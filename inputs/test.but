@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.14 2001/11/24 17:50:55 simon Exp $
+\versionid $Id: test.but,v 1.15 2001/12/04 19:12:18 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -93,7 +93,7 @@ An index tag containing non-alternatived Unicode: \i{\u00BFChe?}
 
 An invisible index tag: \I{she seems to have an invisible tag}yeah.
 
-\S2{sub-sub}{florble} Smaller heading still
+\S2{sub-sub}{Florble} Smaller heading still
 
 A tiny section. Awww. How cute. Actually, this one's a \e{florble},
 and here's a reference to it: \k{sub-sub}.
