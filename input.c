@@ -505,6 +505,9 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	    par.fpos = t.pos;
 	    switch (t.cmd) {
 	      default:
+		needkw = -1;
+		break;
+	      case c__invalid:
 		error(err_badparatype, t.text, &t.pos);
 		needkw = 4;
 		break;
