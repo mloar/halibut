@@ -1,12 +1,13 @@
 " Vim syntax file
 " Language:	Halibut
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
-" URL:          FIXME
+" URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.3 2004/04/01 22:21:23 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.4 2004/04/01 22:50:12 jtn Exp $
 
-" I'm not proud of this. Every time I tangle with vim's syntax highlighting
-" I come away unsatisfied. Nevertheless, it seems to work.
+" I've never been entirely comfortable with vim's syntax highlighting
+" facilities, so this may have all sorts of nasty loose ends, corner cases
+" etc, but it works for me.
 " I have no idea if it's compatible with vim <6.1.
 
 " Based on docs in Halibut CVS 2004-03-31
@@ -56,15 +57,17 @@ syn match butQLEmphInv "\S\@=[^bi]" contained
 syn region butCommentPara start="\\#\_s\@=" end="^\s*$" contains=butTodo
 
 " Inline comments -- nested braces are honoured.
-syn region butComment matchgroup=Comment start="\\#{" end="}" contains=butCommentBrace,butTodo
-syn region butCommentBrace start="{" end="}" contains=butCommentBrace,butTodo contained transparent
+syn region butComment matchgroup=Comment start="\\#{" skip="\}" end="}" contains=butCommentBrace,butTodo
+syn region butCommentBrace start="{" skip="\}" end="}" contains=butCommentBrace,butTodo contained transparent
 
 " Section headings - a bit hairy. Order wrt rest of file is important.
-syn match butCmdSpecific "\\\(S\d\|[CAHSU]\)" nextgroup=butIdentArgH
+syn match butCmdSpecific "\\\(S\d\|[CAHS]\)" nextgroup=butIdentArgH
 " butIdentArgH -> butTextArgH? -> this, which highlights the rest of the para:
 syn region butTextHeading start="" end="^\s*$" contained contains=@butText
+" Unadorned headings
+syn match butCmdSpecific "\\U\_s\@=" nextgroup=butTextHeading
 " ...and overall title
-syn match butCmdSpecific "\\title" nextgroup=butTextHeading
+syn match butCmdSpecific "\\title\_s\@=" nextgroup=butTextHeading
 
 " Bulleted lists
 syn match butCmdSpecific "\\\(b\|n\|dd\)" nextgroup=butIdentArg
@@ -115,7 +118,7 @@ syn region butIndexArg matchgroup=butDelimiter start="{" skip="\\}" end="}" cont
 " Specific hack for \IM{}{}...
 syn region butIMArg    matchgroup=butDelimiter start="{" skip="\\}" end="}" contained nextgroup=butIMArg contains=@butText
 " Default argument (due to being last).
-syn region butTextArg  matchgroup=butDelimiter start="{" skip="\\}" end="}" nextgroup=@butArgument contained contains=@butText
+syn region butTextArg  matchgroup=butDelimiter start="{" skip="\\}" end="}" nextgroup=@butArgument contained contains=@butText transparent
 
 " Rune from vim 6.1 help
 if version >= 508 || !exists("did_halibut_syn_inits")
