@@ -1604,7 +1604,8 @@ static page_data *page_breaks(line_data *first, line_data *last,
 		     */
 		    if (m != last && m->next && !m->next->page_break)
 		    {
-			int x = this_height - minheight;
+			int x = (this_height - minheight) / FUNITS_PER_PT *
+			    4096.0;
 			int xf;
 
 			xf = x & 0xFF;
