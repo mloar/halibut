@@ -591,11 +591,11 @@ static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
 /*
  * Reads a single file (ie until get() returns EOF)
  */
-static void read_file(paragraph ***ret, input *in, indexdata *idx) {
+static void read_file(paragraph ***ret, input *in, indexdata *idx,
+		      tree234 *macros) {
     token t;
     paragraph par;
     word wd, **whptr, **idximplicit;
-    tree234 *macros;
     wchar_t utext[2], *wdtext;
     int style, spcstyle;
     int already;
@@ -631,7 +631,6 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 
     t.text = NULL;
     t.origtext = NULL;
-    macros = newtree234(macrocmp);
     already = FALSE;
 
     crossparastk = stk_new();
@@ -806,6 +805,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		sfree(sitem);
 	    }
 	    continue;
+	}
+
+	while (t.type == tok_cmd &&
+	       macrolookup(macros, in, t.text, &t.pos)) {
+	    dtor(t), t = get_token(in);
 	}
 
 	/*
@@ -1542,7 +1546,6 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
      * this cleanup doesn't happen.
      */
     dtor(t);
-    macrocleanup(macros);
 
     stk_free(crossparastk);
 }
@@ -1550,6 +1553,9 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 paragraph *read_input(input *in, indexdata *idx) {
     paragraph *head = NULL;
     paragraph **hptr = &head;
+    tree234 *macros;
+
+    macros = newtree234(macrocmp);
 
     while (in->currindex < in->nfiles) {
 	in->currfp = fopen(in->filenames[in->currindex], "r");
@@ -1559,10 +1565,12 @@ paragraph *read_input(input *in, indexdata *idx) {
 	    in->csstate = charset_init_state;
 	    in->wcpos = in->nwc = 0;
 	    in->pushback_chars = NULL;
-	    read_file(&hptr, in, idx);
+	    read_file(&hptr, in, idx, macros);
 	}
 	in->currindex++;
     }
+
+    macrocleanup(macros);
 
     return head;
 }
