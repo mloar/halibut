@@ -309,7 +309,7 @@ wchar_t *ustrlow(wchar_t *s) {
     return s;
 }
 
-int utoi(wchar_t *s) {
+int utoi(wchar_t const *s) {
     int sign = +1;
     int n;
 
@@ -328,7 +328,15 @@ int utoi(wchar_t *s) {
     return n;
 }
 
-int utob(wchar_t *s) {
+double utof(wchar_t const *s)
+{
+    char *cs = utoa_dup(s, CS_ASCII);
+    double ret = atof(cs);
+    sfree(cs);
+    return ret;
+}
+
+int utob(wchar_t const *s) {
     if (!ustricmp(s, L"yes") || !ustricmp(s, L"y") ||
 	!ustricmp(s, L"true") || !ustricmp(s, L"t"))
 	return TRUE;

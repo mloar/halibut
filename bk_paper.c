@@ -32,8 +32,6 @@
  *    xref boxes more pleasantly
  * 
  *  - configurability
- *     * all the measurements in `conf' should be configurable
- *        + notably paper size/shape
  *     * page header and footer should be configurable; we should
  * 	 be able to shift the page number elsewhere, and add other
  * 	 things such as the current chapter/section title and fixed
@@ -42,8 +40,8 @@
  * 	 styles; offer a menu of styles from which the user can
  * 	 choose at every heading level
  *     * first-line indent in paragraphs
- *     * fixed text: `Contents', `Index', bullet, quotes, the
- * 	 colon-space and full stop in chapter title constructions
+ *     * fixed text: `Contents', `Index', the colon-space and full
+ * 	 stop in chapter title constructions
  *     * configurable location of contents?
  *     * certainly configurably _remove_ the contents, and possibly
  * 	 also the index
@@ -79,6 +77,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "halibut.h"
 #include "paper.h"
@@ -94,6 +93,7 @@ struct paper_conf_Tag {
     int right_margin;
     int bottom_margin;
     int indent_list_bullet;
+    int indent_list_after;
     int indent_list;
     int indent_quote;
     int base_leading;
@@ -112,6 +112,7 @@ struct paper_conf_Tag {
     int index_minsep;
     int pagenum_fontsize;
     int footer_distance;
+    wchar_t *lquote, *rquote, *bullet;
     /* These are derived from the above */
     int base_width;
     int page_height;
@@ -141,18 +142,19 @@ enum {
 
 static font_data *make_std_font(font_list *fontlist, char const *name);
 static void wrap_paragraph(para_data *pdata, word *words,
-			   int w, int i1, int i2);
+			   int w, int i1, int i2, paper_conf *conf);
 static page_data *page_breaks(line_data *first, line_data *last,
 			      int page_height, int ncols, int headspace);
 static int render_string(page_data *page, font_data *font, int fontsize,
 			 int x, int y, wchar_t *str);
 static int render_line(line_data *ldata, int left_x, int top_y,
-		       xref_dest *dest, keywordlist *keywords, indexdata *idx);
+		       xref_dest *dest, keywordlist *keywords, indexdata *idx,
+		       paper_conf *conf);
 static void render_para(para_data *pdata, paper_conf *conf,
 			keywordlist *keywords, indexdata *idx,
 			paragraph *index_placeholder, page_data *index_page);
 static int string_width(font_data *font, wchar_t const *string, int *errs);
-static int paper_width_simple(para_data *pdata, word *text);
+static int paper_width_simple(para_data *pdata, word *text, paper_conf *conf);
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf);
 static para_data *rule_paragraph(int indent, paper_conf *conf);
 static void add_rect_to_page(page_data *page, int x, int y, int w, int h);
@@ -170,6 +172,217 @@ static word *prepare_contents_title(word *first, wchar_t *separator,
 				    word *second);
 static void fold_into_page(page_data *dest, page_data *src, int right_shift);
 
+static int fonts_ok(wchar_t *string, ...)
+{
+    font_data *font;
+    va_list ap;
+    int ret = TRUE;
+
+    va_start(ap, string);
+    while ( (font = va_arg(ap, font_data *)) != NULL) {
+	int errs;
+	(void) string_width(font, string, &errs);
+	if (errs) {
+	    ret = FALSE;
+	    break;
+	}
+    }
+    va_end(ap);
+
+    return ret;
+}
+
+static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
+    paragraph *p;
+    paper_conf ret;
+
+    /*
+     * Defaults.
+     */
+    ret.paper_width = 595 * 4096;
+    ret.paper_height = 841 * 4096;
+    ret.left_margin = 72 * 4096;
+    ret.top_margin = 72 * 4096;
+    ret.right_margin = 72 * 4096;
+    ret.bottom_margin = 108 * 4096;
+    ret.indent_list_bullet = 6 * 4096;
+    ret.indent_list_after = 18 * 4096;
+    ret.indent_quote = 18 * 4096;
+    ret.base_leading = 4096;
+    ret.base_para_spacing = 10 * 4096;
+    ret.chapter_top_space = 72 * 4096;
+    ret.sect_num_left_space = 12 * 4096;
+    ret.chapter_underline_depth = 14 * 4096;
+    ret.chapter_underline_thickness = 3 * 4096;
+    ret.rule_thickness = 1 * 4096;
+    ret.base_font_size = 12;
+    ret.contents_indent_step = 24 * 4096;
+    ret.contents_margin = 84 * 4096;
+    ret.leader_separation = 12 * 4096;
+    ret.index_gutter = 36 * 4096;
+    ret.index_cols = 2;
+    ret.index_minsep = 18 * 4096;
+    ret.pagenum_fontsize = 12;
+    ret.footer_distance = 32 * 4096;
+    ret.lquote = L"\x2018\0\x2019\0'\0'\0\0";
+    ret.rquote = uadv(ret.lquote);
+    ret.bullet = L"\x2022\0-\0\0";
+
+    /*
+     * Two-pass configuration so that we can pick up global config
+     * (e.g. `quotes') before having it overridden by specific
+     * config (`paper-quotes'), irrespective of the order in which
+     * they occur.
+     */
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    }
+	}
+    }
+
+    for (p = source; p; p = p->next) {
+	p->private_data = NULL;
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"paper-quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    } else if (!ustricmp(p->keyword, L"paper-bullet")) {
+		ret.bullet = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"paper-page-width")) {
+		ret.paper_width =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-page-height")) {
+		ret.paper_height =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-left-margin")) {
+		ret.left_margin =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-top-margin")) {
+		ret.top_margin =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-right-margin")) {
+		ret.right_margin =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-bottom-margin")) {
+		ret.bottom_margin =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-list-indent")) {
+		ret.indent_list_bullet =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-listitem-indent")) {
+		ret.indent_list =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-quote-indent")) {
+		ret.indent_quote =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-base-leading")) {
+		ret.base_leading =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-base-para-spacing")) {
+		ret.base_para_spacing =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-chapter-top-space")) {
+		ret.chapter_top_space =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-sect-num-left-space")) {
+		ret.sect_num_left_space =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-chapter-underline-depth")) {
+		ret.chapter_underline_depth =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-chapter-underline-thickness")) {
+		ret.chapter_underline_thickness =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-rule-thickness")) {
+		ret.rule_thickness =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-contents-indent-step")) {
+		ret.contents_indent_step =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-contents-margin")) {
+		ret.contents_margin =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-leader-separation")) {
+		ret.leader_separation =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-index-gutter")) {
+		ret.index_gutter =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-index-minsep")) {
+		ret.index_minsep =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-footer-distance")) {
+		ret.footer_distance =
+		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-base-font-size")) {
+		ret.base_font_size =
+		    utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-index-columns")) {
+		ret.index_cols =
+		    utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-pagenum-font-size")) {
+		ret.pagenum_fontsize =
+		    utoi(uadv(p->keyword));
+	    }
+	}
+    }
+
+    /*
+     * Set up the derived fields in the conf structure.
+     */
+
+    ret.base_width =
+	ret.paper_width - ret.left_margin - ret.right_margin;
+    ret.page_height =
+	ret.paper_height - ret.top_margin - ret.bottom_margin;
+    ret.indent_list = ret.indent_list_bullet + ret.indent_list_after;
+    ret.index_colwidth =
+	(ret.base_width - (ret.index_cols-1) * ret.index_gutter)
+	/ ret.index_cols;
+
+    /*
+     * Set up the font structures.
+     */
+    ret.tr = make_std_font(fontlist, "Times-Roman");
+    ret.ti = make_std_font(fontlist, "Times-Italic");
+    ret.hr = make_std_font(fontlist, "Helvetica-Bold");
+    ret.hi = make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.cr = make_std_font(fontlist, "Courier");
+    ret.co = make_std_font(fontlist, "Courier-Oblique");
+    ret.cb = make_std_font(fontlist, "Courier-Bold");
+
+    /*
+     * Now process fallbacks on quote characters and bullets. We
+     * use string_width() to determine whether all of the relevant
+     * fonts contain the same character, and fall back whenever we
+     * find a character which not all of them support.
+     */
+
+    /* Quote characters need not be supported in the fixed code fonts,
+     * but must be in the title and body fonts. */
+    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
+	   (!fonts_ok(ret.lquote, ret.tr, ret.ti, ret.hr, ret.hi, NULL) ||
+	    !fonts_ok(ret.rquote, ret.tr, ret.ti, ret.hr, ret.hi, NULL))) {
+	ret.lquote = uadv(ret.rquote);
+	ret.rquote = uadv(ret.lquote);
+    }
+
+    /* The bullet character only needs to be supported in the normal body
+     * font (not even in italics). */
+    while (*ret.bullet && *uadv(ret.bullet) &&
+	   !fonts_ok(ret.bullet, ret.tr, NULL))
+	ret.bullet = uadv(ret.bullet);
+
+    return ret;
+}
+
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			indexdata *idx) {
     paragraph *p;
@@ -180,62 +393,17 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     line_data *firstline, *lastline, *firstcontline, *lastcontline;
     page_data *pages;
     font_list *fontlist;
-    paper_conf *conf;
+    paper_conf *conf, ourconf;
     int has_index;
     int pagenum;
     paragraph index_placeholder_para;
     page_data *first_index_page;
 
-    /*
-     * FIXME: All these things ought to become configurable.
-     */
-    conf = mknew(paper_conf);
-    conf->paper_width = 595 * 4096;
-    conf->paper_height = 841 * 4096;
-    conf->left_margin = 72 * 4096;
-    conf->top_margin = 72 * 4096;
-    conf->right_margin = 72 * 4096;
-    conf->bottom_margin = 108 * 4096;
-    conf->indent_list_bullet = 6 * 4096;
-    conf->indent_list = 24 * 4096;
-    conf->indent_quote = 18 * 4096;
-    conf->base_leading = 4096;
-    conf->base_para_spacing = 10 * 4096;
-    conf->chapter_top_space = 72 * 4096;
-    conf->sect_num_left_space = 12 * 4096;
-    conf->chapter_underline_depth = 14 * 4096;
-    conf->chapter_underline_thickness = 3 * 4096;
-    conf->rule_thickness = 1 * 4096;
-    conf->base_font_size = 12;
-    conf->contents_indent_step = 24 * 4096;
-    conf->contents_margin = 84 * 4096;
-    conf->leader_separation = 12 * 4096;
-    conf->index_gutter = 36 * 4096;
-    conf->index_cols = 2;
-    conf->index_minsep = 18 * 4096;
-    conf->pagenum_fontsize = 12;
-    conf->footer_distance = 32 * 4096;
-
-    conf->base_width =
-	conf->paper_width - conf->left_margin - conf->right_margin;
-    conf->page_height =
-	conf->paper_height - conf->top_margin - conf->bottom_margin;
-    conf->index_colwidth =
-	(conf->base_width - (conf->index_cols-1) * conf->index_gutter)
-	/ conf->index_cols;
-
-    /*
-     * First, set up some font structures.
-     */
     fontlist = mknew(font_list);
     fontlist->head = fontlist->tail = NULL;
-    conf->tr = make_std_font(fontlist, "Times-Roman");
-    conf->ti = make_std_font(fontlist, "Times-Italic");
-    conf->hr = make_std_font(fontlist, "Helvetica-Bold");
-    conf->hi = make_std_font(fontlist, "Helvetica-BoldOblique");
-    conf->cr = make_std_font(fontlist, "Courier");
-    conf->co = make_std_font(fontlist, "Courier-Oblique");
-    conf->cb = make_std_font(fontlist, "Courier-Bold");
+
+    ourconf = paper_configure(sourceform, fontlist);
+    conf = &ourconf;
 
     /*
      * Set up a data structure to collect page numbers for each
@@ -787,8 +955,6 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	}
     }
 
-    sfree(conf);
-
     return doc;
 }
 
@@ -908,7 +1074,7 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 	    int len;
 
 	    aux = pkwtext2;
-	    len = paper_width_simple(pdata, pkwtext2);
+	    len = paper_width_simple(pdata, pkwtext2, conf);
 	    aux_indent = -len - conf->sect_num_left_space;
 
 	    pdata->outline_title = 
@@ -918,8 +1084,8 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 	    aux2 = fake_word(L": ");
 	    aux_indent = 0;
 
-	    firstline_indent += paper_width_simple(pdata, aux);
-	    firstline_indent += paper_width_simple(pdata, aux2);
+	    firstline_indent += paper_width_simple(pdata, aux, conf);
+	    firstline_indent += paper_width_simple(pdata, aux2, conf);
 
 	    pdata->outline_title = 
 		prepare_outline_title(pkwtext, L": ", pwords);
@@ -928,10 +1094,9 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 
       case para_Bullet:
 	/*
-	 * Auxiliary text consisting of a bullet. (FIXME:
-	 * configurable bullet.)
+	 * Auxiliary text consisting of a bullet.
 	 */
-	aux = fake_word(L"\x2022");
+	aux = fake_word(conf->bullet);
 	aux_indent = indent + conf->indent_list_bullet;
 	break;
 
@@ -953,8 +1118,8 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 	aux = pkwtext;
 	aux2 = fake_word(L" ");
 	aux_indent = indent;
-	firstline_indent += paper_width_simple(pdata, aux);
-	firstline_indent += paper_width_simple(pdata, aux2);
+	firstline_indent += paper_width_simple(pdata, aux, conf);
+	firstline_indent += paper_width_simple(pdata, aux2, conf);
 	break;
     }
 
@@ -965,7 +1130,7 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 
     wrap_paragraph(pdata, pwords, conf->base_width - rmargin,
 		   indent + firstline_indent,
-		   indent + extra_indent);
+		   indent + extra_indent, conf);
 
     pdata->first->aux_text = aux;
     pdata->first->aux_text_2 = aux2;
@@ -1170,6 +1335,7 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces);
 struct paper_width_ctx {
     int minspacewidth;
     para_data *pdata;
+    paper_conf *conf;
 };
 
 static int paper_width_list(void *vctx, word *text, word *end, int *nspaces) {
@@ -1216,9 +1382,9 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces)
 	    str = L" ";
     } else /* if (type == word_Quote) */ {
 	if (word->aux == quote_Open)
-	    str = L"\x2018";	       /* FIXME: configurability! */
+	    str = ctx->conf->lquote;
 	else
-	    str = L"\x2019";	       /* FIXME: configurability! */
+	    str = ctx->conf->rquote;
     }
 
     width = string_width(ctx->pdata->fonts[findex], str, &errs);
@@ -1234,7 +1400,7 @@ static int paper_width(void *vctx, word *word)
     return paper_width_internal(vctx, word, NULL);
 }
 
-static int paper_width_simple(para_data *pdata, word *text)
+static int paper_width_simple(para_data *pdata, word *text, paper_conf *conf)
 {
     struct paper_width_ctx ctx;
 
@@ -1242,12 +1408,13 @@ static int paper_width_simple(para_data *pdata, word *text)
     ctx.minspacewidth =
 	(pdata->sizes[FONT_NORMAL] *
 	 string_width(pdata->fonts[FONT_NORMAL], L" ", NULL));
+    ctx.conf = conf;
 
     return paper_width_list(&ctx, text, NULL, NULL);
 }
 
 static void wrap_paragraph(para_data *pdata, word *words,
-			   int w, int i1, int i2)
+			   int w, int i1, int i2, paper_conf *conf)
 {
     wrappedline *wrapping, *p;
     int spacewidth;
@@ -1284,6 +1451,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
      */
     ctx.minspacewidth = spacewidth * 3 / 5;
     ctx.pdata = pdata;
+    ctx.conf = conf;
 
     wrapping = wrap_para(words, w - i1, w - i2, paper_width, &ctx, spacewidth);
 
@@ -1664,7 +1832,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		       int x, int y, word *text, word *text_end, xref **xr,
 		       int shortfall, int nspaces, int *nspace,
-		       keywordlist *keywords, indexdata *idx)
+		       keywordlist *keywords, indexdata *idx, paper_conf *conf)
 {
     while (text && text != text_end) {
 	int style, type, findex, errs;
@@ -1809,16 +1977,17 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 	    goto nextword;
 	} else /* if (type == word_Quote) */ {
 	    if (text->aux == quote_Open)
-		str = L"\x2018";	       /* FIXME: configurability! */
+		str = conf->lquote;
 	    else
-		str = L"\x2019";	       /* FIXME: configurability! */
+		str = conf->rquote;
 	}
 
 	(void) string_width(pdata->fonts[findex], str, &errs);
 
 	if (errs && text->alt)
 	    x = render_text(page, pdata, ldata, x, y, text->alt, NULL,
-			    xr, shortfall, nspaces, nspace, keywords, idx);
+			    xr, shortfall, nspaces, nspace, keywords, idx,
+			    conf);
 	else
 	    x = render_string(page, pdata->fonts[findex],
 			      pdata->sizes[findex], x, y, str);
@@ -1837,7 +2006,8 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
  * Returns the last x position used on the line.
  */
 static int render_line(line_data *ldata, int left_x, int top_y,
-		       xref_dest *dest, keywordlist *keywords, indexdata *idx)
+		       xref_dest *dest, keywordlist *keywords, indexdata *idx,
+		       paper_conf *conf)
 {
     int nspace;
     xref *xr;
@@ -1851,12 +2021,12 @@ static int render_line(line_data *ldata, int left_x, int top_y,
 			left_x + ldata->aux_left_indent,
 			top_y - ldata->ypos,
 			ldata->aux_text, NULL, &xr, 0, 0, &nspace,
-			keywords, idx);
+			keywords, idx, conf);
 	if (ldata->aux_text_2)
 	    render_text(ldata->page, ldata->pdata, ldata,
 			x, top_y - ldata->ypos,
 			ldata->aux_text_2, NULL, &xr, 0, 0, &nspace,
-			keywords, idx);
+			keywords, idx, conf);
     }
     nspace = 0;
 
@@ -1910,7 +2080,7 @@ static int render_line(line_data *ldata, int left_x, int top_y,
 			      left_x + ldata->xpos + extra_indent,
 			      top_y - ldata->ypos, ldata->first, ldata->end,
 			      &xr, shortfall, spaces, &nspace,
-			      keywords, idx);
+			      keywords, idx, conf);
 	}
 
 	if (xr) {
@@ -1977,7 +2147,7 @@ static void render_para(para_data *pdata, paper_conf *conf,
 
 	last_x = render_line(ldata, conf->left_margin,
 			     conf->paper_height - conf->top_margin,
-			     &dest, keywords, idx);
+			     &dest, keywords, idx, conf);
 	if (ldata == pdata->last)
 	    break;
     }
@@ -2001,7 +2171,7 @@ static void render_para(para_data *pdata, paper_conf *conf,
 	}
 
 	w = fake_word(num);
-	wid = paper_width_simple(pdata, w);
+	wid = paper_width_simple(pdata, w, conf);
 	sfree(w);
 
 	for (x = 0; x < conf->base_width; x += conf->leader_separation)
