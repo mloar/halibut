@@ -99,14 +99,6 @@ output file will be given that name. Otherwise, the name of
 the output PDF file will be as specified in the input files,
 or \c{output.pdf} if none is specified at all.
 
-\dt \cw{--man}[\cw{=}\e{filename}]
-
-\dd Makes Halibut generate an output file in Unix \cw{man} page
-format. If the optional \e{filename} parameter is supplied, the
-output \cw{man} page will be given that name. Otherwise, the name of
-the output \cw{man} page will be as specified in the input files, or
-\c{output.1} if none is specified at all.
-
 \dt \cw{-C}\e{word}\cw{:}\e{word}[\cw{:}\e{word}...]
 
 \dd Adds a configuration directive to the input processed by
