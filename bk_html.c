@@ -1988,6 +1988,7 @@ static char *html_format(paragraph *p, char *template_string)
 	    } else if (p->keyword && *p->keyword && fmt == 'k')
 		ws = p->keyword;
 	    else
+		/* %N comes here; also failure cases of other fmts */
 		w = p->words;
 
 	    if (ws) {
