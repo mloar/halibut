@@ -67,7 +67,7 @@ void gen_citations(paragraph *source, keywordlist *kl) {
 	    wchar_t *wp = para->keyword;
 	    while (*wp) {
 		cite_biblio(kl, wp, para->fpos);
-		wp += 1+ustrlen(wp);
+		wp = uadv(wp);
 	    }
 	}
 

@@ -176,6 +176,7 @@ enum {
     c_W,			       /* Web hyperlink */
     c_b,			       /* bulletted list */
     c_c,			       /* code */
+    c_cfg,			       /* configuration directive */
     c_copyright,		       /* copyright statement */
     c_cw,			       /* weak code */
     c_date,			       /* document processing date */
@@ -239,6 +240,7 @@ static void match_kw(token *tok) {
 	{"\\", c__escaped},	       /* escaped backslash (\\) */
 	{"b", c_b},		       /* bulletted list */
 	{"c", c_c},		       /* code */
+	{"cfg", c_cfg},		       /* configuration directive */
 	{"copyright", c_copyright},    /* copyright statement */
 	{"cw", c_cw},		       /* weak code */
 	{"date", c_date},	       /* document processing date */
@@ -623,6 +625,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		/* For \b and \n the keyword is optional */
 	      case c_b: needkw = 4; par.type = para_Bullet; break;
 	      case c_n: needkw = 4; par.type = para_NumberedList; break;
+	      case c_cfg: needkw = 8; par.type = para_Config; break;
 	      case c_copyright: needkw = 32; par.type = para_Copyright; break;
 	      case c_define: is_macro = TRUE; needkw = 1; break;
 		/* For \nocite the keyword is _everything_ */
@@ -697,10 +700,10 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 
 		/* Move to EOP in case of needkw==8 or 16 (no body) */
 		if (needkw & 24) {
-		    if (t.type != tok_eop) {
+		    if (t.type != tok_eop && t.type != tok_eof) {
 			error(err_bodyillegal, &t.pos);
 			/* Error recovery: eat the rest of the paragraph */
-			while (t.type != tok_eop)
+			while (t.type != tok_eop && t.type != tok_eof)
 			    dtor(t), t = get_token(in);
 		    }
 		    addpara(par, ret);

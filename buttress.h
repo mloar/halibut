@@ -97,6 +97,7 @@ enum {
     para_NoCite,
     para_Title,
     para_VersionID,
+    para_Config,		       /* configuration directive */
     para_NotParaType		       /* placeholder value */
 };
 
@@ -225,6 +226,7 @@ word *dup_word_list(word *w);
 wchar_t *ustrdup(wchar_t *s);
 char *ustrtoa(wchar_t *s, char *outbuf, int size);
 int ustrlen(wchar_t *s);
+wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
 wchar_t utolower(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);

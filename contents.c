@@ -15,6 +15,9 @@ struct numberstate_Tag {
     int *sectionlevels;
     int maxsectlevel;
     int listitem;
+    wchar_t *chaptertext;	       /* the word for a chapter */
+    wchar_t *sectiontext;	       /* the word for a section */
+    wchar_t *apptext;		       /* the word for an appendix */
 };
 
 numberstate *number_init(void) {
@@ -89,6 +92,27 @@ static void doanumber(word ***wret, int num) {
     dotext(wret, p);
 }
 
+void number_cfg(numberstate *state, paragraph *source) {
+    /*
+     * Defaults
+     */
+    state->chaptertext = L"Chapter";
+    state->sectiontext = L"Section";
+    state->apptext = L"Appendix";
+
+    for (; source; source = source->next) {
+	if (source->type == para_Config) {
+	    if (!ustricmp(source->keyword, L"chapter")) {
+		state->chaptertext = uadv(source->keyword);
+	    } else if (!ustricmp(source->keyword, L"section")) {
+		state->sectiontext = uadv(source->keyword);
+	    } else if (!ustricmp(source->keyword, L"appendix")) {
+		state->apptext = uadv(source->keyword);
+	    }
+	}
+    }
+}
+
 word *number_mktext(numberstate *state, int para, int aux, int prev,
 		    word **auxret) {
     word *ret = NULL;
@@ -101,7 +125,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	state->chapternum++;
 	for (i = 0; i < state->maxsectlevel; i++)
 	    state->sectionlevels[i] = 0;
-	dotext(&pret, L"Chapter");
+	dotext(&pret, state->chaptertext);
 	dospace(&pret);
 	ret2 = pret;
 	donumber(&pret, state->chapternum);
@@ -118,7 +142,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	state->sectionlevels[level]++;
 	for (i = level+1; i < state->maxsectlevel; i++)
 	    state->sectionlevels[i] = 0;
-	dotext(&pret, L"Section");
+	dotext(&pret, state->sectiontext);
 	dospace(&pret);
 	ret2 = pret;
 	if (state->ischapter)
@@ -136,7 +160,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	state->appendixnum++;
 	for (i = 0; i < state->maxsectlevel; i++)
 	    state->sectionlevels[i] = 0;
-	dotext(&pret, L"Appendix");
+	dotext(&pret, state->apptext);
 	dospace(&pret);
 	ret2 = pret;
 	doanumber(&pret, state->appendixnum);

@@ -90,6 +90,8 @@ keywordlist *get_keywords(paragraph *source) {
     numberstate *n = number_init();
     int prevpara = para_NotParaType;
 
+    number_cfg(n, source);
+
     kl->nkeywords = 0;
     kl->size = 0;
     kl->keys = NULL;
@@ -112,7 +114,7 @@ keywordlist *get_keywords(paragraph *source) {
 		    kw->text = source->kwtext;
 		    kw->para = source;
 		    heap_add(kl, kw);
-		    p += ustrlen(p) + 1;
+		    p = uadv(p);
 		}
 	    }
 	} else {

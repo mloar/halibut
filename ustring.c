@@ -39,6 +39,10 @@ int ustrlen(wchar_t *s) {
     return len;
 }
 
+wchar_t *uadv(wchar_t *s) {
+    return s + 1 + ustrlen(s);
+}
+
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source) {
     wchar_t *ret = dest;
     do {

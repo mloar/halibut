@@ -69,7 +69,7 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
     /*
      * FIXME: want to warn on overlapping source sets.
      */
-    for (; *tags; tags += 1+ustrlen(tags)) {
+    for (; *tags; tags = uadv(tags)) {
 	t = make_indextag();
 	t->name = tags;
 	existing = add23(idx->tags, t, compare_tags);
