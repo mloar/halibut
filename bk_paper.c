@@ -12,8 +12,6 @@
 /*
  * To be done:
  * 
- *  - implement para_Rule
- * 
  *  - set up contents section now we know what sections begin on
  *    which pages
  * 
@@ -57,6 +55,7 @@ static int paper_width_simple(para_data *pdata, word *text);
 static void code_paragraph(para_data *pdata,
 			   font_data *fn, font_data *fi, font_data *fb,
 			   int font_size, int indent, word *words);
+static void rule_paragraph(para_data *pdata, int indent, int height);
 static void add_rect_to_page(page_data *page, int x, int y, int w, int h);
 
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
@@ -89,6 +88,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     int sect_num_left_space = 12 * 4096;
     int chapter_underline_depth = 14 * 4096;
     int chapter_underline_thickness = 3 * 4096;
+    int rule_thickness = 1 * 4096;
 
     int base_width = paper_width - left_margin - right_margin;
     int page_height = paper_height - top_margin - bottom_margin;
@@ -157,6 +157,15 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 		pdata->first->penalty_after += 100000;
 		pdata->last->penalty_before += 100000;
 	    }
+	    break;
+
+	    /*
+	     * This paragraph is also special.
+	     */
+	  case para_Rule:
+	    pdata = mknew(para_data);
+	    rule_paragraph(pdata, indent, rule_thickness);
+	    p->private_data = pdata;
 	    break;
 
 	    /*
@@ -487,6 +496,19 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 				  pdata->last->ypos - chapter_underline_depth),
 				 base_width,
 				 chapter_underline_thickness);
+	    }
+
+	    /*
+	     * Rule paragraphs need to contain an actual rule!
+	     */
+	    if (p->type == para_Rule) {
+		add_rect_to_page(pdata->first->page,
+				 left_margin + pdata->first->xpos,
+				 (paper_height - top_margin -
+				  pdata->last->ypos -
+				  pdata->last->line_height),
+				 base_width - pdata->first->xpos,
+				 pdata->last->line_height);
 	    }
 	}
     }
@@ -1183,36 +1205,38 @@ static void render_line(line_data *ldata, int left_x, int top_y,
     }
     nspace = 0;
 
-    /*
-     * There might be a cross-reference carried over from a
-     * previous line.
-     */
-    if (dest->type != NONE) {
-	xr = mknew(xref);
-	xr->next = NULL;
-	xr->dest = *dest;    /* structure copy */
-	if (ldata->page->last_xref)
-	    ldata->page->last_xref->next = xr;
-	else
-	    ldata->page->first_xref = xr;
-	ldata->page->last_xref = xr;
-	xr->lx = xr->rx = left_x + ldata->xpos;
-	xr->by = top_y - ldata->ypos;
-	xr->ty = top_y - ldata->ypos + ldata->line_height;
-    } else
-	xr = NULL;
-
-    render_text(ldata->page, ldata->pdata, ldata, left_x + ldata->xpos,
-		top_y - ldata->ypos, ldata->first, ldata->end, &xr,
-		ldata->hshortfall, ldata->nspaces, &nspace, keywords);
-
-    if (xr) {
+    if (ldata->first) {
 	/*
-	 * There's a cross-reference continued on to the next line.
+	 * There might be a cross-reference carried over from a
+	 * previous line.
 	 */
-	*dest = xr->dest;
-    } else
-	dest->type = NONE;
+	if (dest->type != NONE) {
+	    xr = mknew(xref);
+	    xr->next = NULL;
+	    xr->dest = *dest;    /* structure copy */
+	    if (ldata->page->last_xref)
+		ldata->page->last_xref->next = xr;
+	    else
+		ldata->page->first_xref = xr;
+	    ldata->page->last_xref = xr;
+	    xr->lx = xr->rx = left_x + ldata->xpos;
+	    xr->by = top_y - ldata->ypos;
+	    xr->ty = top_y - ldata->ypos + ldata->line_height;
+	} else
+	    xr = NULL;
+
+	render_text(ldata->page, ldata->pdata, ldata, left_x + ldata->xpos,
+		    top_y - ldata->ypos, ldata->first, ldata->end, &xr,
+		    ldata->hshortfall, ldata->nspaces, &nspace, keywords);
+
+	if (xr) {
+	    /*
+	     * There's a cross-reference continued on to the next line.
+	     */
+	    *dest = xr->dest;
+	} else
+	    dest->type = NONE;
+    }
 }
 
 static void code_paragraph(para_data *pdata,
@@ -1322,4 +1346,35 @@ static void code_paragraph(para_data *pdata,
 	/* General opprobrium for breaking in a code paragraph. */
 	ldata->penalty_before = ldata->penalty_after = 50000;
     }
+}
+
+static void rule_paragraph(para_data *pdata, int indent, int height)
+{
+    line_data *ldata;
+
+    ldata = mknew(line_data);
+
+    ldata->pdata = pdata;
+    ldata->first = NULL;
+    ldata->end = NULL;
+    ldata->line_height = height;
+
+    ldata->xpos = indent;
+
+    ldata->prev = NULL;
+    ldata->next = NULL;
+
+    ldata->hshortfall = 0;
+    ldata->nspaces = 0;
+    ldata->aux_text = NULL;
+    ldata->aux_text_2 = NULL;
+    ldata->aux_left_indent = 0;
+
+    /*
+     * Better to break after a rule than before it
+     */
+    ldata->penalty_after += 100000;
+    ldata->penalty_before += -100000;
+
+    pdata->first = pdata->last = ldata;
 }
