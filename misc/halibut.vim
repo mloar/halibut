@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.4 2004/04/01 22:50:12 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.5 2004/04/01 22:52:46 jtn Exp $
 
 " I've never been entirely comfortable with vim's syntax highlighting
 " facilities, so this may have all sorts of nasty loose ends, corner cases
@@ -57,8 +57,8 @@ syn match butQLEmphInv "\S\@=[^bi]" contained
 syn region butCommentPara start="\\#\_s\@=" end="^\s*$" contains=butTodo
 
 " Inline comments -- nested braces are honoured.
-syn region butComment matchgroup=Comment start="\\#{" skip="\}" end="}" contains=butCommentBrace,butTodo
-syn region butCommentBrace start="{" skip="\}" end="}" contains=butCommentBrace,butTodo contained transparent
+syn region butComment matchgroup=Comment start="\\#{" skip="\\}" end="}" contains=butCommentBrace,butTodo
+syn region butCommentBrace start="{" skip="\\}" end="}" contains=butCommentBrace,butTodo contained transparent
 
 " Section headings - a bit hairy. Order wrt rest of file is important.
 syn match butCmdSpecific "\\\(S\d\|[CAHS]\)" nextgroup=butIdentArgH
