@@ -174,6 +174,22 @@ displaying the section title.
 
 \S{output-text-characters} Configuring the characters used
 
+\dt \I\cw{\\cfg\{text-charset\}}\cw{\\cfg\{text-charset\}\{}\e{character set name}\cw{\}}
+
+\dd This tells Halibut what \i{character set} the output should be
+in. Any Unicode characters representable in this set will be output
+verbatim; any other characters will not be output and their
+\i{fallback text} (if any) will be used instead.
+
+\lcont{
+
+The character set names are the same as for
+\cw{\\cfg\{input-charset\}} (see \k{input-config}). However, unlike
+\cw{\\cfg\{input-charset\}}, this directive affects the \e{entire}
+output; it's not possible to switch encodings halfway through.
+
+}
+
 \dt \I{\cw{\\cfg\{text-bullet\}}}\cw{\\cfg\{text-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}...\cw{\}}]
 
 \dd This specifies the text which should be used as the \i{bullet}
@@ -240,22 +256,6 @@ matching pair.
 
 \S{output-text-misc} Miscellaneous configuration options
 
-\dt \I\cw{\\cfg\{text-charset\}}\cw{\\cfg\{text-charset\}\{}\e{character set name}\cw{\}}
-
-\dd This tells Halibut what \i{character set} the output should be
-in. Any Unicode characters representable in this set will be output
-verbatim; any other characters will not be output and their
-\i{fallback text} (if any) will be used instead.
-
-\lcont{
-
-The character set names are the same as for
-\cw{\\cfg\{input-charset\}} (see \k{input-config}). However, unlike
-\cw{\\cfg\{input-charset\}}, this directive affects the \e{entire}
-output; it's not possible to switch encodings halfway through.
-
-}
-
 \dt \I{\cw{\\cfg\{text-list-suffix\}}}\cw{\\cfg\{text-list-suffix\}\{}\e{text}\cw{\}}
 
 \dd This text is appended to the number on a \i{numbered list} item
@@ -309,12 +309,12 @@ The \i{default settings} for Halibut's plain text output format are:
 \c ... and so on for all section levels below this ...
 \e iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
 \c
+\c \cfg{text-charset}{ASCII}
 \c \cfg{text-bullet}{\u2022}{-}
 \c \cfg{text-rule}{\u2500}{-}
 \c \cfg{text-quotes}{\u2018}{\u2019}{`}{'}
 \c \cfg{text-emphasis}{_}{_}
 \c
-\c \cfg{text-charset}{ASCII}
 \c \cfg{text-list-suffix}{.}
 \c \cfg{text-versionid}{true}
 
@@ -667,10 +667,13 @@ This output format generates data that can be used by the \i{Windows
 Help} program \cw{WINHELP.EXE}. There are two actual files
 generated, one ending in \c{.hlp} and the other ending in \c{.cnt}.
 
-The output is in the \q{\i{Win1252}} character set.
+Currently, the output is harcoded to be in the \q{\i{Win1252}}
+character set.
 
 The Windows Help output format supports the following configuration
 directives:
+
+\S{output-whlp-file} Output file name
 
 \dt \I{\cw{\\cfg\{winhelp-filename\}}}\cw{\\cfg\{winhelp-filename\}\{}\e{filename}\cw{\}}
 
@@ -686,6 +689,24 @@ Halibut will append it. Halibut will also generate a contents file
 (ending in \c{.cnt}) alongside the file name you specify.
 
 }
+
+\S{output-whlp-characters} Configuring the characters used
+
+\dt \I{\cw{\\cfg\{winhelp-bullet\}}}\cw{\\cfg\{winhelp-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text to use as the \i{bullet} in bulletted lists.
+You can specify multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-bullet\}} directive (see
+\k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{winhelp-quotes\}}}\cw{\\cfg\{winhelp-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd Specifies the quotation marks to use, overriding any
+\cw{\\cfg\{quotes\}} directive. You can specify multiple
+fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
+directive (see \k{output-text-characters}).
+
+\S{output-whlp-misc} Miscellaneous configuration options
 
 \dt \I{\cw{\\cfg\{winhelp-contents-titlepage\}}}\cw{\\cfg\{winhelp-contents-titlepage\}\{}\e{title}\cw{\}}
 
@@ -703,21 +724,7 @@ be appended to section numbers, before displaying the section title.
 
 \dd This text is appended to the number on a \i{numbered list} item,
 in exactly the same way as \cw{\\cfg\{text-list-suffix\}} (see
-\k{output-text-misc}).
-
-\dt \I{\cw{\\cfg\{winhelp-bullet\}}}\cw{\\cfg\{winhelp-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
-
-\dd Specifies the text to use as the \i{bullet} in bulletted lists.
-You can specify multiple fallback options. Works exactly like the
-\cw{\\cfg\{text-bullet\}} directive (see
 \k{output-text-characters}).
-
-\dt \I{\cw{\\cfg\{winhelp-quotes\}}}\cw{\\cfg\{winhelp-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
-
-\dd Specifies the quotation marks to use, overriding any
-\cw{\\cfg\{quotes\}} directive. You can specify multiple
-fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
-directive (see \k{output-text-characters}).
 
 \dt \I{\cw{\\cfg\{winhelp-topic\}}}\cw{\\cfg\{winhelp-topic\}\{}\e{topic-name}\cw{\}}
 
@@ -744,14 +751,18 @@ different help contexts which you can use in this way.
 
 }
 
+\S{output-whlp-defaults} Default settings
+
 The \i{default settings} for the Windows Help output format are:
 
 \c \cfg{winhelp-filename}{output.hlp}
+\c
+\c \cfg{winhelp-bullet}{\u2022}{-}
+\c \cfg{winhelp-quotes}{\u2018}{\u2019}{"}{"}
+\c
 \c \cfg{winhelp-contents-titlepage}{Title page}
 \c \cfg{winhelp-section-suffix}{: }
 \c \cfg{winhelp-list-suffix}{.}
-\c \cfg{winhelp-bullet}{\u2022}{-}
-\c \cfg{winhelp-quotes}{\u2018}{\u2019}{"}{"}
 
 and no \c{\\cfg\{winhelp-topic\}} directives anywhere.
 
@@ -763,12 +774,16 @@ macro package.
 
 The available configuration options for this format are as follows:
 
+\S{output-man-file} Output file name
+
 \dt \I{\cw{\\cfg\{man-filename\}}}\cw{\\cfg\{man-filename\}\{}\e{filename}\cw{\}}
 
 \dd Sets the \i{output file name} in which to store the man page.
 This directive is implicitly generated if you provide a file name
 parameter after the command-line option \i\c{--man} (see
 \k{running-options}).
+
+\S{output-man-identity} Configuring headers and footers
 
 \dt \I{\cw{\\cfg\{man-identity\}}}\cw{\\cfg\{man-identity\}\{}\e{text}\cw{\}\{}\e{text...}\cw{\}}
 
@@ -797,6 +812,8 @@ For example, a typical \cw{man} page might contain
 \c Bloggs}
 
 }
+
+\S{output-man-headings} Configuring heading display
 
 \dt \I{\cw{\\cfg\{man-headnumbers\}}}\cw{\\cfg\{man-headnumbers\}\{}\e{boolean}\cw{\}}
 
@@ -867,10 +884,12 @@ expect.
 
 }
 
+\S{output-man-characters} Configuring the characters used
+
 \dt \I{\cw{\\cfg\{man-charset\}}}\cw{\\cfg\{man-charset\}\{}\e{character set}\cw{\}}
 
 \dd Specifies what character set the output should be in, similarly to
-\cw{\\cfg\{text-charset\}} (see \k{output-text-misc}).
+\cw{\\cfg\{text-charset\}} (see \k{output-text-characters}).
 
 \# FIXME: you're probably on your own in making sure that it's
 sensible to output man pages in that charset.
@@ -888,12 +907,17 @@ You can specify multiple fallback options. Works exactly like the
 fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
 directive (see \k{output-text-characters}).
 
+\S{output-man-defaults} Default settings
+
 The \i{default settings} for the \cw{man} page output format are:
 
 \c \cfg{man-filename}{output.1}
+\c
 \c \cfg{man-identity}{}
+\c
 \c \cfg{man-headnumbers}{false}
 \c \cfg{man-mindepth}{0}
+\c
 \c \cfg{man-charset}{ASCII}
 \c \cfg{man-bullet}{\u2022}{o}
 \c \cfg{man-quotes}{\u2018}{\u2019}{"}{"}
@@ -913,6 +937,8 @@ document.
 The \c{info} output format supports the following configuration
 directives:
 
+\S{output-info-file} Controlling the output filenames
+
 \dt \I{\cw{\\cfg\{info-filename\}}}\cw{\\cfg\{info-filename\}\{}\e{filename}\cw{\}}
 
 \dd Sets the output file name in which to store the \c{info} file.
@@ -930,6 +956,25 @@ these files cannot be \I{renaming \c{info} files}renamed after
 creation and remain useful.
 
 }
+
+\dt \I{\cw{\\cfg\{info-max-file-size\}}}\cw{\\cfg\{info-max-file-size\}\{}\e{bytes}\cw{\}}
+
+\dd Sets the preferred \i{maximum file size} for each subsidiary
+file. As a special case, if you set this to zero, there will be no
+subsidiary files and the whole document will be placed in a single
+self-contained output file. (However, note that this file can still
+not be renamed usefully.)
+
+\lcont{
+
+The preferred maximum file size is only a guideline. Halibut may be
+forced to exceed it if a single section of the document is larger
+than the maximum size (since individual \c{info} nodes may not be
+split between files).
+
+}
+
+\S{output-info-dimensions} Indentation and line width
 
 \dt \I{\cw{\\cfg\{info-width\}}}\cw{\\cfg\{info-width\}\{}\e{width}\cw{\}}
 
@@ -963,15 +1008,7 @@ directive (see \k{output-text-dimensions}).
 item. Works exactly like the \cw{\\cfg\{text-listitem-indent\}}
 directive (see \k{output-text-dimensions}).
 
-\dt \I{\cw{\\cfg\{info-charset\}}}\cw{\\cfg\{info-charset\}\{}\e{character set}\cw{\}}
-
-\dd Specifies what character set the output should be in, similarly to
-\cw{\\cfg\{text-charset\}} (see \k{output-text-misc}).
-
-\# FIXME: if you try sufficiently hard, you can probably find an
-output encoding that will break the info format by trampling on its
-special characters. So either don't do that, or tell us what we should
-do about it.
+\S{output-info-headings} Configuring heading display
 
 \dt \I{\cw{\\cfg\{info-section-suffix\}}}\cw{\\cfg\{info-section-suffix\}\{}\e{text}\cw{\}}
 
@@ -987,6 +1024,18 @@ very much like the \cw{\\cfg\{text-chapter-underline\}} directive
 (see \k{output-text-headings}). You can specify more than one
 option, and Halibut will choose the first one supported by the
 character set.
+
+\S{output-info-characters} Controlling the characters used
+
+\dt \I{\cw{\\cfg\{info-charset\}}}\cw{\\cfg\{info-charset\}\{}\e{character set}\cw{\}}
+
+\dd Specifies what character set the output should be in, similarly to
+\cw{\\cfg\{text-charset\}} (see \k{output-text-characters}).
+
+\# FIXME: if you try sufficiently hard, you can probably find an
+output encoding that will break the info format by trampling on its
+special characters. So either don't do that, or tell us what we should
+do about it.
 
 \dt \I{\cw{\\cfg\{info-bullet\}}}\cw{\\cfg\{info-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
 
@@ -1015,29 +1064,14 @@ multiple fallback options. Works exactly like the
 \cw{\\cfg\{text-emphasis\}} directive (see
 \k{output-text-characters}).
 
+\S{output-info-misc} Miscellaneous configuration options
+
 \dt \I{\cw{\\cfg\{info-list-suffix\}}}\cw{\\cfg\{info-list-suffix\}\{}\e{text}\cw{\}}
 
 \dd Specifies the text to append to the item numbers in a
 \i{numbered list}. Works exactly like the
 \cw{\\cfg\{text-list-suffix\}} directive (see
 \k{output-text-misc}).
-
-\dt \I{\cw{\\cfg\{info-max-file-size\}}}\cw{\\cfg\{info-max-file-size\}\{}\e{bytes}\cw{\}}
-
-\dd Sets the preferred \i{maximum file size} for each subsidiary
-file. As a special case, if you set this to zero, there will be no
-subsidiary files and the whole document will be placed in a single
-self-contained output file. (However, note that this file can still
-not be renamed usefully.)
-
-\lcont{
-
-The preferred maximum file size is only a guideline. Halibut may be
-forced to exceed it if a single section of the document is larger
-than the maximum size (since individual \c{info} nodes may not be
-split between files).
-
-}
 
 \dt \I{\cw{\\cfg\{info-dir-entry\}}}\cw{\\cfg\{info-dir-entry\}\{}\e{section}\cw{\}\{}\e{short
 name}\cw{\}\{}\e{long name}\cw{\}}[\cw{\{}\e{keyword}\cw{\}}]
@@ -1091,28 +1125,29 @@ if the output file were called \c{mygames.info} and the keyword
 
 }
 
+\S{output-info-defaults} Default settings
+
 The \i{default settings} for the \c{info} output format are:
 
 \c \cfg{info-filename}{output.info}
+\c \cfg{info-max-file-size}{65536}
 \c
 \c \cfg{info-width}{70}
 \c \cfg{info-indent-code}{2}
 \c \cfg{info-index-width}{40}
 \c \cfg{info-list-indent}{1}
 \c \cfg{info-listitem-indent}{3}
+zc
+\c \cfg{info-section-suffix}{: }
+\c \cfg{info-underline}{\u203e}{-}
 \c
 \c \cfg{info-charset}{ASCII}
-\c
-\c \cfg{info-section-suffix}{: }
-\c
-\c \cfg{info-underline}{\u203e}{-}
 \c \cfg{info-bullet}{\u2022}{-}
 \c \cfg{info-rule}{\u2500}{-}
 \c \cfg{info-quotes}{\u2018}{\u2019}{`}{'}
 \c \cfg{info-emphasis}{_}{_}
 \c
 \c \cfg{info-list-suffix}{.}
-\c \cfg{info-max-file-size}{65536}
 
 and no \cw{\\cfg\{info-dir-entry\}} directives.
 
