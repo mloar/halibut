@@ -276,6 +276,7 @@ struct text_fragment_Tag {
     font_encoding *fe;
     int fontsize;
     char *text;
+    int width;
 };
 
 struct xref_dest_Tag {

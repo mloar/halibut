@@ -14,14 +14,6 @@
  * 
  *  - linearised PDF, perhaps?
  * 
- *  - compression of output files. For the actual text display,
- *    both output formats currently average about 50-60 characters
- *    per 5-6 character word of text, and almost all of it's the
- *    same.
- *     * In PS, we can define custom text operators to make things
- * 	 more efficient.
- *     * In PDF, there already are!
- * 
  *  - I'm uncertain of whether I need to include a ToUnicode CMap
  *    in each of my font definitions in PDF. Currently things (by
  *    which I mean cut and paste out of acroread) seem to be
@@ -1563,7 +1555,8 @@ static void add_rect_to_page(page_data *page, int x, int y, int w, int h)
 }
 
 static void add_string_to_page(page_data *page, int x, int y,
-			       font_encoding *fe, int size, char *text)
+			       font_encoding *fe, int size, char *text,
+			       int width)
 {
     text_fragment *frag;
 
@@ -1581,6 +1574,7 @@ static void add_string_to_page(page_data *page, int x, int y,
     frag->fe = fe;
     frag->fontsize = size;
     frag->text = dupstr(text);
+    frag->width = width;
 }
 
 /*
@@ -1634,7 +1628,8 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 	if (!subfont || sf != subfont) {
 	    if (subfont) {
 		text[textpos] = '\0';
-		add_string_to_page(page, x, y, subfont, fontsize, text);
+		add_string_to_page(page, x, y, subfont, fontsize, text,
+				   textwid);
 		x += textwid;
 	    } else {
 		assert(textpos == 0);
@@ -1651,7 +1646,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 
     if (textpos > 0) {
 	text[textpos] = '\0';
-	add_string_to_page(page, x, y, subfont, fontsize, text);
+	add_string_to_page(page, x, y, subfont, fontsize, text, textwid);
 	x += textwid;
     }
 

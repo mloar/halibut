@@ -73,6 +73,27 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndComments\n");
 
     fprintf(fp, "%%%%BeginProlog\n");
+    /*
+     * Supply a prologue function which allows a reasonably
+     * compressed representation of the text on the pages.
+     * 
+     * Expects two arguments: a y-coordinate, and then an array.
+     * Elements of the array are processed sequentially as follows:
+     * 
+     *  - a number is treated as an x-coordinate
+     *  - an array is treated as a (font, size) pair
+     *  - a string is shown
+     */
+    fprintf(fp,
+	    "/t {\n"
+	    "  exch /y exch def {\n"
+	    "    /x exch def\n"
+	    "    x type [] type eq {x aload pop scalefont setfont} if\n"
+	    "    x type dup 1 type eq exch 1.0 type eq or {x y moveto} if\n"
+	    "    x type () type eq {x show} if\n"
+	    "  } forall\n"
+	    "} def\n");
+
     fprintf(fp, "%%%%EndProlog\n");
 
     fprintf(fp, "%%%%BeginSetup\n");
@@ -119,7 +140,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
      */
     pageno = 0;
     for (page = doc->pages; page; page = page->next) {
-	text_fragment *frag;
+	text_fragment *frag, *frag_end;
 	rect *r;
 
 	pageno++;
@@ -154,20 +175,44 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		    r->h / 4096.0, r->w / 4096.0);
 	}
 
-	for (frag = page->first_text; frag; frag = frag->next) {
+	frag = page->first_text;
+	while (frag) {
+	    font_encoding *fe;
+	    int fs;
 	    char *c;
 
-	    fprintf(fp, "%s %d scalefont setfont %g %g moveto (",
-		   frag->fe->name, frag->fontsize,
-		   frag->x/4096.0, frag->y/4096.0);
+	    /*
+	     * Collect all the adjacent text fragments with the
+	     * same y-coordinate.
+	     */
+	    for (frag_end = frag;
+		 frag_end && frag_end->y == frag->y;
+		 frag_end = frag_end->next);
 
-	    for (c = frag->text; *c; c++) {
-		if (*c == '(' || *c == ')' || *c == '\\')
-		    fputc('\\', fp);
-		fputc(*c, fp);
+	    fprintf(fp, "%g[", frag->y / 4096.0);
+
+	    fe = NULL;
+	    fs = -1;
+
+	    while (frag && frag != frag_end) {
+
+		if (frag->fe != fe || frag->fontsize != fs)
+		    fprintf(fp, "[%s %d]", frag->fe->name, frag->fontsize);
+		fe = frag->fe;
+		fs = frag->fontsize;
+
+		fprintf(fp, "%g(", frag->x/4096.0);
+		for (c = frag->text; *c; c++) {
+		    if (*c == '(' || *c == ')' || *c == '\\')
+			fputc('\\', fp);
+		    fputc(*c, fp);
+		}
+		fprintf(fp, ")");
+
+		frag = frag->next;
 	    }
 
-	    fprintf(fp, ") show\n");
+	    fprintf(fp, "]t\n");
 	}
 
 	fprintf(fp, "showpage\n");

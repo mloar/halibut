@@ -56,6 +56,8 @@ struct objlist_Tag {
 static object *new_object(objlist *list);
 static void objtext(object *o, char const *text);
 static void objstream(object *o, char const *text);
+static void pdf_string(void (*add)(object *, char const *),
+		       object *, char const *);
 static void objref(object *o, object *dest);
 
 static void make_pages_node(object *node, object *parent, page_data *first,
@@ -195,8 +197,9 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     for (page = doc->pages; page; page = page->next) {
 	object *opage, *cstr;
 	rect *r;
-	text_fragment *frag;
+	text_fragment *frag, *frag_end;
 	char buf[256];
+	int x, y, lx, ly;
 
 	opage = (object *)page->spare;
 	/*
@@ -236,24 +239,89 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 
 	objstream(cstr, "BT\n");
-	for (frag = page->first_text; frag; frag = frag->next) {
-	    char *c;
 
+	/*
+	 * PDF tracks two separate current positions: the position
+	 * given in the `line matrix' and the position given in the
+	 * `text matrix'. We must therefore track both as well.
+	 * They start off at -1 (unset).
+	 */
+	lx = ly = -1;
+	x = y = -1;
+
+	frag = page->first_text;
+	while (frag) {
+	    /*
+	     * For compactness, I'm going to group text fragments
+	     * into subsequences that use the same font+size. So
+	     * first find the end of this subsequence.
+	     */
+	    for (frag_end = frag;
+		 (frag_end &&
+		  frag_end->fe == frag->fe &&
+		  frag_end->fontsize == frag->fontsize);
+		 frag_end = frag_end->next);
+
+	    /*
+	     * Now select the text fragment, and prepare to display
+	     * the text.
+	     */
 	    objstream(cstr, "/");
 	    objstream(cstr, frag->fe->name);
-	    sprintf(buf, " %d Tf 1 0 0 1 %g %g Tm (", frag->fontsize,
-		    frag->x/4096.0, frag->y/4096.0);
+	    sprintf(buf, " %d Tf ", frag->fontsize);
 	    objstream(cstr, buf);
 
-	    for (c = frag->text; *c; c++) {
-		if (*c == '(' || *c == ')' || *c == '\\')
-		    objstream(cstr, "\\");
-		buf[0] = *c;
-		buf[1] = '\0';
+	    while (frag && frag != frag_end) {
+		/*
+		 * Place the text position for the first piece of
+		 * text.
+		 */
+		if (lx < 0) {
+		    sprintf(buf, "1 0 0 1 %g %g Tm ",
+			    frag->x/4096.0, frag->y/4096.0);
+		} else {
+		    sprintf(buf, "%g %g Td ",
+			    (frag->x - lx)/4096.0, (frag->y - ly)/4096.0);
+		}
 		objstream(cstr, buf);
-	    }
+		lx = x = frag->x;
+		ly = y = frag->y;
 
-	    objstream(cstr, ") Tj\n");
+		/*
+		 * See if we're going to use Tj (show a single
+		 * string) or TJ (show an array of strings with
+		 * x-spacings between them). We determine this by
+		 * seeing if there's more than one text fragment in
+		 * sequence with the same y-coordinate.
+		 */
+		if (frag->next && frag->next != frag_end &&
+		    frag->next->y == y) {
+		    /*
+		     * The TJ strategy.
+		     */
+		    objstream(cstr, "[");
+		    while (frag && frag != frag_end && frag->y == y) {
+			if (frag->x != x) {
+			    sprintf(buf, "%g",
+				    (x - frag->x) * 1000.0 /
+				    (4096.0 * frag->fontsize));
+			    objstream(cstr, buf);
+			}
+			pdf_string(objstream, cstr, frag->text);
+			x = frag->x + frag->width;
+			frag = frag->next;
+		    }
+		    objstream(cstr, "]TJ\n");
+		} else
+		{
+		    /*
+		     * The Tj strategy.
+		     */
+		    pdf_string(objstream, cstr, frag->text);
+		    objstream(cstr, "Tj\n");
+		    frag = frag->next;
+		}
+	    }
 	}
 	objstream(cstr, "ET");
 
@@ -285,18 +353,9 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		    objref(annot, (object *)xr->dest.page->spare);
 		    objtext(annot, " /XYZ null null null]\n");
 		} else {
-		    char *p;
-
-		    objtext(annot, "/A <<\n/Type /Action\n/S /URI\n/URI (");
-		    for (p = xr->dest.url; *p; p++) {
-			char c[2];
-			c[0] = *p;
-			c[1] = '\0';
-			if (*p == '(' || *p == ')' || *p == '\\')
-			    objtext(annot, "\\");
-			objtext(annot, c);
-		    }
-		    objtext(annot, ")\n>>\n");
+		    objtext(annot, "/A <<\n/Type /Action\n/S /URI\n/URI ");
+		    pdf_string(objtext, annot, xr->dest.url);
+		    objtext(annot, "\n>>\n");
 		}
 
 		objtext(annot, ">>\n");
@@ -596,7 +655,7 @@ static int make_outline(object *parent, outline_element *items, int n,
     level = items->level;
 
     while (n > 0) {
-	char *title, *p;
+	char *title;
 
 	/*
 	 * Here we expect to be sitting on an item at the given
@@ -611,16 +670,9 @@ static int make_outline(object *parent, outline_element *items, int n,
 	curr = new_object(parent->list);
 	if (!first) first = curr;
 	last = curr;
-	objtext(curr, "<<\n/Title (");
-	for (p = title; *p; p++) {
-	    char c[2];
-	    if (*p == '\\' || *p == '(' || *p == ')')
-		objtext(curr, "\\");
-	    c[0] = *p;
-	    c[1] = '\0';
-	    objtext(curr, c);
-	}
-	objtext(curr, ")\n/Parent ");
+	objtext(curr, "<<\n/Title ");
+	pdf_string(objtext, curr, title);
+	objtext(curr, "\n/Parent ");
 	objref(curr, parent);
 	objtext(curr, "\n/Dest [");
 	objref(curr, (object *)items->pdata->first->page->spare);
@@ -708,4 +760,21 @@ static int pdf_versionid(FILE *fp, word *words)
     ret += fprintf(fp, "\n");
 
     return ret;
+}
+
+static void pdf_string(void (*add)(object *, char const *),
+		       object *o, char const *str)
+{
+    char const *p;
+
+    add(o, "(");
+    for (p = str; *p; p++) {
+	char c[2];
+	if (*p == '\\' || *p == '(' || *p == ')')
+	    add(o, "\\");
+	c[0] = *p;
+	c[1] = '\0';
+	add(o, c);
+    }
+    add(o, ")");
 }
