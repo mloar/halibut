@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.18 2002/08/05 10:31:33 simon Exp $
+\versionid $Id: test.but,v 1.19 2002/08/12 11:24:28 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -105,7 +105,8 @@ and here's a reference to it: \k{sub-sub}.
 \# \cfg{winhelp-topic}{Y5VQEXZQVJ} (uncomment this and it clashes)
 
 Here's an \i{appendix}, for no terribly good reason at all. See
-\k{book}.
+__\k{book}__ (please excuse those underscores, I'm testing
+whitespace).
 
 It also contains a \W{http://www.tartarus.org/}{hyperlink}.
 
@@ -117,6 +118,7 @@ It also contains a \W{http://www.tartarus.org/}{hyperlink}.
 the document even though there is no \cw{\\k} citing it.
 
 \BR{book} [SillyCitation]
+\BR{uncited} Badger.
 
 \nocite{nocite}
 

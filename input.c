@@ -528,11 +528,13 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 
     t.text = NULL;
     macros = newtree234(macrocmp);
+    already = FALSE;
 
     /*
      * Loop on each paragraph.
      */
     while (1) {
+	int start_cmd = c__invalid;
 	par.words = NULL;
 	par.keyword = NULL;
 	whptr = &par.words;
@@ -540,7 +542,10 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	/*
 	 * Get a token.
 	 */
-	dtor(t), t = get_token(in);
+	if (!already) {
+	    dtor(t), t = get_token(in);
+	}
+	already = FALSE;
 	if (t.type == tok_eof)
 	    return;
 
@@ -620,19 +625,22 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		 */
 	      case c_A: needkw = 2; par.type = para_Appendix; break;
 	      case c_B: needkw = 2; par.type = para_Biblio; break;
-	      case c_BR: needkw = 1; par.type = para_BR; break;
+	      case c_BR: needkw = 1; par.type = para_BR;
+		start_cmd = c_BR; break;
 	      case c_C: needkw = 2; par.type = para_Chapter; break;
 	      case c_H: needkw = 2; par.type = para_Heading;
 		par.aux = 0;
 		break;
-	      case c_IM: needkw = 2; par.type = para_IM; break;
+	      case c_IM: needkw = 2; par.type = para_IM;
+		start_cmd = c_IM; break;
 	      case c_S: needkw = 2; par.type = para_Subsect;
 		par.aux = t.aux; break;
 	      case c_U: needkw = 32; par.type = para_UnnumberedChapter; break;
 		/* For \b and \n the keyword is optional */
 	      case c_b: needkw = 4; par.type = para_Bullet; break;
 	      case c_n: needkw = 4; par.type = para_NumberedList; break;
-	      case c_cfg: needkw = 8; par.type = para_Config; break;
+	      case c_cfg: needkw = 8; par.type = para_Config;
+		start_cmd = c_cfg; break;
 	      case c_copyright: needkw = 32; par.type = para_Copyright; break;
 	      case c_define: is_macro = TRUE; needkw = 1; break;
 		/* For \nocite the keyword is _everything_ */
@@ -709,12 +717,21 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 
 		/* Move to EOP in case of needkw==8 or 16 (no body) */
 		if (needkw & 24) {
-		    if (t.type != tok_eop && t.type != tok_eof) {
+		    /* We allow whitespace even when we expect no para body */
+		    while (t.type == tok_white)
+			dtor(t), t = get_token(in);
+		    if (t.type != tok_eop && t.type != tok_eof &&
+			(start_cmd == c__invalid ||
+			 t.type != tok_cmd || t.cmd != start_cmd)) {
 			error(err_bodyillegal, &t.pos);
 			/* Error recovery: eat the rest of the paragraph */
-			while (t.type != tok_eop && t.type != tok_eof)
+			while (t.type != tok_eop && t.type != tok_eof &&
+			       (start_cmd == c__invalid ||
+				t.type != tok_cmd || t.cmd != start_cmd))
 			    dtor(t), t = get_token(in);
 		    }
+		    if (t.type == tok_cmd)
+			already = TRUE;/* inhibit get_token at top of loop */
 		    addpara(par, ret);
 		    continue;	       /* next paragraph */
 		}
@@ -745,6 +762,14 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	while (t.type != tok_eop && t.type != tok_eof) {
 	    iswhite = FALSE;
 	    already = FALSE;
+
+	    /* Handle implicit paragraph breaks after \IM, \BR etc */
+	    if (start_cmd != c__invalid &&
+		t.type == tok_cmd && t.cmd == start_cmd) {
+		already = TRUE;	       /* inhibit get_token at top of loop */
+		break;
+	    }
+
 	    if (t.type == tok_cmd && t.cmd == c__escaped) {
 		t.type = tok_word;     /* nice and simple */
 		t.aux = 0;	       /* even if `\-' - nonbreaking! */
@@ -765,6 +790,19 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		wd.aux = 0;
 		wd.fpos = t.pos;
 		wd.breaks = FALSE;
+
+		/*
+		 * Inhibit use of whitespace if it's (probably the
+		 * newline) before a repeat \IM / \BR type
+		 * directive.
+		 */
+		if (start_cmd != c__invalid) {
+		    dtor(t), t = get_token(in);
+		    already = TRUE;
+		    if (t.type == tok_cmd && t.cmd == start_cmd)
+			break;
+		}
+
 		if (indexing)
 		    rdadd(&indexstr, ' ');
 		if (!indexing || index_visible)
