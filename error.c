@@ -111,12 +111,28 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "unable to nest text styles");
 	flags = FILEPOS;
 	break;
+      case err_nestedindex:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "unable to nest index markings");
+	flags = FILEPOS;
+	break;
+      case err_nosuchkw:
+	fpos = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sprintf(error, "unable to resolve cross-reference to `%.200s'", sp);
+	flags = FILEPOS;
+	break;
     }
 
     if (flags & PREFIX)
 	fputs("buttress: ", stderr);
-    if (flags & FILEPOS)
-	fprintf(stderr, "%s:%d: ", fpos.filename, fpos.line);
+    if (flags & FILEPOS) {
+	fprintf(stderr, "%s:%d:", fpos.filename, fpos.line);
+	if (fpos.col > 0)
+	    fprintf(stderr, "%d:", fpos.col);
+	fputc(' ', stderr);
+    }
     fputs(error, stderr);
     fputc('\n', stderr);
 }

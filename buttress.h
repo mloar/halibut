@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <wchar.h>
+#include <time.h>
 
 #ifdef __GNUC__
 #define NORETURN __attribute__((__noreturn__))
@@ -15,6 +16,8 @@
 #define FALSE 0
 #endif
 
+#define lenof(x) ( sizeof((x)) / sizeof(*(x)) )
+
 /*
  * Structure tags
  */
@@ -22,6 +25,10 @@ typedef struct input_Tag input;
 typedef struct filepos_Tag filepos;
 typedef struct paragraph_Tag paragraph;
 typedef struct word_Tag word;
+typedef struct keywordlist_Tag keywordlist;
+typedef struct keyword_Tag keyword;
+typedef struct userstyle_Tag userstyle;
+typedef struct numberstate_Tag numberstate;
 
 /*
  * Data structure to hold a file name and index, a line and a
@@ -35,7 +42,7 @@ struct filepos_Tag {
 /*
  * Data structure to hold all the file names etc for input
  */
-#define INPUT_PUSHBACK_MAX 16
+#define INPUT_PUSHBACK_MAX 1
 struct input_Tag {
     char **filenames;		       /* complete list of input files */
     int nfiles;			       /* how many in the list */
@@ -43,7 +50,9 @@ struct input_Tag {
     int currindex;		       /* which one is that in the list */
     int pushback[INPUT_PUSHBACK_MAX];  /* pushed-back input characters */
     int npushback;
-    filepos pos;
+    int reportcols;		       /* report column numbers in errors */
+    filepos pos[1+INPUT_PUSHBACK_MAX];
+    int posptr;
 };
 
 /*
@@ -55,6 +64,8 @@ struct paragraph_Tag {
     int type;
     wchar_t *keyword;		       /* for most special paragraphs */
     word *words;		       /* list of words in paragraph */
+    int aux;			       /* number, in a numbered paragraph */
+    word *kwtext;		       /* chapter/section indication */
 };
 enum {
     para_IM,			       /* index merge */
@@ -73,16 +84,18 @@ enum {
     para_Preamble,
     para_NoCite,
     para_Title,
-    para_VersionID
+    para_VersionID,
+    para_NotParaType		       /* placeholder value */
 };
 
 /*
  * Data structure to hold an individual word
  */
 struct word_Tag {
-    word *next;
+    word *next, *alt;
     int type;
     wchar_t *text;
+    filepos fpos;
 };
 enum {
     word_Normal,
@@ -91,8 +104,11 @@ enum {
     word_WeakCode,		       /* monospaced, normal in text */
     word_UpperXref,		       /* \K */
     word_LowerXref,		       /* \k */
+    word_XrefEnd,		       /* (invisible; no text) */
     word_IndexRef,		       /* (always an invisible one) */
-    word_WhiteSpace		       /* text is NULL or ignorable */
+    word_WhiteSpace,		       /* text is NULL or ignorable */
+    word_HyperLink,		       /* (invisible) */
+    word_HyperEnd		       /* (also invisible; no text) */
 };
 
 /*
@@ -118,15 +134,29 @@ enum {
     err_explbr,			       /* expected `{' after command */
     err_kwexprbr,		       /* expected `}' after cross-ref */
     err_missingrbrace,		       /* unclosed braces at end of para */
-    err_nestedstyles		       /* unable to nest text styles */
+    err_nestedstyles,		       /* unable to nest text styles */
+    err_nestedindex,		       /* unable to nest `\i' thingys */
+    err_nosuchkw		       /* unresolved cross-reference */
 };
 
 /*
  * malloc.c
  */
+#ifdef LOGALLOC
+void *smalloc(char *file, int line, int size);
+void *srealloc(char *file, int line, void *p, int size);
+void sfree(char *file, int line, void *p);
+#define smalloc(x) smalloc(__FILE__, __LINE__, x)
+#define srealloc(x, y) srealloc(__FILE__, __LINE__, x, y)
+#define sfree(x) sfree(__FILE__, __LINE__, x)
+#else
 void *smalloc(int size);
 void *srealloc(void *p, int size);
 void sfree(void *p);
+#endif
+void free_word_list(word *w);
+void free_para_list(paragraph *p);
+word *dup_word_list(word *w);
 
 /*
  * ustring.c
@@ -135,6 +165,9 @@ wchar_t *ustrdup(wchar_t *s);
 char *ustrtoa(wchar_t *s, char *outbuf, int size);
 int ustrlen(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
+int ustrcmp(wchar_t *lhs, wchar_t *rhs);
+wchar_t *ustrlow(wchar_t *s);
+wchar_t *ustrftime(wchar_t *fmt, struct tm *timespec);
 
 /*
  * help.c
@@ -166,5 +199,39 @@ void *stk_pop(stack);
  * input.c
  */
 paragraph *read_input(input *in);
+
+/*
+ * keywords.c
+ */
+struct keywordlist_Tag {
+    int nkeywords;
+    int size;
+    keyword **keys;
+};
+struct keyword_Tag {
+    wchar_t *key;		       /* the keyword itself */
+    word *text;			       /* "Chapter 2", "Appendix Q"... */
+    				       /* (NB: filepos are not set) */
+};
+keywordlist *get_keywords(paragraph *);
+void free_keywords(keywordlist *);
+void subst_keywords(paragraph *, keywordlist *);
+
+/*
+ * index.c
+ */
+
+/*
+ * contents.c
+ */
+numberstate *number_init(void);
+word *number_mktext(numberstate *, int, int, int);
+void number_free(numberstate *);
+
+/*
+ * style.c
+ */
+struct userstyle_Tag {
+};
 
 #endif

@@ -20,6 +20,10 @@ else
 
 CFLAGS += -Wall -W
 
+ifdef LOGALLOC
+CFLAGS += -DLOGALLOC
+endif
+
 ifdef RELEASE
 ifndef VERSION
 VERSION := $(RELEASE)
@@ -40,7 +44,7 @@ endif
 SRC := ../
 
 MODULES := main malloc ustring error help licence version misc
-MODULES += input
+MODULES += input keywords contents index style
 
 OBJECTS := $(addsuffix .o,$(MODULES))
 DEPS := $(addsuffix .d,$(MODULES))

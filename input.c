@@ -4,40 +4,70 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <time.h>
 #include "buttress.h"
 
 #define TAB_STOP 8		       /* for column number tracking */
 
+static void setpos(input *in, char *fname) {
+    in->pos[0].filename = fname;
+    in->pos[0].line = 1;
+    in->pos[0].col = (in->reportcols ? 1 : -1);
+    in->pos[1] = in->pos[0];
+    in->posptr = 1;
+}
+
+static filepos getpos(input *in) {
+    return in->pos[in->posptr];
+}
+
 static void unget(input *in, int c) {
     assert(in->npushback < INPUT_PUSHBACK_MAX);
     in->pushback[in->npushback++] = c;
+    in->posptr += lenof(in->pos)-1;
+    in->posptr %= lenof(in->pos);
 }
 
 /*
  * Can return EOF
  */
 static int get(input *in) {
-    if (in->npushback)
+    if (in->npushback) {
+	in->posptr++;
+	in->posptr %= lenof(in->pos);
 	return in->pushback[--in->npushback];
+    }
     else if (in->currfp) {
 	int c = getc(in->currfp);
+	filepos fp;
+
 	if (c == EOF) {
 	    fclose(in->currfp);
 	    in->currfp = NULL;
 	}
 	/* Track line numbers, for error reporting */
-	switch (c) {
-	  case '\t':
-	    in->pos.col = 1 + (in->pos.col + TAB_STOP-1) % TAB_STOP;
-	    break;
-	  case '\n':
-	    in->pos.col = 1;
-	    in->pos.line++;
-	    break;
-	  default:
-	    in->pos.col++;
-	    break;
+	fp = in->pos[in->posptr];
+	in->posptr++;
+	in->posptr %= lenof(in->pos);
+	if (in->reportcols) {
+	    switch (c) {
+	      case '\t':
+		fp.col = 1 + (fp.col + TAB_STOP-1) % TAB_STOP;
+		break;
+	      case '\n':
+		fp.col = 1;
+		fp.line++;
+		break;
+	      default:
+		fp.col++;
+		break;
+	    }
+	} else {
+	    fp.col = -1;
+	    if (c == '\n')
+		fp.line++;
 	}
+	in->pos[in->posptr] = fp;
 	/* FIXME: do input charmap translation. We should be returning
 	 * Unicode here. */
 	return c;
@@ -197,10 +227,15 @@ static void match_kw(token *tok) {
     if (tok->text[0] == 'S') {
 	/* We expect numeric characters thereafter. */
 	wchar_t *p = tok->text+1;
-	int n = 0;
-	while (*p && isdec(*p)) {
-	    n = 10 * n + fromdec(*p);
-	    p++;
+	int n;
+	if (!*p)
+	    n = 1;
+	else {
+	    n = 0;
+	    while (*p && isdec(*p)) {
+		n = 10 * n + fromdec(*p);
+		p++;
+	    }
 	}
 	if (!*p) {
 	    tok->cmd = c_S;
@@ -252,7 +287,7 @@ token get_token(input *in) {
     rdstring rs = { 0, 0, NULL };
 
     ret.text = NULL;		       /* default */
-    ret.pos = in->pos;
+    ret.pos = getpos(in);
     c = get(in);
     if (iswhite(c)) {		       /* tok_white or tok_eop */
 	nls = 0;
@@ -260,6 +295,10 @@ token get_token(input *in) {
 	    if (isnl(c))
 		nls++;
 	} while ((c = get(in)) != EOF && iswhite(c));
+	if (c == EOF) {
+	    ret.type = tok_eof;
+	    return ret;
+	}
 	unget(in, c);
 	ret.type = (nls > 1 ? tok_eop : tok_white);
 	return ret;
@@ -350,12 +389,12 @@ token get_codepar_token(input *in) {
     token ret;
     rdstring rs = { 0, 0, NULL };
 
-    ret.pos = in->pos;
+    ret.pos = getpos(in);
     ret.type = tok_word;
     c = get(in);		       /* expect (and discard) one space */
     if (c == ' ') {
+	ret.pos = getpos(in);
 	c = get(in);
-	ret.pos = in->pos;
     }
     while (!isnl(c) && c != EOF) {
 	rdadd(&rs, c);
@@ -370,24 +409,32 @@ token get_codepar_token(input *in) {
 /*
  * Adds a new word to a linked list
  */
-static void addword(word newword, word ***hptrptr) {
+static word *addword(word newword, word ***hptrptr) {
     word *mnewword = smalloc(sizeof(word));
     *mnewword = newword;	       /* structure copy */
     mnewword->next = NULL;
     **hptrptr = mnewword;
     *hptrptr = &mnewword->next;
+    return mnewword;
 }
 
 /*
  * Adds a new paragraph to a linked list
  */
-static void addpara(paragraph newpara, paragraph ***hptrptr) {
+static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
     paragraph *mnewpara = smalloc(sizeof(paragraph));
     *mnewpara = newpara;	       /* structure copy */
     mnewpara->next = NULL;
     **hptrptr = mnewpara;
     *hptrptr = &mnewpara->next;
+    return mnewpara;
 }
+
+/*
+ * Destructor before token is reassigned; should catch most memory
+ * leaks
+ */
+#define dtor(t) ( sfree(t.text) )
 
 /*
  * Reads a single file (ie until get() returns EOF)
@@ -397,16 +444,26 @@ static void read_file(paragraph ***ret, input *in) {
     paragraph par;
     word wd, **whptr;
     int style;
+    int already;
+    int type;
     struct stack_item {
 	enum {
-	    stack_ualt,		       /* \u alternative */
-	    stack_style,	       /* \e, \c, \cw */
-	    stack_idx,		       /* \I, \i, \ii */
-	    stack_nop		       /* do nothing (for error recovery) */
+	    stack_nop = 0,	       /* do nothing (for error recovery) */
+	    stack_ualt = 1,	       /* \u alternative */
+	    stack_style = 2,	       /* \e, \c, \cw */
+	    stack_idx = 4,	       /* \I, \i, \ii */
+	    stack_hyper = 8,	       /* \W */
 	} type;
 	word **whptr;		       /* to restore from \u alternatives */
     } *sitem;
     stack parsestk;
+    word *indexword, *uword;
+    rdstring indexstr;
+    int index_downcase, index_visible, indexing;
+    const rdstring nullrs = { 0, 0, NULL };
+    wchar_t uchr;
+
+    t.text = NULL;
 
     /*
      * Loop on each paragraph.
@@ -419,7 +476,7 @@ static void read_file(paragraph ***ret, input *in) {
 	/*
 	 * Get a token.
 	 */
-	t = get_token(in);
+	dtor(t), t = get_token(in);
 	if (t.type == tok_eof)
 	    return;
 
@@ -429,16 +486,18 @@ static void read_file(paragraph ***ret, input *in) {
 	if (t.type == tok_cmd && t.cmd == c_c && !isbrace(in)) {
 	    par.type = para_Code;
 	    while (1) {
-		t = get_codepar_token(in);
+		dtor(t), t = get_codepar_token(in);
 		wd.type = word_WeakCode;
 		wd.text = ustrdup(t.text);
+		wd.alt = NULL;
+		wd.fpos = t.pos;
 		addword(wd, &whptr);
-		t = get_token(in);
+		dtor(t), t = get_token(in);
 		if (t.type == tok_white) {
 		    /*
 		     * The newline after a code-paragraph line
 		     */
-		    t = get_token(in);
+		    dtor(t), t = get_token(in);
 		}
 		if (t.type == tok_eop || t.type == tok_eof)
 		    break;
@@ -446,11 +505,12 @@ static void read_file(paragraph ***ret, input *in) {
 		    error(err_brokencodepara, &t.pos);
 		    addpara(par, ret);
 		    while (t.type != tok_eop)   /* error recovery: */
-			t = get_token(in);   /* eat rest of paragraph */
+			dtor(t), t = get_token(in);   /* eat rest of paragraph */
 		    continue;
 		}
 	    }
 	    addpara(par, ret);
+	    continue;
 	}
 
 	/*
@@ -470,7 +530,7 @@ static void read_file(paragraph ***ret, input *in) {
 		break;
 	      case c__comment:
 		do {
-		    t = get_token(in);
+		    dtor(t), t = get_token(in);
 		} while (t.type != tok_eop && t.type != tok_eof);
 		continue;	       /* next paragraph */
 		/*
@@ -488,8 +548,8 @@ static void read_file(paragraph ***ret, input *in) {
 	      case c_C: needkw = 2; par.type = para_Chapter; break;
 	      case c_H: needkw = 2; par.type = para_Heading; break;
 	      case c_IM: needkw = 2; par.type = para_IM; break;
-		/* FIXME: multiple levels of Subsect */
-	      case c_S: needkw = 2; par.type = para_Subsect; break;
+	      case c_S: needkw = 2; par.type = para_Subsect;
+		par.aux = t.aux; break;
 	      case c_U: needkw = 0; par.type = para_UnnumberedChapter; break;
 		/* For \b and \n the keyword is optional */
 	      case c_b: needkw = 4; par.type = para_Bullet; break;
@@ -508,14 +568,14 @@ static void read_file(paragraph ***ret, input *in) {
 		filepos fp;
 
 		/* Get keywords. */
-		t = get_token(in);
+		dtor(t), t = get_token(in);
 		fp = t.pos;
 		while (t.type == tok_lbrace) {
 		    /* This is a keyword. */
 		    nkeys++;
 		    /* FIXME: there will be bugs if anyone specifies an
 		     * empty keyword (\foo{}), so trap this case. */
-		    while (t = get_token(in),
+		    while (dtor(t), t = get_token(in),
 			   t.type == tok_word || t.type == tok_white) {
 			if (t.type == tok_white)
 			    rdadd(&rs, ' ');
@@ -524,11 +584,10 @@ static void read_file(paragraph ***ret, input *in) {
 		    }
 		    if (t.type != tok_rbrace) {
 			error(err_kwunclosed, &t.pos);
-			/* FIXME: memory leak */
 			continue;
 		    }
 		    rdadd(&rs, 0);     /* add string terminator */
-		    t = get_token(in); /* eat right brace */
+		    dtor(t), t = get_token(in); /* eat right brace */
 		}
 
 		rdadd(&rs, 0);     /* add string terminator */
@@ -547,8 +606,9 @@ static void read_file(paragraph ***ret, input *in) {
 		if (needkw == 8) {
 		    if (t.type != tok_eop) {
 			error(err_bodyillegal, &t.pos);
-			while (t.type != tok_eop)   /* error recovery: */
-			    t = get_token(in);   /* eat rest of paragraph */
+			/* Error recovery: eat the rest of the paragraph */
+			while (t.type != tok_eop)
+			    dtor(t), t = get_token(in);
 		    }
 		    addpara(par, ret);
 		    continue;	       /* next paragraph */
@@ -569,43 +629,71 @@ static void read_file(paragraph ***ret, input *in) {
 	 *  \I
 	 *  \u
 	 *  \W
+	 *  \date
 	 *  \\ \{ \}
 	 */
 	parsestk = stk_new();
 	style = word_Normal;
+	indexing = FALSE;
 	while (t.type != tok_eop && t.type != tok_eof) {
+	    already = FALSE;
 	    if (t.type == tok_cmd && t.cmd == c__escaped)
 		t.type = tok_word;     /* nice and simple */
 	    switch (t.type) {
 	      case tok_white:
+		if (whptr == &par.words)
+		    break;	       /* strip whitespace at start of para */
 		wd.text = NULL;
 		wd.type = word_WhiteSpace;
-		addword(wd, &whptr);
+		wd.alt = NULL;
+		wd.fpos = t.pos;
+		if (indexing)
+		    rdadd(&indexstr, ' ');
+		if (!indexing || index_visible)
+		    addword(wd, &whptr);
 		break;
 	      case tok_word:
-		wd.text = ustrdup(t.text);
-		wd.type = style;
-		addword(wd, &whptr);
+		if (indexing)
+		    rdadds(&indexstr, t.text);
+		if (!indexing || index_visible) {
+		    wd.text = ustrdup(t.text);
+		    wd.type = style;
+		    wd.alt = NULL;
+		    wd.fpos = t.pos;
+		    addword(wd, &whptr);
+		}
 		break;
 	      case tok_lbrace:
 		error(err_unexbrace, &t.pos);
-		/* FIXME: errorrec. Push nop. */
+		/* Error recovery: push nop */
+		sitem = smalloc(sizeof(*sitem));
+		sitem->type = stack_nop;
+		stk_push(parsestk, sitem);
 		break;
 	      case tok_rbrace:
 		sitem = stk_pop(parsestk);
 		if (!sitem)
 		    error(err_unexbrace, &t.pos);
-		else switch (sitem->type) {
-		  case stack_ualt:
-		    whptr = sitem->whptr;
-		    break;
-		  case stack_style:
-		    style = word_Normal;
-		    break;
-		  case stack_idx:
-		    /* FIXME: do this bit! */
-		  case stack_nop:
-		    break;
+		else {
+		    if (sitem->type & stack_ualt)
+			whptr = sitem->whptr;
+		    if (sitem->type & stack_style)
+			style = word_Normal;
+		    if (sitem->type & stack_idx) {
+			indexword->text = ustrdup(indexstr.text);
+			sfree(indexstr.text);
+			if (index_downcase)
+			    ustrlow(indexword->text);
+			indexing = FALSE;
+		    }
+		    if (sitem->type & stack_hyper) {
+			wd.text = NULL;
+			wd.type = word_HyperEnd;
+			wd.alt = NULL;
+			wd.fpos = t.pos;
+			if (!indexing || index_visible)
+			    addword(wd, &whptr);
+		    }
 		}
 		sfree(sitem);
 		break;
@@ -613,52 +701,108 @@ static void read_file(paragraph ***ret, input *in) {
 		switch (t.cmd) {
 		  case c_K:
 		  case c_k:
+		  case c_W:
+		  case c_date:
 		    /*
-		     * Keyword. We expect a left brace, some text,
-		     * and then a right brace. No nesting; no
-		     * arguments.
+		     * Keyword, hyperlink, or \date. We expect a
+		     * left brace, some text, and then a right
+		     * brace. No nesting; no arguments.
 		     */
+		    wd.fpos = t.pos;
 		    if (t.cmd == c_K)
 			wd.type = word_UpperXref;
-		    else
+		    else if (t.cmd == c_k)
 			wd.type = word_LowerXref;
-		    t = get_token(in);
+		    else if (t.cmd == c_W)
+			wd.type = word_HyperLink;
+		    else
+			wd.type = word_Normal;
+		    dtor(t), t = get_token(in);
 		    if (t.type != tok_lbrace) {
-			error(err_explbr, &t.pos);
-		    }
-		    {
+			if (wd.type == word_Normal) {
+			    time_t thetime = time(NULL);
+			    struct tm *broken = localtime(&thetime);
+			    already = TRUE;
+			    wd.text = ustrftime(NULL, broken);
+			    wd.type = style;
+			} else
+			    error(err_explbr, &t.pos);
+		    } else {
 			rdstring rs = { 0, 0, NULL };
-			while (t = get_token(in),
+			while (dtor(t), t = get_token(in),
 			       t.type == tok_word || t.type == tok_white) {
 			    if (t.type == tok_white)
 				rdadd(&rs, ' ');
 			    else
 				rdadds(&rs, t.text);
 			}
-			wd.text = ustrdup(rs.text);
+			if (wd.type == word_Normal) {
+			    time_t thetime = time(NULL);
+			    struct tm *broken = localtime(&thetime);
+			    wd.text = ustrftime(rs.text, broken);
+			    wd.type = style;
+			} else {
+			    wd.text = ustrdup(rs.text);
+			}
+			sfree(rs.text);
+			if (t.type != tok_rbrace) {
+			    error(err_kwexprbr, &t.pos);
+			}
 		    }
-		    if (t.type != tok_rbrace) {
-			error(err_kwexprbr, &t.pos);
+		    wd.alt = NULL;
+		    if (!indexing || index_visible)
+			addword(wd, &whptr);
+		    else
+			sfree(wd.text);
+		    if (wd.type == word_HyperLink) {
+			/*
+			 * Hyperlinks are different: they then
+			 * expect another left brace, to begin
+			 * delimiting the text marked by the link.
+			 */
+			dtor(t), t = get_token(in);
+			/*
+			 * Special cases: \W{}\c, \W{}\e, \W{}\cw
+			 */
+			if (t.type == tok_cmd &&
+			    (t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
+			    if (style != word_Normal)
+				error(err_nestedstyles, &t.pos);
+			    else {
+				style = (t.cmd == c_c ? word_Code :
+					 t.cmd == c_cw ? word_WeakCode :
+					 word_Emph);
+				sitem->type |= stack_style;
+			    }
+			    dtor(t), t = get_token(in);
+			}
+			if (t.type != tok_lbrace) {
+			    error(err_explbr, &t.pos);
+			} else {
+			    sitem = smalloc(sizeof(*sitem));
+			    sitem->type = stack_hyper;
+			    stk_push(parsestk, sitem);
+			}
 		    }
-		    addword(wd, &whptr);
 		    break;
 		  case c_c:
 		  case c_cw:
 		  case c_e:
+		    type = t.cmd;
 		    if (style != word_Normal) {
 			error(err_nestedstyles, &t.pos);
 			/* Error recovery: eat lbrace, push nop. */
-			t = get_token(in);
+			dtor(t), t = get_token(in);
 			sitem = smalloc(sizeof(*sitem));
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
-		    t = get_token(in);
+		    dtor(t), t = get_token(in);
 		    if (t.type != tok_lbrace) {
 			error(err_explbr, &t.pos);
 		    } else {
-			style = (t.cmd == c_c ? word_Code :
-				 t.cmd == c_cw ? word_WeakCode :
+			style = (type == c_c ? word_Code :
+				 type == c_cw ? word_WeakCode :
 				 word_Emph);
 			sitem = smalloc(sizeof(*sitem));
 			sitem->type = stack_style;
@@ -668,36 +812,91 @@ static void read_file(paragraph ***ret, input *in) {
 		  case c_i:
 		  case c_ii:
 		  case c_I:
-		    if (style != word_Normal) {
-			error(err_nestedstyles, &t.pos);
+		    type = t.cmd;
+		    if (indexing) {
+			error(err_nestedindex, &t.pos);
 			/* Error recovery: eat lbrace, push nop. */
-			t = get_token(in);
+			dtor(t), t = get_token(in);
 			sitem = smalloc(sizeof(*sitem));
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
-		    t = get_token(in);
+		    sitem = smalloc(sizeof(*sitem));
+		    sitem->type = stack_idx;
+		    dtor(t), t = get_token(in);
+		    /*
+		     * Special cases: \i\c, \i\e, \i\cw
+		     */
+		    wd.fpos = t.pos;
+		    if (t.type == tok_cmd &&
+			(t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
+			if (style != word_Normal)
+			    error(err_nestedstyles, &t.pos);
+			else {
+			    style = (t.cmd == c_c ? word_Code :
+				     t.cmd == c_cw ? word_WeakCode :
+				     word_Emph);
+			    sitem->type |= stack_style;
+			}
+			dtor(t), t = get_token(in);
+		    }
 		    if (t.type != tok_lbrace) {
+			sfree(sitem);
 			error(err_explbr, &t.pos);
 		    } else {
-			/*
-			 * FIXME: do something useful
-			 * Add an index-ref word and keep a pointer to it
-			 * Set a flag so that other addwords also update it
-			 */
-			sitem = smalloc(sizeof(*sitem));
-			sitem->type = stack_idx;
+			/* Add an index-reference word with no text as yet */
+			wd.type = word_IndexRef;
+			wd.text = NULL;
+			wd.alt = NULL;
+			indexword = addword(wd, &whptr);
+			/* Set up a rdstring to read the index text */
+			indexstr = nullrs;
+			/* Flags so that we do the Right Things with text */
+			index_visible = (type != c_I);
+			index_downcase = (type == c_ii);
+			indexing = TRUE;
+			/* Stack item to close the indexing on exit */
 			stk_push(parsestk, sitem);
 		    }
 		    break;
 		  case c_u:
-		  case c_W:
+		    uchr = t.aux;
+		    if (!indexing || index_visible) {
+			wchar_t text[2];
+			text[1] = 0;
+			text[0] = uchr;
+			wd.text = ustrdup(text);
+			wd.type = style;
+			wd.alt = NULL;
+			wd.fpos = t.pos;
+			uword = addword(wd, &whptr);
+		    }
+		    dtor(t), t = get_token(in);
+		    if (t.type == tok_lbrace) {
+			/*
+			 * \u with a left brace. Until the brace
+			 * closes, all further words go on a
+			 * sidetrack from the main thread of the
+			 * paragraph.
+			 */
+			sitem = smalloc(sizeof(*sitem));
+			sitem->type = stack_ualt;
+			sitem->whptr = whptr;
+			stk_push(parsestk, sitem);
+			whptr = &uword->alt;
+		    } else {
+			if (indexing)
+			    rdadd(&indexstr, uchr);
+			already = TRUE;
+		    }
+		    break;
 		  default:
 		    error(err_badmidcmd, t.text, &t.pos);
 		    break;
 		}
 	    }
-	    t = get_token(in);
+	    if (!already)
+		dtor(t), t = get_token(in);
 	}
 	/* Check the stack is empty */
 	if (NULL != (sitem = stk_pop(parsestk))) {
@@ -710,6 +909,7 @@ static void read_file(paragraph ***ret, input *in) {
 	stk_free(parsestk);
 	addpara(par, ret);
     }
+    dtor(t);
 }
 
 paragraph *read_input(input *in) {
@@ -719,9 +919,7 @@ paragraph *read_input(input *in) {
     while (in->currindex < in->nfiles) {
 	in->currfp = fopen(in->filenames[in->currindex], "r");
 	if (in->currfp) {
-	    in->pos.filename = in->filenames[in->currindex];
-	    in->pos.line = 1;
-	    in->pos.col = 1;
+	    setpos(in, in->filenames[in->currindex]);
 	    read_file(&hptr, in);
 	}
 	in->currindex++;

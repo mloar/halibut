@@ -6,12 +6,17 @@
 #include <stdlib.h>
 #include "buttress.h"
 
+static void dbg_prtsource(paragraph *sourceform);
+static void dbg_prtwordlist(int level, word *w);
+static void dbg_prtkws(keywordlist *kws);
+
 int main(int argc, char **argv) {
     char **infiles;
     char *outfile;
     int nfiles;
     int nogo;
     int errs;
+    int reportcols;
 
     /*
      * Set up initial (default) parameters.
@@ -20,6 +25,7 @@ int main(int argc, char **argv) {
     outfile = NULL;
     nfiles = 0;
     nogo = errs = FALSE;
+    reportcols = 0;
 
     if (argc == 1) {
 	usage();
@@ -67,6 +73,8 @@ int main(int argc, char **argv) {
 				errs = TRUE, error(err_optnoarg, opt);
 			    else
 				outfile = val;
+			} else if (!strcmp(opt, "-precise")) {
+			    reportcols = 1;
 			} else {
 			    errs = TRUE, error(err_nosuchopt, opt);
 			}
@@ -76,6 +84,7 @@ int main(int argc, char **argv) {
 		  case 'h':
 		  case 'V':
 		  case 'L':
+		  case 'P':
 		    /*
 		     * Option requiring no parameter.
 		     */
@@ -91,6 +100,9 @@ int main(int argc, char **argv) {
 		      case 'L':
 			licence();
 			nogo = TRUE;
+			break;
+		      case 'P':
+			reportcols = 1;
 			break;
 		    }
 		    break;
@@ -154,12 +166,14 @@ int main(int argc, char **argv) {
     {
 	input in;
 	paragraph *sourceform;
+	keywordlist *keywords;
 
 	in.filenames = infiles;
 	in.nfiles = nfiles;
 	in.currfp = NULL;
 	in.currindex = 0;
 	in.npushback = 0;
+	in.reportcols = reportcols;
 
 	sourceform = read_input(&in);
 	if (!sourceform)
@@ -167,43 +181,86 @@ int main(int argc, char **argv) {
 
 	sfree(infiles);
 
-	/*
-	 * FIXME: having read it, do something with it!
-	 */
-	{
-	    paragraph *p;
-	    word *w;
-	    for (p = sourceform; p; p = p->next) {
-		wchar_t *wp;
-		printf("para %d ", p->type);
-		if (p->keyword) {
-		    wp = p->keyword;
-		    while (*wp) {
-			putchar('\"');
-			for (; *wp; wp++)
-			    putchar(*wp);
-			putchar('\"');
-			if (*++wp)
-			    printf(", ");
-		    }
-		} else
-		    printf("(no keyword)");
-		printf(" {\n");
-		for (w = p->words; w; w = w->next) {
-		    printf("    word %d ", w->type);
-		    if (w->text) {
-			printf("\"");
-			for (wp = w->text; *wp; wp++)
-			    putchar(*wp);
-			printf("\"");
-		    } else
-			printf("(no text)");
-		    printf("\n");
-		}
-		printf("}\n");
-	    }
-	}
+	keywords = get_keywords(sourceform);
+	dbg_prtkws(keywords);
+
+	subst_keywords(sourceform, keywords);
+	dbg_prtsource(sourceform);
+
+	free_para_list(sourceform);
     }
 
     return 0;
+}
+
+static void dbg_prtsource(paragraph *sourceform) {
+    /*
+     * Output source form in debugging format.
+     */
+
+    paragraph *p;
+    for (p = sourceform; p; p = p->next) {
+	wchar_t *wp;
+	printf("para %d ", p->type);
+	if (p->keyword) {
+	    wp = p->keyword;
+	    while (*wp) {
+		putchar('\"');
+		for (; *wp; wp++)
+		    putchar(*wp);
+		putchar('\"');
+		if (*++wp)
+		    printf(", ");
+	    }
+	} else
+	    printf("(no keyword)");
+	printf(" {\n");
+	dbg_prtwordlist(1, p->words);
+	printf("}\n");
+    }
+}
+
+static void dbg_prtkws(keywordlist *kws) {
+    /*
+     * Output keywords in debugging format.
+     */
+
+    int i;
+
+    for (i = 0; i < kws->nkeywords; i++) {
+	wchar_t *wp;
+	printf("keyword ");
+	wp = kws->keys[i]->key;
+	while (*wp) {
+	    putchar('\"');
+	    for (; *wp; wp++)
+		putchar(*wp);
+	    putchar('\"');
+	    if (*++wp)
+		printf(", ");
+	}
+	printf(" {\n");
+	dbg_prtwordlist(1, kws->keys[i]->text);
+	printf("}\n");
+    }
+}
+
+static void dbg_prtwordlist(int level, word *w) {
+    for (; w; w = w->next) {
+	wchar_t *wp;
+	printf("%*sword %d ", level*4, "", w->type);
+	if (w->text) {
+	    printf("\"");
+	    for (wp = w->text; *wp; wp++)
+		    putchar(*wp);
+	    printf("\"");
+	} else
+	    printf("(no text)");
+	if (w->alt) {
+	    printf(" alt = {\n");
+	    dbg_prtwordlist(level+1, w->alt);
+	    printf("%*s}", level*4, "");
+	}
+	printf("\n");
+    }
 }
