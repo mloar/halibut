@@ -1,4 +1,4 @@
-CHAPTERS := $(SITE) blurb intro running input licence
+CHAPTERS := $(SITE) blurb intro running input output licence
 
 INPUTS = $(patsubst %,%.but,$(CHAPTERS))
 
