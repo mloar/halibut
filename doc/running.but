@@ -163,6 +163,10 @@ might have to type four backslashes on your shell command line. This
 is not part of Halibut's own behaviour, and it cannot do anything
 about it.)
 
+Configuration directives created in this way take effect after all
+other input has been processed. (In most cases, this has the effect of
+overriding any other instances of the directive in the input.)
+
 }
 
 The options which set the output file names actually work by
@@ -177,6 +181,22 @@ a filename to \c{--html}; so \c{--html=myfile.html} is equivalent to
 directives.)
 
 In addition to these, there are also a few other options:
+
+\dt \i\cw{--input-charset}\cw{=}\e{charset}
+
+\dd Changes the default assumed character set for all input files from
+ASCII to something else. (\cw{-Cinput-charset} cannot be used for
+this, as \cw{-C} directives are processed after all other input, so
+wouldn't affect any files.)
+
+\lcont{
+
+Any \cw{\\cfg\{input-charset\}} directives within input files override
+this option.
+
+See \k{input-config} for more information about the input character set.
+
+}
 
 \dt \i\cw{--help}
 

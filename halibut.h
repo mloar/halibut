@@ -206,6 +206,8 @@ enum {
     err_nomemory,		       /* out of memory */
     err_optnoarg,		       /* option `-%s' requires an argument */
     err_nosuchopt,		       /* unrecognised option `-%s' */
+    err_cmdcharset,		       /* unrecognised charset %s (cmdline) */
+    err_futileopt,		       /* futile option `-%s'%s */
     err_noinput,		       /* no input files */
     err_cantopen,		       /* unable to open input file `%s' */
     err_nodata,			       /* no data in input files */

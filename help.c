@@ -15,6 +15,7 @@ static char *helptext[] = {
     "         --ps[=filename]       generate PostScript output",
     "         --pdf[=filename]      generate PDF output",
     "         -Cfoo:bar:baz         append \\cfg{foo}{bar}{baz} to input",
+    "         --input-charset=cs    change default input file charset",
     "         --precise             report column numbers in error messages",
     "         --help                display this text",
     "         --version             display version number",
@@ -23,7 +24,7 @@ static char *helptext[] = {
 };
 
 static char *usagetext[] = {
-    "usage: halibut [--format[=filename]] [-Cconfig...] file.but [file.but...]",
+    "usage: halibut [--format[=filename]] [options] file.but [file.but...]",
     NULL
 };
 

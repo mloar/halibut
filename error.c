@@ -37,6 +37,17 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "unrecognised option `-%.200s'", sp);
 	flags = PREFIX;
 	break;
+      case err_cmdcharset:
+	sp = va_arg(ap, char *);
+	sprintf(error, "character set `%.200s' not recognised", sp);
+	flags = PREFIX;
+	break;
+      case err_futileopt:
+	sp = va_arg(ap, char *);
+	sp2 = va_arg(ap, char *);
+	sprintf(error, "warning: option `-%s' has no effect%s", sp, sp2);
+	flags = PREFIX;
+	break;
       case err_noinput:		       /* no arguments */
 	sprintf(error, "no input files");
 	flags = PREFIX;

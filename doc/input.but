@@ -1338,9 +1338,9 @@ For example, \c{iso-8859-1}, \c{iso8859-1} and \c{iso_8859-1} are
 all recognised, \c{GB2312} and \c{EUC-CN} both work, and so on.
 
 This directive takes effect immediately after the \c{\\cfg} command.
-All text after that in the file is expected to be in the new
-character set. You can even change character set several times
-within a file if you really want to.
+All text after that until the end of the input file is expected to be
+in the new character set. You can even change character set several
+times within a file if you really want to. 
 
 When Halibut reads the input file, everything you type will be
 converted into \i{Unicode} from the character set you specify here,
@@ -1403,8 +1403,10 @@ The \i{default settings} for the above options are:
 \c \cfg{appendix}{Appendix}
 \c \cfg{input-charset}{ASCII}
 
-(The default settings for \cw{\\cfg\{quotes\}} are backend-specific;
-see \k{output}.)
+The default for \cw{\\cfg\{input-charset\}} can be changed with the
+\cw{--input-charset} option; see \k{running-options}. The default
+settings for \cw{\\cfg\{quotes\}} are backend-specific; see
+\k{output}.
 
 \H{input-macro} Defining \i{macros}
 

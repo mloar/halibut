@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
     int nogo;
     int errs;
     int reportcols;
+    int input_charset;
     int debug;
     int backendbits, prebackbits;
     int k, b;
@@ -58,6 +59,7 @@ int main(int argc, char **argv) {
     nfiles = 0;
     nogo = errs = FALSE;
     reportcols = 0;
+    input_charset = CS_ASCII;
     debug = 0;
     backendbits = 0;
     cfg = cfg_tail = NULL;
@@ -113,6 +115,17 @@ int main(int argc, char **argv) {
 			    }
 			if (k < (int)lenof(backends)) {
 			    /* do nothing */;
+			} else if (!strcmp(opt, "-input-charset")) {
+			    if (!val) {
+				errs = TRUE, error(err_optnoarg, opt);
+			    } else {
+				int charset = charset_from_localenc(val);
+				if (charset == CS_NONE) {
+				    errs = TRUE, error(err_cmdcharset, val);
+				} else {
+				    input_charset = charset;
+				}
+			    }
 			} else if (!strcmp(opt, "-help")) {
 			    help();
 			    nogo = TRUE;
@@ -193,6 +206,10 @@ int main(int argc, char **argv) {
 			    while (*q) {
 				if (*q == ':') {
 				    *r = '\0';
+				    /* XXX ad-hoc diagnostic */
+				    if (!strcmp(s, "input-charset"))
+					error(err_futileopt, "Cinput-charset",
+					      "; use --input-charset");
 				    cmdline_cfg_add(para, s);
 				    r = s;
 				} else {
@@ -263,7 +280,7 @@ int main(int argc, char **argv) {
 	in.pushback = NULL;
 	in.reportcols = reportcols;
 	in.stack = NULL;
-	in.defcharset = charset_from_locale();
+	in.defcharset = input_charset;
 
 	idx = make_index();
 
