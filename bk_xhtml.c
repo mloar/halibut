@@ -644,7 +644,7 @@ static int xhtml_para_level(paragraph *p)
   }
 }
 
-static char* xhtml_index_filename = "Index.html";
+static char* xhtml_index_filename = "IndexPage.html";
 
 /* Output the nav links for the current file.
  * file == NULL means we're doing the index
