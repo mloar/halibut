@@ -10,11 +10,6 @@
 /*
  * Still to do:
  * 
- *  - Code cleanups: prototype whlp_{start,end}_hyperlink in the
- *    header file. Also decide whether context_hash is going to be
- *    externally visible or not; if it is, rename it to
- *    whlp_something and put it in the header file, and if not,
- *    make it static.
  *  - nonbreaking spaces and hyphens will be needed.
  *  - tabs, and tab stop settings in the paragraphinfo.
  * 
@@ -315,7 +310,7 @@ static int idxleaf(const void *av, unsigned char *outbuf)
  * This is the code to compute the hash of a context name. Copied
  * straight from Winterhoff's documentation.
  */
-unsigned long context_hash(char *context)
+static unsigned long context_hash(char *context)
 {
     signed char bytemapping[256] =
 	"\x00\xD1\xD2\xD3\xD4\xD5\xD6\xD7\xD8\xD9\xDA\xDB\xDC\xDD\xDE\xDF"

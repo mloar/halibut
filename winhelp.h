@@ -132,3 +132,6 @@ void whlp_begin_para(WHLP h, int para_type);
 void whlp_end_para(WHLP h);
 void whlp_set_font(WHLP h, int font_id);
 void whlp_text(WHLP h, char *text);
+void whlp_start_hyperlink(WHLP h, WHLP_TOPIC target);
+void whlp_end_hyperlink(WHLP h);
+
