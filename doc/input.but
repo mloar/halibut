@@ -1308,6 +1308,7 @@ The \i{default settings} for the above options are:
 \c \cfg{chapter}{Chapter}
 \c \cfg{section}{Section}
 \c \cfg{appendix}{Appendix}
+\c \cfg{input-charset}{ASCII}
 
 \H{input-macro} Defining \i{macros}
 
