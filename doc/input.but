@@ -192,7 +192,8 @@ Here is some \q{text in quotes}.
 }
 
 and in every output format Halibut generates, it will choose the
-best quote characters available to it in that format.
+best quote characters available to it in that format. (The quote
+characters to use can be configured with the \c{\\cfg} command.)
 
 You can still use the ordinary quote characters of your choice if
 you prefer; or you could even use the \c{\\u} command (see
@@ -1367,6 +1368,10 @@ output character set were to contain U+201C but not U+201D, then
 Halibut would fall back to using the ASCII double quote character as
 \e{both} open and close quotes. (No known character set is that
 silly; I mention it only as an example.)
+
+\cw{\\cfg\{quotes\}} (and the backend-specific versions) apply to the
+\e{entire} output; it's not possible to change quote characters
+partway through the output.
 
 }
 
