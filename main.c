@@ -2,6 +2,7 @@
  * main.c: command line parsing and top level
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "halibut.h"
@@ -10,24 +11,39 @@ static void dbg_prtsource(paragraph *sourceform);
 static void dbg_prtwordlist(int level, word *w);
 static void dbg_prtkws(keywordlist *kws);
 
+static const struct backend {
+    char *name;
+    void (*func)(paragraph *, keywordlist *, indexdata *);
+    int bitfield;
+} backends[] = {
+    {"text", text_backend, 0x0001},
+    {"xhtml", xhtml_backend, 0x0002},
+    {"html", xhtml_backend, 0x0002},
+    {"hlp", whlp_backend, 0x0004},
+    {"whlp", whlp_backend, 0x0004},
+    {"winhelp", whlp_backend, 0x0004},
+    {"man", man_backend, 0x0008},
+};
+
 int main(int argc, char **argv) {
     char **infiles;
-    char *outfile;
     int nfiles;
     int nogo;
     int errs;
     int reportcols;
     int debug;
+    int backendbits;
+    int k, b;
 
     /*
      * Set up initial (default) parameters.
      */
     infiles = mknewa(char *, argc);
-    outfile = NULL;
     nfiles = 0;
     nogo = errs = FALSE;
     reportcols = 0;
     debug = 0;
+    backendbits = 0;
 
     if (argc == 1) {
 	usage();
@@ -60,7 +76,16 @@ int main(int argc, char **argv) {
 			    val = p;
 			} else
 			    val = NULL;
-			if (!strcmp(opt, "-help")) {
+
+			assert(opt[0] == '-');
+			for (k = 0; k < (int)lenof(backends); k++)
+			    if (!strcmp(opt+1, backends[k].name)) {
+				backendbits |= backends[k].bitfield;
+				break;
+			    }
+			if (k < (int)lenof(backends)) {
+			    /* do nothing */;
+			} else if (!strcmp(opt, "-help")) {
 			    help();
 			    nogo = TRUE;
 			} else if (!strcmp(opt, "-version")) {
@@ -70,11 +95,6 @@ int main(int argc, char **argv) {
 				   !strcmp(opt, "-license")) {
 			    licence();
 			    nogo = TRUE;
-			} else if (!strcmp(opt, "-output")) {
-			    if (!val)
-				errs = TRUE, error(err_optnoarg, opt);
-			    else
-				outfile = val;
 			} else if (!strcmp(opt, "-precise")) {
 			    reportcols = 1;
 			} else {
@@ -112,6 +132,7 @@ int main(int argc, char **argv) {
 			break;
 		    }
 		    break;
+#if 0
 		  case 'o':
 		    /*
 		     * Option requiring parameter.
@@ -135,6 +156,7 @@ int main(int argc, char **argv) {
 		    }
 		    p = NULL;	       /* prevent continued processing */
 		    break;
+#endif
 		  default:
 		    /*
 		     * Unrecognised option.
@@ -214,10 +236,15 @@ int main(int argc, char **argv) {
 	    dbg_prtsource(sourceform);
 	}
 
-	text_backend(sourceform, keywords, idx);
-	xhtml_backend(sourceform, keywords, idx);
-	whlp_backend(sourceform, keywords, idx);
-	man_backend(sourceform, keywords, idx);
+	/*
+	 * Run the selected set of backends.
+	 */
+	for (k = b = 0; k < (int)lenof(backends); k++)
+	    if (b != backends[k].bitfield) {
+		b = backends[k].bitfield;
+		if (backendbits == 0 || (backendbits & b))
+		    backends[k].func(sourceform, keywords, idx);
+	    }
 
 	free_para_list(sourceform);
 	free_keywords(keywords);
