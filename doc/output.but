@@ -1269,13 +1269,8 @@ for \cw{\\quote} (see \k{input-quote}) and code quotes with \cw{\\c}
 
 \dt \I{\cw{\\cfg\{paper-chapter-top-space\}}}\cw{\\cfg\{paper-chapter-top-space\}\{}\e{points}\cw{\}}
 
-\dd Specifies the space between the top margin \#{XXX check} and the
-top of the chapter heading. (Each chapter begins on a new page.)
-
-\# FIXME: the first page of the Index gets mangled if this is
-set to zero.
-
-\# FIXME: exact relationship to top-margin?
+\dd Specifies the space between the top margin and the top of the
+chapter heading. (Each chapter begins on a new page.)
 
 \dt \I{\cw{\\cfg\{paper-chapter-underline-thickness\}}}\cw{\\cfg\{paper-chapter-underline-thickness\}\{}\e{points}\cw{\}}
 
