@@ -18,6 +18,7 @@ struct numberstate_Tag {
     int oklevel;
     int maxsectlevel;
     int listitem;
+    stack listitem_stack;
     wchar_t *chaptertext;	       /* the word for a chapter */
     wchar_t *sectiontext;	       /* the word for a section */
     wchar_t *apptext;		       /* the word for an appendix */
@@ -35,10 +36,12 @@ numberstate *number_init(void) {
     memset(ret->currentsects, 0, (ret->maxsectlevel+1)*sizeof(paragraph *));
     ret->lastsect = NULL;
     ret->listitem = -1;
+    ret->listitem_stack = stk_new();
     return ret;
 }
 
 void number_free(numberstate *state) {
+    stk_free(state->listitem_stack);
     sfree(state->sectionlevels);
     sfree(state->currentsects);
     sfree(state);
@@ -122,13 +125,18 @@ void number_cfg(numberstate *state, paragraph *source) {
 }
 
 word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
-		    int prev, int *errflag) {
+		    int *prev, int *errflag) {
     word *ret = NULL;
     word **ret2 = &ret;
     word **pret = &ret;
-    int i, level;
+    int i, level, thistype;
+    struct listitem_stack_entry {
+	int listitem;
+	int prev;
+    } *lse;
 
     level = -2;			       /* default for non-section-heading */
+    thistype = p->type;
     switch (p->type) {
       case para_Chapter:
 	state->chapternum++;
@@ -191,10 +199,23 @@ word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
 	break;
       case para_NumberedList:
 	ret2 = pret;
-	if (prev != para_NumberedList)
+	if (*prev != para_NumberedList)
 	    state->listitem = 0;
 	state->listitem++;
 	donumber(&pret, state->listitem);
+	break;
+      case para_LcontPush:
+	lse = mknew(struct listitem_stack_entry);
+	lse->listitem = state->listitem;
+	lse->prev = *prev;
+	stk_push(state->listitem_stack, lse);
+	state->listitem = 0;
+	break;
+      case para_LcontPop:
+	lse = (struct listitem_stack_entry *)stk_pop(state->listitem_stack);
+	state->listitem = lse->listitem;
+	thistype = lse->prev;
+	sfree(lse);
 	break;
     }
 
@@ -218,5 +239,6 @@ word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
     }
 
     p->kwtext2 = *ret2;
+    *prev = thistype;
     return ret;
 }

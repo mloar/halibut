@@ -392,7 +392,7 @@ indextag *index_findtag(indexdata *idx, wchar_t *name);
  */
 numberstate *number_init(void);
 void number_cfg(numberstate *, paragraph *);
-word *number_mktext(numberstate *, paragraph *, wchar_t *, int , int *);
+word *number_mktext(numberstate *, paragraph *, wchar_t *, int *, int *);
 void number_free(numberstate *);
 
 /*

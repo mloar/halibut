@@ -62,8 +62,7 @@ keywordlist *get_keywords(paragraph *source) {
 	 * This also sets up the `parent', `child' and `sibling'
 	 * links.
 	 */
-	source->kwtext = number_mktext(n, source, q, prevpara, &errors);
-	prevpara = source->type;
+	source->kwtext = number_mktext(n, source, q, &prevpara, &errors);
 
 	if (p && *p) {
 	    if (source->kwtext || source->type == para_Biblio) {
