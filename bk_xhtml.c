@@ -730,6 +730,11 @@ static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
     fprintf(fp, "<a href='%s'>Previous</a> | ", xhtml_last_file->filename);
   }
   fprintf(fp, "<a href='Contents.html'>Contents</a> | ");
+  if (file == NULL) {
+    fprintf(fp, "Index | ");
+  } else {
+    fprintf(fp, "<a href='%s'>Index</a> | ", xhtml_index_filename);
+  }
   if (file != NULL) { /* otherwise we're doing nav links for the index */
     if (xhtml_next_file==NULL)
       xhtml_next_file = file->child;
