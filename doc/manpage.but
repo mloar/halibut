@@ -1,0 +1,111 @@
+\cfg{man-identity}{halibut}{1}{2004-04-08}{Halibut}{Simon Tatham}
+\cfg{man-mindepth}{1}
+
+\A{manpage} Halibut \cw{man} page
+
+\H{manpage-name} NAME
+
+\cw{halibut} - multi-format documentation formatting tool
+
+\H{manpage-synopsis} SYNOPSIS
+
+\c halibut [options] file1.but [file2.but ...]
+\e bbbbbbb  iiiiiii  iiiiiiiii  iiiiiiiii
+
+\S{manpage-description} DESCRIPTION
+
+\c{halibut} reads the given set of input files, assembles them into
+a document, and outputs that document in one or more formats.
+
+The available command-line options can configure what formats
+Halibut should output in, and can also configure other things about
+the way Halibut works.
+
+\S{manpage-options} OPTIONS
+
+The command-line options supported by \c{halibut} are:
+
+\dt \cw{--text}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an output file in plain text format. If
+the optional \e{filename} parameter is supplied, the output text
+file will be given that name. Otherwise, the name of the output text
+file will be as specified in the input files, or \c{output.txt} if
+none is specified at all.
+
+\dt \cw{--html}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate one or more output files in HTML format.
+If the optional \e{filename} parameter is supplied, there will be
+precisely one HTML output file with that name, containing the whole
+document. Otherwise, there may be one or more than one HTML file
+produced as output; this, and the file names, will be as specified
+in the input files, or given a set of default names starting with
+\c{Contents.html} if none is specified at all.
+
+\dt \cw{--winhelp}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an output file in Windows Help format. If
+the optional \e{filename} parameter is supplied, the output help
+file will be given that name. Otherwise, the name of the output help
+file will be as specified in the input files, or \c{output.hlp} if
+none is specified at all.
+
+\lcont{
+The output help file must have a name ending in \c{.hlp}; if it does
+not, \c{.hlp} will be added. A secondary contents file will be created
+alongside the main help file, with the same name except that it will
+end in \c{.cnt} (for example \c{output.cnt}, if the main file is
+\c{output.hlp}).
+}
+
+\dt \cw{--man}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an output file in Unix \cw{man} page
+format. If the optional \e{filename} parameter is supplied, the
+output \cw{man} page will be given that name. Otherwise, the name of
+the output \cw{man} page will be as specified in the input files, or
+\c{output.1} if none is specified at all.
+
+\dt \cw{-C}\e{word}\cw{:}\e{word}[\cw{:}\e{word}...]
+
+\dd Adds a configuration directive to the input processed by
+Halibut. Using this directive is exactly equivalent to appending an
+extra input file to the command line which contains the directive
+\cw{\\cfg\{}\e{word}\cw{\}\{}\e{word}\cw{\}\{}\e{word}...\cw{\}}.
+
+\dt \cw{--precise}
+
+\dd Makes Halibut report the column number as well as the line
+number when it encounters an error in an input file.
+
+\dt \cw{--help}
+
+\dd Makes Halibut display a brief summary of its command-line
+options.
+
+\dt \cw{--version}
+
+\dd Makes Halibut report its version number.
+
+\dt \cw{--licence}
+
+\dd Makes Halibut display its licence (MIT).
+
+\S{putty-manpage-more-information} MORE INFORMATION
+
+For more information on Halibut, including full details of the input
+file format, look in the full manual. If this is not installed
+locally on your system, you can also find it at the Halibut web site:
+
+\W{http://www.chiark.greenend.org.uk/~sgtatham/halibut/}\cw{http://www.chiark.greenend.org.uk/~sgtatham/halibut/}
+
+\S{putty-manpage-bugs} BUGS
+
+This man page isn't terribly complete.
+
+The HTML output isn't very good.
+
+Unicode handling is atrocious.
+
+Several more output formats (PostScript, PDF, \cw{info}) are missing.
