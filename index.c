@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "buttress.h"
+#include "halibut.h"
 
 static int compare_tags(void *av, void *bv);
 static int compare_entries(void *av, void *bv);

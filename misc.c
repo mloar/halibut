@@ -2,7 +2,7 @@
  * misc.c: miscellaneous useful items
  */
 
-#include "buttress.h"
+#include "halibut.h"
 
 struct stackTag {
     void **data;

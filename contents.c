@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <limits.h>
-#include "buttress.h"
+#include "halibut.h"
 
 struct numberstate_Tag {
     int chapternum;

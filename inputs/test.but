@@ -1,4 +1,4 @@
-\title Buttress: A Test Document With A Stupidly Long Title Just To
+\title Halibut: A Test Document With A Stupidly Long Title Just To
 See If Wrapping Titles Works OK. In Fact This Title Will Span Three
 Lines, Not Just Two. How's That For Ludicrous?
 
@@ -7,7 +7,7 @@ Lines, Not Just Two. How's That For Ludicrous?
 \cfg{xhtml-leaf-contains-contents}{true}
 
 \preamble This manual is a small joke effort, designed to use every
-feature \#{ comment } that Buttress's input format supports. Creation
+feature \#{ comment } that Halibut's input format supports. Creation
 date \date{%Y.%m.%d} (default format is \date).
 
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.17 2001/12/14 12:44:40 simon Exp $
+\versionid $Id: test.but,v 1.18 2002/08/05 10:31:33 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more

@@ -1,5 +1,5 @@
 /*
- * Windows Help backend for Buttress
+ * Windows Help backend for Halibut
  * 
  * TODO:
  *  - allow user to specify section contexts.
@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "buttress.h"
+#include "halibut.h"
 #include "winhelp.h"
 
 struct bk_whlp_state {

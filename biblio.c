@@ -3,7 +3,7 @@
  */
 
 #include <assert.h>
-#include "buttress.h"
+#include "halibut.h"
 
 static wchar_t *gentext(int num) {
     wchar_t text[22];

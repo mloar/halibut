@@ -1,16 +1,16 @@
 /*
- * error.c: buttress error handling
+ * error.c: Halibut error handling
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include "buttress.h"
+#include "halibut.h"
 
 /*
  * Error flags
  */
-#define PREFIX 0x0001		       /* give `buttress:' prefix */
+#define PREFIX 0x0001		       /* give `halibut:' prefix */
 #define FILEPOS 0x0002		       /* give file position prefix */
 
 static void do_error(int code, va_list ap) {
@@ -192,7 +192,7 @@ static void do_error(int code, va_list ap) {
     }
 
     if (flags & PREFIX)
-	fputs("buttress: ", stderr);
+	fputs("halibut: ", stderr);
     if (flags & FILEPOS) {
 	fprintf(stderr, "%s:%d:", fpos.filename, fpos.line);
 	if (fpos.col > 0)

@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "buttress.h"
+#include "halibut.h"
 
 static void dbg_prtsource(paragraph *sourceform);
 static void dbg_prtwordlist(int level, word *w);

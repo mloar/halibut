@@ -1,11 +1,11 @@
 /*
- * text backend for Buttress
+ * text backend for Halibut
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "buttress.h"
+#include "halibut.h"
 
 typedef enum { LEFT, LEFTPLUS, CENTRE } alignment;
 typedef struct {

@@ -1,4 +1,4 @@
-# Buttress master makefile
+# Halibut master makefile
 
 # Requires a compiler with -MD support, currently
 
@@ -59,8 +59,8 @@ MODULES += winhelp
 OBJECTS := $(addsuffix .o,$(MODULES))
 DEPS := $(addsuffix .d,$(MODULES))
 
-buttress: $(OBJECTS)
-	$(CC) $(LFLAGS) -o buttress $(OBJECTS) $(LIBS)
+halibut: $(OBJECTS)
+	$(CC) $(LFLAGS) -o halibut $(OBJECTS) $(LIBS)
 
 %.o: $(SRC)%.c
 	$(CC) $(CFLAGS) -MD -c $<
@@ -72,7 +72,7 @@ spotless:: clean
 	rm -f *.d
 
 clean::
-	rm -f *.o buttress core
+	rm -f *.o halibut core
 
 FORCE: # phony target to force version.o to be rebuilt every time
 

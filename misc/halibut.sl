@@ -1,6 +1,6 @@
-% Buttress mode for Jed.
+% Halibut mode for Jed.
 
-$1 = "Buttress";
+$1 = "Halibut";
 create_syntax_table ($1);
 
 define_syntax ("\#", "", '%', $1);       % Comment Syntax
@@ -10,9 +10,9 @@ define_syntax ("a-zA-Z0-9", 'w', $1);
 set_syntax_flags ($1, 8);
 
 #ifdef HAS_DFA_SYNTAX
-%enable_highlight_cache ("buttress.dfa", $1);
+%enable_highlight_cache ("halibut.dfa", $1);
 
-% A braced comment in Buttress is \#{ ... }, where ... may contain
+% A braced comment in Halibut is \#{ ... }, where ... may contain
 % any correctly nested sequence of braces. Of course we can't match
 % that in a DFA rule, so we'll go down to a reasonable depth of 3
 % instead.
@@ -50,16 +50,16 @@ build_highlight_table ($1);
 #endif
 
 %  This hook identifies lines containing comments as paragraph separator
-define buttress_is_comment() {
+define halibut_is_comment() {
     bol ();
     while (ffind ("\\\\#")) go_right (3);
     ffind ("\\#"); % return value on stack
 }
 
-variable Buttress_Ignore_Comment = 0;  % if true, line containing a comment
+variable Halibut_Ignore_Comment = 0;  % if true, line containing a comment
                                        % does not delimit a paragraph
 
-define buttress_paragraph_separator() {
+define halibut_paragraph_separator() {
     bol();
     skip_white();
     if (eolp())
@@ -67,13 +67,13 @@ define buttress_paragraph_separator() {
     if (looking_at("\\c ") or looking_at("\\c\t") or
 	looking_at("\\c\n"))
 	return 1;
-    return not (Buttress_Ignore_Comment) and buttress_is_comment();
+    return not (Halibut_Ignore_Comment) and halibut_is_comment();
 } 
 
-define buttress_wrap_hook() {
+define halibut_wrap_hook() {
     variable yep;
     push_spot ();
-    yep = up_1 () and buttress_is_comment ();
+    yep = up_1 () and halibut_is_comment ();
     pop_spot ();
     if (yep) {
 	push_spot ();
@@ -84,15 +84,15 @@ define buttress_wrap_hook() {
 }
 
 #ifexists mode_set_mode_info
-mode_set_mode_info("Buttress", "fold_info", "\\# {{{\r\\# }}}\r\r");
+mode_set_mode_info("Halibut", "fold_info", "\\# {{{\r\\# }}}\r\r");
 #endif
 
-define buttress_mode() {
-    variable mode = "Buttress";
+define halibut_mode() {
+    variable mode = "Halibut";
     % use_keymap (mode);
     set_mode (mode, 0x1 | 0x20);
-    set_buffer_hook ("par_sep", "buttress_paragraph_separator");
-    set_buffer_hook ("wrap_hook", "buttress_wrap_hook");
+    set_buffer_hook ("par_sep", "halibut_paragraph_separator");
+    set_buffer_hook ("wrap_hook", "halibut_wrap_hook");
     use_syntax_table (mode);
-    runhooks ("buttress_mode_hook");
+    runhooks ("halibut_mode_hook");
 }

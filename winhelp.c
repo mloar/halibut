@@ -71,7 +71,7 @@
 #include <time.h>
 #include <stdarg.h>
 
-#include "buttress.h"
+#include "halibut.h"
 #include "winhelp.h"
 #include "tree234.h"
 

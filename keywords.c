@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "buttress.h"
+#include "halibut.h"
 
 static int kwcmp(void *av, void *bv)
 {

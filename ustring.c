@@ -4,7 +4,7 @@
 
 #include <wchar.h>
 #include <time.h>
-#include "buttress.h"
+#include "halibut.h"
 
 wchar_t *ustrdup(wchar_t *s) {
     wchar_t *r;

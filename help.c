@@ -3,7 +3,7 @@
  */
 
 #include <stdio.h>
-#include "buttress.h"
+#include "halibut.h"
 
 static char *helptext[] = {
     "FIXME: help text goes here",
@@ -28,5 +28,5 @@ void usage(void) {
 }
 
 void showversion(void) {
-    printf("Buttress, %s\n", version);
+    printf("Halibut, %s\n", version);
 }

@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-#include "buttress.h"
+#include "halibut.h"
 
 #ifdef LOGALLOC
 #define LOGPARAMS char *file, int line,
@@ -37,8 +37,8 @@ static void logprintf(char *fmt, ...) {
 #endif
 
 /*
- * smalloc should guarantee to return a useful pointer - buttress
- * can do nothing except die when it's out of memory anyway
+ * smalloc should guarantee to return a useful pointer - Halibut
+ * can do nothing except die when it's out of memory anyway.
  */
 void *(smalloc)(LOGPARAMS int size) {
     void *p;

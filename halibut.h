@@ -1,5 +1,5 @@
-#ifndef BUTTRESS_BUTTRESS_H
-#define BUTTRESS_BUTTRESS_H
+#ifndef HALIBUT_HALIBUT_H
+#define HALIBUT_HALIBUT_H
 
 #include <stdio.h>
 #include <wchar.h>

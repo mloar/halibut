@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
-#include "buttress.h"
+#include "halibut.h"
 
 #define TAB_STOP 8		       /* for column number tracking */
 
@@ -157,7 +157,7 @@ enum {
     tok_rbrace			       /* } */
 };
 
-/* Buttress command keywords. */
+/* Halibut command keywords. */
 enum {
     c__invalid,			       /* invalid command */
     c__comment,			       /* comment command (\#) */

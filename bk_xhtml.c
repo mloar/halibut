@@ -1,5 +1,5 @@
 /*
- * xhtml backend for Buttress
+ * xhtml backend for Halibut
  * (initial implementation by James Aylett)
  *
  * Still to do:
@@ -23,13 +23,13 @@
  *   top-level file not being normal, probably not even having a valid
  *   section level, and stuff like that. I question whether this is an
  *   issue, frankly; small manuals that fit on one page should probably
- *   not be written in buttress at all.
+ *   not be written in halibut at all.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "buttress.h"
+#include "halibut.h"
 
 struct xhtmlsection_Struct {
     struct xhtmlsection_Struct *next; /* next sibling (NULL if split across files) */
@@ -328,7 +328,7 @@ void xhtml_fixup_layout(xhtmlfile* file)
  * Note that you _can_ have 1.1.1.1 followed by 1.2 - you can change
  * more than one level at a time. Lots of asserts, and probably part of
  * the algorithm here, rely on this being true. (It currently isn't
- * enforced by buttress, however.)
+ * enforced by halibut, however.)
  *
  * File splitting makes this harder. For instance, say we added at (3)
  * above and now need to add another section. We are splitting at level
@@ -1098,7 +1098,7 @@ static void xhtml_doheader(FILE *fp, word *title)
   else
     xhtml_para(fp, title);
   fprintf(fp, "</title>\n");
-  fprintf(fp, "<meta name=\"generator\" content=\"Buttress %s xhtml-backend\" />\n", version);
+  fprintf(fp, "<meta name=\"generator\" content=\"Halibut %s xhtml-backend\" />\n", version);
   if (conf.author)
     fprintf(fp, "<meta name=\"author\" content=\"%ls\" />\n", conf.author);
   if (conf.description)
