@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.19 2002/08/12 11:24:28 simon Exp $
+\versionid $Id: test.but,v 1.20 2004/03/23 20:10:23 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -32,6 +32,14 @@ fragments}.
 
 \cw{This} is weak code. And \k{head} contains some other stuff.
 \K{subhead} does too.
+
+To test the man page back end:
+
+.Directive
+
+'Directive
+
+\\Sping\\Spong\\Spoing
 
 \H{head} First section title (very long again, no prizes for
 guessing the reason why this time, and here's yet more text to pad
@@ -56,6 +64,39 @@ This is a list:
 
 \b Aah.
 
+\lcont{
+
+This bulletted list contains a list continuation. This is an
+additional paragraph, or more than one, indented at the same level
+as the list items, and able to contain nested sublists and other
+features. For example, here's a code paragraph:
+
+\c spingle:~$ whoami
+\c spoggler
+
+And here's a sublist. Numbered, just for variety.
+
+\n One.
+
+\lcont{
+
+\n 1a.
+
+\n 1b.
+
+\n 1c.
+
+\lcont{This is an even sillier one: a continuation of a list item in
+a continuation of a list item in a continuation of a list item!}
+
+}
+
+\n Two.
+
+\n Threeeee!
+
+}
+
 \b Eek.
 
 This is a horizontal rule:
@@ -69,6 +110,31 @@ This is a numbered list:
 \n{keyword} Aah.
 
 \n Eek. \q{Aah} is point \k{keyword}.
+
+This is a description list:
+
+\dt FISH
+
+\dd A piscine creature, often to be found swimming aimlessly around
+in the sea eating things and not contributing to the global economy.
+
+\lcont{
+
+Here's another of those funky list continuation things, just to keep
+Halibut on its toes.
+
+}
+
+\dt BADGER
+
+\dd A non-piscine creature, often to be found snuffling around on
+land, not contributing to the global economy, and not even swimming
+to make up for it. I don't know. These mammals. Pa-thetic.
+
+\dt "SAUSAGE SALESMAN"
+
+\dd An exemplary contributor to the global economy. Unless he's CMOT
+Dibbler.
 
 A-paragraph-full-of-hyphens-to-test-the-idea-that-word-wrapping-can-happen-somewhere-in-all-this-hyphenatory-nonsense.
 

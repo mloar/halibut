@@ -101,6 +101,8 @@ enum {
     para_BiblioCited,		       /*  ... into this paragraph type */
     para_Bullet,
     para_NumberedList,
+    para_DescribedThing,
+    para_Description,
     para_Code,
     para_Copyright,
     para_Preamble,
@@ -108,6 +110,8 @@ enum {
     para_Title,
     para_VersionID,
     para_Config,		       /* configuration directive */
+    para_LcontPush,		       /* begin continuation of list item */
+    para_LcontPop,		       /* end continuation of list item */
     para_NotParaType		       /* placeholder value */
 };
 
@@ -197,6 +201,7 @@ enum {
     err_commenteof,		       /* EOF inside braced comment */
     err_kwexprbr,		       /* expected `}' after cross-ref */
     err_missingrbrace,		       /* unclosed braces at end of para */
+    err_missingrbrace2,		       /* unclosed braces at end of file */
     err_nestedstyles,		       /* unable to nest text styles */
     err_nestedindex,		       /* unable to nest `\i' thingys */
     err_nosuchkw,		       /* unresolved cross-reference */
@@ -207,6 +212,8 @@ enum {
     err_sectjump,		       /* jump a heading level, eg \C -> \S */
     err_winhelp_ctxclash,	       /* WinHelp context ID hash clash */
     err_multikw,		       /* keyword clash in sections */
+    err_misplacedlcont,		       /* \lcont not after a list item */
+    err_sectmarkerinlcont,	       /* section marker appeared in \lcont */
     err_whatever                       /* random error of another type */
 };
 
@@ -277,6 +284,7 @@ stack stk_new(void);
 void stk_free(stack);
 void stk_push(stack, void *);
 void *stk_pop(stack);
+void *stk_top(stack);
 
 typedef struct tagRdstring rdstring;
 struct tagRdstring {
@@ -412,5 +420,10 @@ void xhtml_backend(paragraph *, keywordlist *, indexdata *);
  * bk_whlp.c
  */
 void whlp_backend(paragraph *, keywordlist *, indexdata *);
+
+/*
+ * bk_man.c
+ */
+void man_backend(paragraph *, keywordlist *, indexdata *);
 
 #endif

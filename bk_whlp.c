@@ -50,6 +50,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     struct bk_whlp_state state;
     WHLP_TOPIC contents_topic;
     int i;
+    int nesting;
     indexentry *ie;
 
     filename = "output.hlp";	       /* FIXME: configurability */
@@ -216,6 +217,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
      * Now we've done the contents page, we're ready to go through
      * and do the main manual text. Ooh.
      */
+    nesting = 0;
     for (p = sourceform; p; p = p->next) switch (p->type) {
 	/*
 	 * Things we ignore because we've already processed them or
@@ -229,6 +231,14 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Preamble:
       case para_NoCite:
       case para_Title:
+	break;
+
+      case para_LcontPush:
+	nesting++;
+	break;
+      case para_LcontPop:
+	assert(nesting > 0);
+	nesting--;
 	break;
 
 	/*
@@ -343,12 +353,14 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Normal:
+      case para_DescribedThing:
+      case para_Description:
       case para_BiblioCited:
       case para_Bullet:
       case para_NumberedList:
 	whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
 	if (p->type == para_Bullet || p->type == para_NumberedList) {
-	    whlp_para_attr(h, WHLP_PARA_LEFTINDENT, 72);
+	    whlp_para_attr(h, WHLP_PARA_LEFTINDENT, 72*nesting + 72);
 	    whlp_para_attr(h, WHLP_PARA_FIRSTLINEINDENT, -36);
 	    whlp_set_tabstop(h, 72, WHLP_ALIGN_LEFT);
 	    whlp_begin_para(h, WHLP_PARA_SCROLL);
@@ -361,6 +373,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    }
 	    whlp_tab(h);
 	} else {
+	    whlp_para_attr(h, WHLP_PARA_LEFTINDENT,
+			   72*nesting + (p->type==para_Description ? 72 : 0));
 	    whlp_begin_para(h, WHLP_PARA_SCROLL);
 	}
 
@@ -386,6 +400,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    for (w = p->words; w; w = w->next) {
 		if (!w->next)
 		    whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
+		whlp_para_attr(h, WHLP_PARA_LEFTINDENT, 72*nesting);
 		whlp_begin_para(h, WHLP_PARA_SCROLL);
 		whlp_set_font(h, FONT_CODE);
 		whlp_convert(w->text, &c, FALSE);

@@ -41,6 +41,13 @@ void *stk_pop(stack s) {
 	return NULL;
 }
 
+void *stk_top(stack s) {
+    if (s->sp > 0)
+	return s->data[s->sp-1];
+    else
+	return NULL;
+}
+
 /*
  * Small routines to amalgamate a string from an input source.
  */

@@ -180,11 +180,14 @@ enum {
     c_copyright,		       /* copyright statement */
     c_cw,			       /* weak code */
     c_date,			       /* document processing date */
+    c_dd,			       /* description list: description */
     c_define,			       /* macro definition */
+    c_dt,			       /* description list: described thing */
     c_e,			       /* emphasis */
     c_i,			       /* visible index mark */
     c_ii,			       /* uncapitalised visible index mark */
     c_k,			       /* uncapitalised cross-reference */
+    c_lcont,			       /* continuation para(s) for list item */
     c_n,			       /* numbered list */
     c_nocite,			       /* bibliography trickery */
     c_preamble,			       /* document preamble text */
@@ -245,11 +248,14 @@ static void match_kw(token *tok) {
 	{"copyright", c_copyright},    /* copyright statement */
 	{"cw", c_cw},		       /* weak code */
 	{"date", c_date},	       /* document processing date */
+	{"dd", c_dd},		       /* description list: description */
 	{"define", c_define},	       /* macro definition */
+	{"dt", c_dt},		       /* description list: described thing */
 	{"e", c_e},		       /* emphasis */
 	{"i", c_i},		       /* visible index mark */
 	{"ii", c_ii},		       /* uncapitalised visible index mark */
 	{"k", c_k},		       /* uncapitalised cross-reference */
+	{"lcont", c_lcont},	       /* continuation para(s) for list item */
 	{"n", c_n},		       /* numbered list */
 	{"nocite", c_nocite},	       /* bibliography trickery */
 	{"preamble", c_preamble},      /* document preamble text */
@@ -506,6 +512,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
     int already;
     int iswhite, seenwhite;
     int type;
+    int prev_para_type;
     struct stack_item {
 	enum {
 	    stack_nop = 0,	       /* do nothing (for error recovery) */
@@ -519,6 +526,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	word **idximplicit;	       /* to restore from \u alternatives */
     } *sitem;
     stack parsestk;
+    struct crossparaitem {
+ 	int type;		       /* currently c_lcont or -1 */
+	int seen_lcont;
+    };
+    stack crossparastk;
     word *indexword, *uword, *iword;
     word *idxwordlist;
     rdstring indexstr;
@@ -529,6 +541,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
     t.text = NULL;
     macros = newtree234(macrocmp);
     already = FALSE;
+
+    crossparastk = stk_new();
 
     /*
      * Loop on each paragraph.
@@ -542,10 +556,12 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	/*
 	 * Get a token.
 	 */
-	if (!already) {
-	    dtor(t), t = get_token(in);
-	}
-	already = FALSE;
+	do {
+	    if (!already) {
+		dtor(t), t = get_token(in);
+	    }
+	    already = FALSE;
+	} while (t.type == tok_eop);
 	if (t.type == tok_eof)
 	    break;
 
@@ -574,14 +590,79 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		    break;
 		else if (t.type != tok_cmd || t.cmd != c_c) {
 		    error(err_brokencodepara, &t.pos);
+		    prev_para_type = par.type;
 		    addpara(par, ret);
 		    while (t.type != tok_eop)   /* error recovery: */
 			dtor(t), t = get_token(in);   /* eat rest of paragraph */
 		    goto codeparabroken;   /* ick, but such is life */
 		}
 	    }
+	    prev_para_type = par.type;
 	    addpara(par, ret);
 	    codeparabroken:
+	    continue;
+	}
+
+	/*
+	 * Spot the special commands that define a grouping of more
+	 * than one paragraph, and also the closing braces that
+	 * finish them.
+	 */
+	if (t.type == tok_cmd &&
+	    t.cmd == c_lcont) {
+	    struct crossparaitem *sitem, *stop;
+
+	    /*
+	     * Expect, and swallow, an open brace.
+	     */
+	    dtor(t), t = get_token(in);
+	    if (t.type != tok_lbrace) {
+		error(err_explbr, &t.pos);
+		continue;
+	    }
+
+	    /*
+	     * \lcont causes a continuation of a list item into
+	     * multiple paragraphs (which may in turn contain
+	     * nested lists, code paras etc). Hence, the previous
+	     * paragraph must be of a list type.
+	     */
+	    sitem = mknew(struct crossparaitem);
+	    stop = (struct crossparaitem *)stk_top(crossparastk);
+	    if (prev_para_type == para_Bullet ||
+		prev_para_type == para_NumberedList ||
+		prev_para_type == para_Description) {
+		sitem->type = c_lcont;
+		sitem->seen_lcont = 1;
+		par.type = para_LcontPush;
+		prev_para_type = par.type;
+		addpara(par, ret);
+	    } else {
+		/*
+		 * Push a null item on the cross-para stack so that
+		 * when we see the corresponding closing brace we
+		 * don't give a cascade error.
+		 */
+		sitem->type = -1;
+		sitem->seen_lcont = (stop ? stop->seen_lcont : 0);
+		error(err_misplacedlcont, &t.pos);
+	    }
+	    stk_push(crossparastk, sitem);
+	    continue;
+	} else if (t.type == tok_rbrace) {
+	    struct crossparaitem *sitem = stk_pop(crossparastk);
+	    if (!sitem)
+		error(err_unexbrace, &t.pos);
+	    else {
+		switch (sitem->type) {
+		  case c_lcont:
+		    par.type = para_LcontPop;
+		    prev_para_type = par.type;
+		    addpara(par, ret);
+		    break;
+		}
+		sfree(sitem);
+	    }
 	    continue;
 	}
 
@@ -638,6 +719,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	      case c_U: needkw = 32; par.type = para_UnnumberedChapter; break;
 		/* For \b and \n the keyword is optional */
 	      case c_b: needkw = 4; par.type = para_Bullet; break;
+	      case c_dt: needkw = 4; par.type = para_DescribedThing; break;
+	      case c_dd: needkw = 4; par.type = para_Description; break;
 	      case c_n: needkw = 4; par.type = para_NumberedList; break;
 	      case c_cfg: needkw = 8; par.type = para_Config;
 		start_cmd = c_cfg; break;
@@ -649,6 +732,17 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	      case c_rule: needkw = 16; par.type = para_Rule; break;
 	      case c_title: needkw = 32; par.type = para_Title; break;
 	      case c_versionid: needkw = 32; par.type = para_VersionID; break;
+	    }
+
+	    if (par.type == para_Chapter ||
+		par.type == para_Heading ||
+		par.type == para_Subsect ||
+		par.type == para_Appendix ||
+		par.type == para_UnnumberedChapter) {
+		struct crossparaitem *sitem = stk_top(crossparastk);
+		if (sitem && sitem->seen_lcont) {
+		    error(err_sectmarkerinlcont, &t.pos);
+		}
 	    }
 
 	    if (needkw > 0) {
@@ -732,6 +826,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		    }
 		    if (t.type == tok_cmd)
 			already = TRUE;/* inhibit get_token at top of loop */
+		    prev_para_type = par.type;
 		    addpara(par, ret);
 		    continue;	       /* next paragraph */
 		}
@@ -837,9 +932,16 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		break;
 	      case tok_rbrace:
 		sitem = stk_pop(parsestk);
-		if (!sitem)
-		    error(err_unexbrace, &t.pos);
-		else {
+		if (!sitem) {
+		    /*
+		     * This closing brace could have been an
+		     * indication that the cross-paragraph stack
+		     * wants popping. Accordingly, we treat it here
+		     * as an indication that the paragraph is over.
+		     */
+		    already = TRUE;
+		    goto finished_para;
+		} else {
 		    if (sitem->type & stack_ualt) {
 			whptr = sitem->whptr;
 			idximplicit = sitem->idximplicit;
@@ -1170,16 +1272,26 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		dtor(t), t = get_token(in);
 	    seenwhite = iswhite;
 	}
+	finished_para:
 	/* Check the stack is empty */
-	if (NULL != (sitem = stk_pop(parsestk))) {
-	    do {
+	if (stk_top(parsestk)) {
+	    while ((sitem = stk_pop(parsestk)))
 		sfree(sitem);
-		sitem = stk_pop(parsestk);
-	    } while (sitem);
 	    error(err_missingrbrace, &t.pos);
 	}
 	stk_free(parsestk);
+	prev_para_type = par.type;
 	addpara(par, ret);
+	if (t.type == tok_eof)
+	    already = TRUE;
+    }
+
+    if (stk_top(crossparastk)) {
+	void *p;
+
+	error(err_missingrbrace2, &t.pos);
+	while ((p = stk_pop(crossparastk)))
+	    sfree(p);
     }
 
     /*
@@ -1188,6 +1300,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
      */
     dtor(t);
     macrocleanup(macros);
+
+    stk_free(crossparastk);
 }
 
 paragraph *read_input(input *in, indexdata *idx) {

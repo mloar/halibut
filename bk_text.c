@@ -182,6 +182,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     word spaceword;
     FILE *fp;
     char *prefixextra;
+    int nesting, nestindent;
     int indentb, indenta;
 
     IGNORE(keywords);		       /* we don't happen to need this */
@@ -219,8 +220,19 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 		      conf.indent_preambles ? conf.indent : 0, 0,
 		      conf.width + (conf.indent_preambles ? 0 : conf.indent));
 
+    nestindent = conf.listindentbefore + conf.listindentafter;
+    nesting = 0;
+
     /* Do the main document */
     for (p = sourceform; p; p = p->next) switch (p->type) {
+
+      case para_LcontPush:
+	nesting++;
+	break;
+      case para_LcontPop:
+	assert(nesting > 0);
+	nesting--;
+	break;
 
 	/*
 	 * Things we ignore because we've already processed them or
@@ -254,10 +266,13 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Rule:
-	text_rule(fp, conf.indent, conf.width);
+	text_rule(fp, conf.indent + nestindent*nesting,
+		  conf.width - nestindent*nesting);
 	break;
 
       case para_Normal:
+      case para_DescribedThing:
+      case para_Description:
       case para_BiblioCited:
       case para_Bullet:
       case para_NumberedList:
@@ -269,6 +284,11 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	} else if (p->type == para_NumberedList) {
 	    prefix = p->kwtext;
 	    prefixextra = ".";	       /* FIXME: configurability */
+	    indentb = conf.listindentbefore;
+	    indenta = conf.listindentafter;
+	} else if (p->type == para_Description) {
+	    prefix = NULL;
+	    prefixextra = NULL;
 	    indentb = conf.listindentbefore;
 	    indenta = conf.listindentafter;
 	} else {
@@ -289,8 +309,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	    body = p->words;
 	}
 	text_para(fp, prefix, prefixextra, body,
-		  conf.indent + indentb, indenta,
-		  conf.width - indentb - indenta);
+		  conf.indent + nestindent*nesting + indentb, indenta,
+		  conf.width - nestindent*nesting - indentb - indenta);
 	if (wp) {
 	    wp->next = NULL;
 	    free_word_list(body);
@@ -298,7 +318,9 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Code:
-	text_codepara(fp, p->words, conf.indent + conf.indent_code, conf.width - 2 * conf.indent_code);
+	text_codepara(fp, p->words,
+		      conf.indent + nestindent*nesting + conf.indent_code,
+		      conf.width - nestindent*nesting - 2 * conf.indent_code);
 	break;
     }
 

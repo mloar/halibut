@@ -1076,14 +1076,15 @@ static void xhtml_do_sections(FILE *fp, xhtmlsection *sections)
 /* Write this list of paragraphs. Close off all lists at the end. */
 static void xhtml_do_paras(FILE *fp, paragraph *p)
 {
-  int last_type = -1, first=TRUE;
+  int last_type = -1, ptype, first=TRUE;
+  stack lcont_stack = stk_new();
   if (!p)
     return;
 
 /*  for (; p && (xhtml_para_level(p)>limit || xhtml_para_level(p)==-1 || first); p=p->next) {*/
   for (; p && (xhtml_para_level(p)==-1 || first); p=p->next) {
     first=FALSE;
-    switch (p->type)
+    switch (ptype = p->type)
     {
       /*
        * Things we ignore because we've already processed them or
@@ -1123,8 +1124,29 @@ static void xhtml_do_paras(FILE *fp, paragraph *p)
         fprintf(fp, "</p>\n");
         break;
 
+      case para_LcontPush:
+	{
+	    int *p;
+	    p = mknew(int);
+	    *p = last_type;
+	    stk_push(lcont_stack, p);
+	    last_type = para_Normal;
+	}
+	break;
+      case para_LcontPop:
+	{
+	    int *p = stk_pop(lcont_stack);
+	    assert(p);
+	    ptype = last_type = *p;
+	    sfree(p);
+	    goto closeofflist;	       /* ick */
+	}
+	break;
+
       case para_Bullet:
       case para_NumberedList:
+      case para_Description:
+      case para_DescribedThing:
       case para_BiblioCited:
         if (last_type!=p->type) {
           /* start up list if necessary */
@@ -1132,41 +1154,62 @@ static void xhtml_do_paras(FILE *fp, paragraph *p)
             fprintf(fp, "<ul>\n");
           } else if (p->type == para_NumberedList) {
             fprintf(fp, "<ol>\n");
-          } else if (p->type == para_BiblioCited) {
+          } else if (p->type == para_BiblioCited ||
+		     p->type == para_DescribedThing ||
+		     p->type == para_Description) {
             fprintf(fp, "<dl>\n");
           }
         }
-        if (p->type == para_Bullet || p->type == para_NumberedList)
+        if (p->type == para_Bullet || p->type == para_NumberedList) {
           fprintf(fp, "<li>");
-        else if (p->type == para_BiblioCited) {
+	} else if (p->type == para_DescribedThing) {
+          fprintf(fp, "<dt>");
+	} else if (p->type == para_Description) {
+          fprintf(fp, "<dd>");
+	} else if (p->type == para_BiblioCited) {
           fprintf(fp, "<dt>");
           xhtml_para(fp, p->kwtext);
           fprintf(fp, "</dt>\n<dd>");
         }
         xhtml_para(fp, p->words);
-        if (p->type == para_BiblioCited) {
+	{
+          paragraph *p2 = p->next;
+          if (p2 && xhtml_para_level(p2)==-1 && p2->type == para_LcontPush)
+	    break;
+	}
+
+	closeofflist:
+        if (ptype == para_BiblioCited) {
           fprintf(fp, "</dd>\n");
-        } else if (p->type == para_Bullet || p->type == para_NumberedList) {
+	} else if (p->type == para_DescribedThing) {
+          fprintf(fp, "</dt>");
+	} else if (p->type == para_Description) {
+          fprintf(fp, "</dd>");
+        } else if (ptype == para_Bullet || ptype == para_NumberedList) {
           fprintf(fp, "</li>");
         }
-        if (p->type == para_Bullet || p->type == para_NumberedList || p->type == para_BiblioCited)
+        if (ptype == para_Bullet || ptype == para_NumberedList ||
+	    ptype == para_BiblioCited || ptype == para_Description ||
+	    ptype == para_DescribedThing)
           /* close off list if necessary */
         {
           paragraph *p2 = p->next;
           int close_off=FALSE;
 /*          if (p2 && (xhtml_para_level(p2)>limit || xhtml_para_level(p2)==-1)) {*/
           if (p2 && xhtml_para_level(p2)==-1) {
-            if (p2->type != p->type)
+            if (p2->type != ptype && p2->type != para_LcontPush)
               close_off=TRUE;
           } else {
             close_off=TRUE;
           }
           if (close_off) {
-            if (p->type == para_Bullet) {
+            if (ptype == para_Bullet) {
               fprintf(fp, "</ul>\n");
-            } else if (p->type == para_NumberedList) {
+            } else if (ptype == para_NumberedList) {
               fprintf(fp, "</ol>\n");
-            } else if (p->type == para_BiblioCited) {
+            } else if (ptype == para_BiblioCited ||
+		       ptype == para_Description ||
+		       ptype == para_DescribedThing) {
               fprintf(fp, "</dl>\n");
             }
           }
@@ -1177,8 +1220,10 @@ static void xhtml_do_paras(FILE *fp, paragraph *p)
         xhtml_codepara(fp, p->words);
         break;
     }
-    last_type = p->type;
+    last_type = ptype;
   }
+
+  stk_free(lcont_stack);
 }
 
 /*

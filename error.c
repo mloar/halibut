@@ -119,6 +119,11 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "unclosed braces at end of paragraph");
 	flags = FILEPOS;
 	break;
+      case err_missingrbrace2:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "unclosed braces at end of input file");
+	flags = FILEPOS;
+	break;
       case err_nestedstyles:
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "unable to nest text styles");
@@ -184,6 +189,16 @@ static void do_error(int code, va_list ap) {
 	sprintf(error + strlen(error), "%s:%d", fpos2.filename, fpos2.line);
 	flags = FILEPOS;
 	break;
+      case err_misplacedlcont:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "\\lcont is only expected after a list item");
+	flags = FILEPOS;
+	break;
+      case err_sectmarkerinlcont:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "section headings are not supported within \\lcont");
+	flags = FILEPOS;
+	break; 
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
