@@ -904,11 +904,16 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			   t.type == tok_word || 
 			   t.type == tok_white ||
 			   (t.type == tok_cmd && t.cmd == c__nbsp) ||
-			   (t.type == tok_cmd && t.cmd == c__escaped)) {
+			   (t.type == tok_cmd && t.cmd == c__escaped) ||
+			   (t.type == tok_cmd && t.cmd == c_u)) {
 			if (t.type == tok_white ||
 			    (t.type == tok_cmd && t.cmd == c__nbsp)) {
 			    rdadd(&rs, ' ');
 			    rdaddc(&rsc, ' ');
+			} else if (t.type == tok_cmd && t.cmd == c_u) {
+			    rdadd(&rs, t.aux);
+			    rdaddc(&rsc, '\\');
+			    rdaddsc(&rsc, t.origtext);
 			} else {
 			    rdadds(&rs, t.text);
 			    rdaddsc(&rsc, t.origtext);

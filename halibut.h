@@ -237,6 +237,7 @@ enum {
     err_sectmarkerinblock,	       /* section marker appeared in block */
     err_infodirentry,		       /* \cfg{info-dir-entry} missing param */
     err_infonodechar,		       /* colon/comma in node name in info */
+    err_text_codeline,		       /* \c line too long in text backend */
     err_whatever                       /* random error of another type */
 };
 

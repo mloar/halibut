@@ -118,6 +118,12 @@ directive
 \IM{\\cfg\{text-bullet\}} \c{text-bullet} configuration directive
 \IM{\\cfg\{text-bullet\}} \cw{\\cfg\{text-bullet\}}
 
+\IM{\\cfg\{text-rule\}} \c{text-rule} configuration directive
+\IM{\\cfg\{text-rule\}} \cw{\\cfg\{text-rule\}}
+
+\IM{\\cfg\{text-quotes\}} \c{text-quotes} configuration directive
+\IM{\\cfg\{text-quotes\}} \cw{\\cfg\{text-quotes\}}
+
 \IM{\\cfg\{xhtml-leaf-level\}} \c{xhtml-leaf-level} configuration
 directive
 \IM{\\cfg\{xhtml-leaf-level\}} \cw{\\cfg\{xhtml-leaf-level\}}

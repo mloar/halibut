@@ -16,6 +16,7 @@
 static void do_error(int code, va_list ap) {
     char error[1024];
     char c;
+    int i, j;
     char *sp, *sp2;
     wchar_t *wsp;
     filepos fpos, fpos2;
@@ -219,6 +220,14 @@ static void do_error(int code, va_list ap) {
 	c = (char)va_arg(ap, int);
 	sprintf(error, "info output format does not support '%c' in"
 		" node names; removing", c);
+	flags = FILEPOS;
+	break;
+      case err_text_codeline:
+	fpos = *va_arg(ap, filepos *);
+	i = va_arg(ap, int);
+	j = va_arg(ap, int);
+	sprintf(error, "warning: code paragraph line is %d chars wide, wider"
+		" than body width %d", i, j);
 	flags = FILEPOS;
 	break;
       case err_whatever:

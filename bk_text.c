@@ -11,7 +11,7 @@ typedef enum { LEFT, LEFTPLUS, CENTRE } alignment;
 typedef struct {
     alignment align;
     int just_numbers;
-    wchar_t underline;
+    wchar_t *underline;
     wchar_t *number_suffix;
 } alignstruct;
 
@@ -25,7 +25,9 @@ typedef struct {
     int indent_preambles;
     int charset;
     word bullet;
+    wchar_t *lquote, *rquote, *rule;
     char *filename;
+    wchar_t *listsuffix, *startemph, *endemph;
 } textconfig;
 
 typedef struct {
@@ -35,11 +37,12 @@ typedef struct {
 } textfile;
 
 static void text_heading(textfile *, word *, word *, word *, alignstruct,
-			 int,int);
-static void text_rule(textfile *, int, int);
-static void text_para(textfile *, word *, wchar_t *, word *, int, int, int);
+			 int, int, textconfig *);
+static void text_rule(textfile *, int, int, textconfig *);
+static void text_para(textfile *, word *, wchar_t *, word *, int, int, int,
+		      textconfig *);
 static void text_codepara(textfile *, word *, int, int);
-static void text_versionid(textfile *, word *);
+static void text_versionid(textfile *, word *, textconfig *);
 
 static void text_output(textfile *, const wchar_t *);
 static void text_output_many(textfile *, int, wchar_t);
@@ -54,6 +57,8 @@ static alignment utoalign(wchar_t *p) {
 
 static textconfig text_configure(paragraph *source) {
     textconfig ret;
+    paragraph *p;
+    int n;
 
     /*
      * Non-negotiables.
@@ -72,56 +77,82 @@ static textconfig text_configure(paragraph *source) {
     ret.listindentafter = 3;
     ret.width = 68;
     ret.atitle.align = CENTRE;
-    ret.atitle.underline = L'=';
+    ret.atitle.underline = L"\x2550\0=\0\0";
     ret.achapter.align = LEFT;
     ret.achapter.just_numbers = FALSE;
     ret.achapter.number_suffix = L": ";
-    ret.achapter.underline = L'-';
+    ret.achapter.underline = L"\x203E\0-\0\0";
     ret.nasect = 1;
     ret.asect = mknewa(alignstruct, ret.nasect);
     ret.asect[0].align = LEFTPLUS;
     ret.asect[0].just_numbers = TRUE;
     ret.asect[0].number_suffix = L" ";
-    ret.asect[0].underline = L'\0';
+    ret.asect[0].underline = L"\0";
     ret.include_version_id = TRUE;
     ret.indent_preambles = FALSE;
-    ret.bullet.text = L"-";
+    ret.bullet.text = L"\x2022\0-\0\0";
+    ret.rule = L"\x2500\0-\0\0";
     ret.filename = dupstr("output.txt");
+    ret.startemph = ret.endemph = L"_";
+    ret.listsuffix = L".";
     ret.charset = CS_ASCII;
+    /*
+     * Default quote characters are Unicode matched single quotes,
+     * falling back to the TeXlike `'.
+     */
+    ret.lquote = L"\x2018\0\x2019\0`\0'\0\0";
+    ret.rquote = uadv(ret.lquote);
 
-    for (; source; source = source->next) {
-	if (source->type == para_Config) {
-	    if (!ustricmp(source->keyword, L"text-indent")) {
-		ret.indent = utoi(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-charset")) {
-		char *csname = utoa_dup(uadv(source->keyword), CS_ASCII);
+    /*
+     * Two-pass configuration so that we can pick up global config
+     * (e.g. `quotes') before having it overridden by specific
+     * config (`text-quotes'), irrespective of the order in which
+     * they occur.
+     */
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    }
+	}
+    }
+
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"text-indent")) {
+		ret.indent = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-charset")) {
+		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
 		ret.charset = charset_from_localenc(csname);
 		sfree(csname);
-	    } else if (!ustricmp(source->keyword, L"text-filename")) {
+	    } else if (!ustricmp(p->keyword, L"text-filename")) {
 		sfree(ret.filename);
-		ret.filename = dupstr(adv(source->origkeyword));
-	    } else if (!ustricmp(source->keyword, L"text-indent-code")) {
-		ret.indent_code = utoi(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-width")) {
-		ret.width = utoi(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-list-indent")) {
-		ret.listindentbefore = utoi(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-listitem-indent")) {
-		ret.listindentafter = utoi(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-chapter-align")) {
-		ret.achapter.align = utoalign(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-chapter-underline")) {
-		ret.achapter.underline = *uadv(source->keyword);
-	    } else if (!ustricmp(source->keyword, L"text-chapter-numeric")) {
-		ret.achapter.just_numbers = utob(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-chapter-suffix")) {
-		ret.achapter.number_suffix = uadv(source->keyword);
-	    } else if (!ustricmp(source->keyword, L"text-section-align")) {
-		wchar_t *p = uadv(source->keyword);
+		ret.filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(p->keyword, L"text-indent-code")) {
+		ret.indent_code = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-width")) {
+		ret.width = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-list-indent")) {
+		ret.listindentbefore = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-listitem-indent")) {
+		ret.listindentafter = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-chapter-align")) {
+		ret.achapter.align = utoalign(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-chapter-underline")) {
+		ret.achapter.underline = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-chapter-numeric")) {
+		ret.achapter.just_numbers = utob(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-chapter-suffix")) {
+		ret.achapter.number_suffix = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-section-align")) {
+		wchar_t *q = uadv(p->keyword);
 		int n = 0;
-		if (uisdigit(*p)) {
-		    n = utoi(p);
-		    p = uadv(p);
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
 		}
 		if (n >= ret.nasect) {
 		    int i;
@@ -130,13 +161,13 @@ static textconfig text_configure(paragraph *source) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
 		}
-		ret.asect[n].align = utoalign(p);
-	    } else if (!ustricmp(source->keyword, L"text-section-underline")) {
-		wchar_t *p = uadv(source->keyword);
+		ret.asect[n].align = utoalign(q);
+	    } else if (!ustricmp(p->keyword, L"text-section-underline")) {
+		wchar_t *q = uadv(p->keyword);
 		int n = 0;
-		if (uisdigit(*p)) {
-		    n = utoi(p);
-		    p = uadv(p);
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
 		}
 		if (n >= ret.nasect) {
 		    int i;
@@ -145,13 +176,13 @@ static textconfig text_configure(paragraph *source) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
 		}
-		ret.asect[n].underline = *p;
-	    } else if (!ustricmp(source->keyword, L"text-section-numeric")) {
-		wchar_t *p = uadv(source->keyword);
+		ret.asect[n].underline = q;
+	    } else if (!ustricmp(p->keyword, L"text-section-numeric")) {
+		wchar_t *q = uadv(p->keyword);
 		int n = 0;
-		if (uisdigit(*p)) {
-		    n = utoi(p);
-		    p = uadv(p);
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
 		}
 		if (n >= ret.nasect) {
 		    int i;
@@ -160,13 +191,13 @@ static textconfig text_configure(paragraph *source) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
 		}
-		ret.asect[n].just_numbers = utob(p);
-	    } else if (!ustricmp(source->keyword, L"text-section-suffix")) {
-		wchar_t *p = uadv(source->keyword);
+		ret.asect[n].just_numbers = utob(q);
+	    } else if (!ustricmp(p->keyword, L"text-section-suffix")) {
+		wchar_t *q = uadv(p->keyword);
 		int n = 0;
-		if (uisdigit(*p)) {
-		    n = utoi(p);
-		    p = uadv(p);
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
 		}
 		if (n >= ret.nasect) {
 		    int i;
@@ -176,20 +207,74 @@ static textconfig text_configure(paragraph *source) {
 		    }
 		    ret.nasect = n+1;
 		}
-		ret.asect[n].number_suffix = p;
-	    } else if (!ustricmp(source->keyword, L"text-title-align")) {
-		ret.atitle.align = utoalign(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-title-underline")) {
-		ret.atitle.underline = *uadv(source->keyword);
-	    } else if (!ustricmp(source->keyword, L"text-versionid")) {
-		ret.include_version_id = utob(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-indent-preamble")) {
-		ret.indent_preambles = utob(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"text-bullet")) {
-		ret.bullet.text = uadv(source->keyword);
+		ret.asect[n].number_suffix = q;
+	    } else if (!ustricmp(p->keyword, L"text-title-align")) {
+		ret.atitle.align = utoalign(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-title-underline")) {
+		ret.atitle.underline = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-versionid")) {
+		ret.include_version_id = utob(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-indent-preamble")) {
+		ret.indent_preambles = utob(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"text-bullet")) {
+		ret.bullet.text = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-rule")) {
+		ret.rule = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-list-suffix")) {
+		ret.listsuffix = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-emphasis")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.startemph = uadv(p->keyword);
+		    ret.endemph = uadv(ret.startemph);
+		}
+	    } else if (!ustricmp(p->keyword, L"text-quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
 	    }
 	}
     }
+
+    /*
+     * Now process fallbacks on quote characters, underlines, the
+     * rule character, the emphasis characters, and bullets.
+     */
+    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
+	   (!cvt_ok(ret.charset, ret.lquote) ||
+	    !cvt_ok(ret.charset, ret.rquote))) {
+	ret.lquote = uadv(ret.rquote);
+	ret.rquote = uadv(ret.lquote);
+    }
+
+    while (*uadv(ret.endemph) && *uadv(uadv(ret.endemph)) &&
+	   (!cvt_ok(ret.charset, ret.startemph) ||
+	    !cvt_ok(ret.charset, ret.endemph))) {
+	ret.startemph = uadv(ret.endemph);
+	ret.endemph = uadv(ret.startemph);
+    }
+
+    while (*ret.atitle.underline && *uadv(ret.atitle.underline) &&
+	   !cvt_ok(ret.charset, ret.atitle.underline))
+	ret.atitle.underline = uadv(ret.atitle.underline);
+    
+    while (*ret.achapter.underline && *uadv(ret.achapter.underline) &&
+	   !cvt_ok(ret.charset, ret.achapter.underline))
+	ret.achapter.underline = uadv(ret.achapter.underline);
+
+    for (n = 0; n < ret.nasect; n++) {
+	while (*ret.asect[n].underline && *uadv(ret.asect[n].underline) &&
+	       !cvt_ok(ret.charset, ret.asect[n].underline))
+	    ret.asect[n].underline = uadv(ret.asect[n].underline);
+    }
+    
+    while (*ret.bullet.text && *uadv(ret.bullet.text) &&
+	   !cvt_ok(ret.charset, ret.bullet.text))
+	ret.bullet.text = uadv(ret.bullet.text);
+
+    while (*ret.rule && *uadv(ret.rule) &&
+	   !cvt_ok(ret.charset, ret.rule))
+	ret.rule = uadv(ret.rule);
 
     return ret;
 }
@@ -231,7 +316,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_Title)
 	    text_heading(&tf, NULL, NULL, p->words,
-			 conf.atitle, conf.indent, conf.width);
+			 conf.atitle, conf.indent, conf.width, &conf);
 
     nestindent = conf.listindentbefore + conf.listindentafter;
     nesting = (conf.indent_preambles ? 0 : -conf.indent);
@@ -274,7 +359,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Appendix:
       case para_UnnumberedChapter:
 	text_heading(&tf, p->kwtext, p->kwtext2, p->words,
-		     conf.achapter, conf.indent, conf.width);
+		     conf.achapter, conf.indent, conf.width, &conf);
 	nesting = 0;
 	break;
 
@@ -282,11 +367,11 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Subsect:
 	text_heading(&tf, p->kwtext, p->kwtext2, p->words,
 		     conf.asect[p->aux>=conf.nasect ? conf.nasect-1 : p->aux],
-		     conf.indent, conf.width);
+		     conf.indent, conf.width, &conf);
 	break;
 
       case para_Rule:
-	text_rule(&tf, conf.indent + nesting, conf.width - nesting);
+	text_rule(&tf, conf.indent + nesting, conf.width - nesting, &conf);
 	break;
 
       case para_Normal:
@@ -303,7 +388,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	    indenta = conf.listindentafter;
 	} else if (p->type == para_NumberedList) {
 	    prefix = p->kwtext;
-	    prefixextra = L".";	       /* FIXME: configurability */
+	    prefixextra = conf.listsuffix;
 	    indentb = conf.listindentbefore;
 	    indenta = conf.listindentafter;
 	} else if (p->type == para_Description) {
@@ -330,7 +415,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 	text_para(&tf, prefix, prefixextra, body,
 		  conf.indent + nesting + indentb, indenta,
-		  conf.width - nesting - indentb - indenta);
+		  conf.width - nesting - indentb - indenta, &conf);
 	if (wp) {
 	    wp->next = NULL;
 	    free_word_list(body);
@@ -348,7 +433,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     if (conf.include_version_id) {
 	for (p = sourceform; p; p = p->next)
 	    if (p->type == para_VersionID)
- 		text_versionid(&tf, p->words);
+ 		text_versionid(&tf, p->words, &conf);
     }
 
     /*
@@ -392,7 +477,7 @@ static void text_output_many(textfile *tf, int n, wchar_t c)
 	text_output(tf, s);
 }
 
-static void text_rdaddw(int charset, rdstring *rs, word *text, word *end) {
+static void text_rdaddw(rdstring *rs, word *text, word *end, textconfig *cfg) {
     for (; text && text != end; text = text->next) switch (text->type) {
       case word_HyperLink:
       case word_HyperEnd:
@@ -419,30 +504,30 @@ static void text_rdaddw(int charset, rdstring *rs, word *text, word *end) {
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only))
-	    rdadd(rs, L'_');	       /* FIXME: configurability */
+	    rdadds(rs, cfg->startemph);
 	else if (towordstyle(text->type) == word_Code &&
 		 (attraux(text->aux) == attr_First ||
 		  attraux(text->aux) == attr_Only))
-	    rdadd(rs, L'`');	       /* FIXME: configurability */
+	    rdadds(rs, cfg->lquote);
 	if (removeattr(text->type) == word_Normal) {
-	    if (cvt_ok(charset, text->text) || !text->alt)
+	    if (cvt_ok(cfg->charset, text->text) || !text->alt)
 		rdadds(rs, text->text);
 	    else
-		text_rdaddw(charset, rs, text->alt, NULL);
+		text_rdaddw(rs, text->alt, NULL, cfg);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
 	    rdadd(rs, L' ');
 	} else if (removeattr(text->type) == word_Quote) {
-	    rdadd(rs, quoteaux(text->aux) == quote_Open ? L'`' : L'\'');
-				       /* FIXME: configurability */
+	    rdadds(rs, quoteaux(text->aux) == quote_Open ?
+		   cfg->lquote : cfg->rquote);
 	}
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_Last ||
 	     attraux(text->aux) == attr_Only))
-	    rdadd(rs, L'_');	       /* FIXME: configurability */
+	    rdadds(rs, cfg->endemph);
 	else if (towordstyle(text->type) == word_Code &&
 		 (attraux(text->aux) == attr_Last ||
 		  attraux(text->aux) == attr_Only))
-	    rdadd(rs, L'\'');	       /* FIXME: configurability */
+	    rdadds(rs, cfg->rquote);
 	break;
     }
 }
@@ -459,7 +544,9 @@ static int text_width_list(void *ctx, word *text) {
 }
 
 static int text_width(void *ctx, word *text) {
-    int charset = * (int *) ctx;
+    textconfig *cfg = (textconfig *)ctx;
+    int wid;
+    int attr;
 
     switch (text->type) {
       case word_HyperLink:
@@ -469,19 +556,35 @@ static int text_width(void *ctx, word *text) {
       case word_XrefEnd:
       case word_IndexRef:
 	return 0;
+    }
 
+    assert(text->type < word_internal_endattrs);
+
+    wid = 0;
+    attr = towordstyle(text->type);
+    if (attr == word_Emph || attr == word_Code) {
+	if (attraux(text->aux) == attr_Only ||
+	    attraux(text->aux) == attr_First)
+	    wid += ustrwid(attr == word_Emph ? cfg->startemph : cfg->lquote,
+			   cfg->charset);
+    }
+    if (attr == word_Emph || attr == word_Code) {
+	if (attraux(text->aux) == attr_Only ||
+	    attraux(text->aux) == attr_Last)
+	    wid += ustrwid(attr == word_Emph ? cfg->startemph : cfg->lquote,
+			   cfg->charset);
+    }
+
+    switch (text->type) {
       case word_Normal:
       case word_Emph:
       case word_Code:
       case word_WeakCode:
-	return (((text->type == word_Emph ||
-		  text->type == word_Code)
-		 ? (attraux(text->aux) == attr_Only ? 2 :
-		    attraux(text->aux) == attr_Always ? 0 : 1)
-		 : 0) +
-		(cvt_ok(charset, text->text) || !text->alt ?
-		 ustrwid(text->text, charset) :
-		 text_width_list(ctx, text->alt)));
+	if (cvt_ok(cfg->charset, text->text) || !text->alt)
+	    wid += ustrwid(text->text, cfg->charset);
+	else
+	    wid += text_width_list(ctx, text->alt);
+	return wid;
 
       case word_WhiteSpace:
       case word_EmphSpace:
@@ -493,31 +596,34 @@ static int text_width(void *ctx, word *text) {
       case word_WkCodeQuote:
 	assert(text->type != word_CodeQuote &&
 	       text->type != word_WkCodeQuote);
-	return (((towordstyle(text->type) == word_Emph ||
-		  towordstyle(text->type) == word_Code)
-		 ? (attraux(text->aux) == attr_Only ? 2 :
-		    attraux(text->aux) == attr_Always ? 0 : 1)
-		 : 0) + 1);
+	if (removeattr(text->type) == word_Quote) {
+	    if (quoteaux(text->aux) == quote_Open)
+		wid += ustrwid(cfg->lquote, cfg->charset);
+	    else
+		wid += ustrwid(cfg->rquote, cfg->charset);
+	} else
+	    wid++;		       /* space */
     }
-    return 0;			       /* should never happen */
+
+    return wid;
 }
 
 static void text_heading(textfile *tf, word *tprefix, word *nprefix,
 			 word *text, alignstruct align,
-			 int indent, int width) {
+			 int indent, int width, textconfig *cfg) {
     rdstring t = { 0, 0, NULL };
     int margin, length;
     int firstlinewidth, wrapwidth;
     wrappedline *wrapping, *p;
 
     if (align.just_numbers && nprefix) {
-	text_rdaddw(tf->charset, &t, nprefix, NULL);
+	text_rdaddw(&t, nprefix, NULL, cfg);
 	rdadds(&t, align.number_suffix);
     } else if (!align.just_numbers && tprefix) {
-	text_rdaddw(tf->charset, &t, tprefix, NULL);
+	text_rdaddw(&t, tprefix, NULL, cfg);
 	rdadds(&t, align.number_suffix);
     }
-    margin = length = t.pos;
+    margin = length = ustrwid(t.text ? t.text : L"", cfg->charset);
 
     if (align.align == LEFTPLUS) {
 	margin = indent - margin;
@@ -531,10 +637,10 @@ static void text_heading(textfile *tf, word *tprefix, word *nprefix,
     }
 
     wrapping = wrap_para(text, firstlinewidth, wrapwidth,
-			 text_width, &tf->charset, 0);
+			 text_width, cfg, 0);
     for (p = wrapping; p; p = p->next) {
-	text_rdaddw(tf->charset, &t, p->begin, p->end);
-	length = t.pos;
+	text_rdaddw(&t, p->begin, p->end, cfg);
+	length = ustrwid(t.text ? t.text : L"", cfg->charset);
 	if (align.align == CENTRE) {
 	    margin = (indent + width - length)/2;
 	    if (margin < 0) margin = 0;
@@ -542,9 +648,12 @@ static void text_heading(textfile *tf, word *tprefix, word *nprefix,
 	text_output_many(tf, margin, L' ');
 	text_output(tf, t.text);
 	text_output(tf, L"\n");
-	if (align.underline != L'\0') {
+	if (*align.underline) {
 	    text_output_many(tf, margin, L' ');
-	    text_output_many(tf, length, align.underline);
+	    while (length > 0) {
+		text_output(tf, align.underline);
+		length -= ustrwid(align.underline, cfg->charset);
+	    }
 	    text_output(tf, L"\n");
 	}
 	if (align.align == LEFTPLUS)
@@ -560,27 +669,31 @@ static void text_heading(textfile *tf, word *tprefix, word *nprefix,
     sfree(t.text);
 }
 
-static void text_rule(textfile *tf, int indent, int width) {
+static void text_rule(textfile *tf, int indent, int width, textconfig *cfg) {
     text_output_many(tf, indent, L' ');
-    text_output_many(tf, width, L'-');     /* FIXME: configurability! */
+    while (width > 0) {
+	text_output(tf, cfg->rule);
+	width -= ustrwid(cfg->rule, cfg->charset);
+    }
     text_output_many(tf, 2, L'\n');
 }
 
 static void text_para(textfile *tf, word *prefix, wchar_t *prefixextra,
-		      word *text, int indent, int extraindent, int width) {
+		      word *text, int indent, int extraindent, int width,
+		      textconfig *cfg) {
     wrappedline *wrapping, *p;
     rdstring pfx = { 0, 0, NULL };
     int e;
     int firstlinewidth = width;
 
     if (prefix) {
-	text_rdaddw(tf->charset, &pfx, prefix, NULL);
+	text_rdaddw(&pfx, prefix, NULL, cfg);
 	if (prefixextra)
 	    rdadds(&pfx, prefixextra);
 	text_output_many(tf, indent, L' ');
 	text_output(tf, pfx.text);
 	/* If the prefix is too long, shorten the first line to fit. */
-	e = extraindent - pfx.pos;
+	e = extraindent - ustrwid(pfx.text ? pfx.text : L"", cfg->charset);
 	if (e < 0) {
 	    firstlinewidth += e;       /* this decreases it, since e < 0 */
 	    if (firstlinewidth < 0) {
@@ -595,10 +708,10 @@ static void text_para(textfile *tf, word *prefix, wchar_t *prefixextra,
 	e = indent + extraindent;
 
     wrapping = wrap_para(text, firstlinewidth, width,
-			 text_width, &tf->charset, 0);
+			 text_width, cfg, 0);
     for (p = wrapping; p; p = p->next) {
 	rdstring t = { 0, 0, NULL };
-	text_rdaddw(tf->charset, &t, p->begin, p->end);
+	text_rdaddw(&t, p->begin, p->end, cfg);
 	text_output_many(tf, e, L' ');
 	text_output(tf, t.text);
 	text_output(tf, L"\n");
@@ -611,9 +724,9 @@ static void text_para(textfile *tf, word *prefix, wchar_t *prefixextra,
 
 static void text_codepara(textfile *tf, word *text, int indent, int width) {
     for (; text; text = text->next) if (text->type == word_WeakCode) {
-	if (ustrlen(text->text) > width) {
-	    /* FIXME: warn */
-	}
+	int wid = ustrwid(text->text, tf->charset);
+	if (wid > width)
+	    error(err_text_codeline, &text->fpos, wid, width);
 	text_output_many(tf, indent, L' ');
 	text_output(tf, text->text);
 	text_output(tf, L"\n");
@@ -622,12 +735,12 @@ static void text_codepara(textfile *tf, word *text, int indent, int width) {
     text_output(tf, L"\n");
 }
 
-static void text_versionid(textfile *tf, word *text) {
+static void text_versionid(textfile *tf, word *text, textconfig *cfg) {
     rdstring t = { 0, 0, NULL };
 
-    rdadd(&t, L'[');		       /* FIXME: configurability */
-    text_rdaddw(tf->charset, &t, text, NULL);
-    rdadd(&t, L']');		       /* FIXME: configurability */
+    rdadd(&t, L'[');
+    text_rdaddw(&t, text, NULL, cfg);
+    rdadd(&t, L']');
     rdadd(&t, L'\n');
 
     text_output(tf, t.text);
