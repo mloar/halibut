@@ -126,10 +126,10 @@ knows where the literal computer text starts and stops; and in plain
 text, this cannot be done by changing font, so there needs to be an
 alternative way.
 
-So in the plain text back end, things marked as code (\c{\\c}) will
-be surrounded by quote marks, so that it's obvious where they start
-and finish. Things marked as weak code (\c{\\cw}) will not look any
-different from normal text.
+So in the plain text output format, things marked as code (\c{\\c})
+will be surrounded by quote marks, so that it's obvious where they
+start and finish. Things marked as weak code (\c{\\cw}) will not
+look any different from normal text.
 
 I recommend using weak code for any application where it is
 \e{obvious} that the text is literal computer input or output. For
