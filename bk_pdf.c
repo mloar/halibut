@@ -64,7 +64,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
     filename = dupstr("output.pdf");
     for (p = sourceform; p; p = p->next) {
-	if (p->type == para_Config && p->parent) {
+	if (p->type == para_Config) {
 	    if (!ustricmp(p->keyword, L"pdf-filename")) {
 		sfree(filename);
 		filename = dupstr(adv(p->origkeyword));
