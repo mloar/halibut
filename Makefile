@@ -61,23 +61,8 @@ topclean:
 # Make a release archive. If $(VERSION) is specified, this will
 # also contain a `manifest' file which will be used to decide the
 # version number automatically.
-release:
-	find . -name CVS -prune -o -name build -prune -o -name reltmp -prune \
-	       -o -type d -exec mkdir -p reltmp/$(RELDIR)/{} \;
-	find . -name CVS -prune -o -name build -prune -o -name reltmp -prune \
-	       -o -name '*.orig' -prune -o -name '*.rej' -prune \
-	       -o -name '*.txt' -prune -o -name '*.html' -prune \
-	       -o -name '*.1' -prune -o -name '.cvsignore' -prune \
-	       -o -name '*.gz' -prune -o -name '.[^.]*' -prune \
-	       -o -type f -exec ln -s $(PWD)/{} reltmp/$(RELDIR)/{} \;
-	if test "x$(VERSION)y" != "xy"; then                            \
-	    (cd reltmp/$(RELDIR);                                       \
-	     find . -name '*.[ch]' -exec md5sum {} \;                   \
-	    ) > reltmp/$(RELDIR)/manifest;                              \
-	    echo "-DVERSION=\"$(VERSION)\"" > reltmp/$(RELDIR)/version; \
-	fi
-	tar chzvoCf reltmp $(RELDIR).tar.gz $(RELDIR)
-	rm -rf reltmp
+release: release.sh
+	./release.sh $(RELDIR) $(VERSION)
 
 else
 
@@ -105,7 +90,11 @@ all: halibut
 
 SRC := ../
 
+ifeq ($(shell test -d $(SRC)charset && echo yes),yes)
 LIBCHARSET_SRCDIR = $(SRC)charset/
+else
+LIBCHARSET_SRCDIR = $(SRC)../charset/
+endif
 LIBCHARSET_OBJDIR = ./#
 LIBCHARSET_OBJPFX = cs-#
 LIBCHARSET_GENPFX = charset-#
