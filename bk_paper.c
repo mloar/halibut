@@ -387,9 +387,46 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
      */
     for (pdata = firstpara; pdata; pdata = pdata->next) {
 	int last_x;
+	xref *cxref;
+	page_data *cxref_page;
 	xref_dest dest;
+	para_data *target;
+
 	dest.type = NONE;
+	cxref = NULL;
+	cxref_page = NULL;
+
 	for (ldata = pdata->first; ldata; ldata = ldata->next) {
+	    /*
+	     * If this is a contents entry, we expect to have a single
+	     * enormous cross-reference rectangle covering the whole
+	     * thing. (Unless, of course, it spans multiple pages.)
+	     */
+	    if (pdata->contents_entry && ldata->page != cxref_page) {
+		cxref_page = ldata->page;
+		cxref = mknew(xref);
+		cxref->next = NULL;
+		cxref->dest.type = PAGE;
+		assert(pdata->contents_entry->private_data);
+		target = (para_data *)pdata->contents_entry->private_data;
+		cxref->dest.page = target->first->page;
+		cxref->dest.url = NULL;
+		if (ldata->page->last_xref)
+		    ldata->page->last_xref->next = cxref;
+		else
+		    ldata->page->first_xref = cxref;
+		ldata->page->last_xref = cxref;
+		cxref->lx = conf->left_margin;
+		cxref->rx = conf->paper_width - conf->right_margin;
+		cxref->ty = conf->paper_height - conf->top_margin
+		    - ldata->ypos + ldata->line_height;
+	    }
+	    if (pdata->contents_entry) {
+		assert(cxref != NULL);
+		cxref->by = conf->paper_height - conf->top_margin
+		    - ldata->ypos;
+	    }
+
 	    last_x = render_line(ldata, conf->left_margin,
 				 conf->paper_height - conf->top_margin,
 				 &dest, keywords);
@@ -403,7 +440,6 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	 */
 	if (pdata->contents_entry) {
 	    word *w;
-	    para_data *target;
 	    wchar_t *num;
 	    int wid;
 	    int x;
