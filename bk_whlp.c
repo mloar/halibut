@@ -258,7 +258,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    if (ie_prev) {
 		/*
 		 * It appears that Windows Help's index mechanism
-		 * is inherently case-sensitive. Therefore, if two
+		 * is inherently case-insensitive. Therefore, if two
 		 * adjacent index terms compare equal apart from
 		 * case, I'm going to append nonbreaking spaces to
 		 * the end of the second one so that Windows will
