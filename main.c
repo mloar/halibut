@@ -199,6 +199,7 @@ int main(int argc, char **argv) {
 				}
 				q++;
 			    }
+			    *r = '\0';
 			    cmdline_cfg_add(para, s);
 
 			    if (cfg_tail)
