@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.9 2004/04/02 00:03:10 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.10 2004/04/28 17:34:54 jacob Exp $
 
 " I've never been entirely comfortable with vim's syntax highlighting
 " facilities, so this may have all sorts of nasty loose ends, corner cases
@@ -60,7 +60,7 @@ syn region butQLEmph   matchgroup=butCmdSpecific start="\\e\_s\@=" matchgroup=NO
 syn match butQLEmphInv "\S\@=[^bi]" contained
 
 " Paragraph level comment -- might need to come before inline comment.
-syn region butCommentPara start="\\#\_s\@=" end="^\s*$" contains=butTodo
+syn region butCommentPara start="\\#" end="^\s*$" contains=butTodo
 
 " Inline comments -- nested braces are honoured.
 syn region butComment matchgroup=Comment start="\\#{" skip="\\}" end="}" contains=butCommentBrace,butTodo
