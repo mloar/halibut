@@ -52,6 +52,10 @@ and Halibut would generate the text
 This \\ is a backslash, and these are \{braces\}.
 }
 
+If you want to write your input file in a character set other than
+ASCII, you can do so by using the \c{\\cfg\{input-charset\}}
+command. See \k{input-config} for details of this.
+
 \H{input-inline} Simple \i{inline formatting commands}
 
 Halibut formatting commands all begin with a backslash, followed by
@@ -190,12 +194,13 @@ Here is some \q{text in quotes}.
 and in every output format Halibut generates, it will choose the
 best quote characters available to it in that format.
 
-You can still use ordinary ASCII \i{double quotes} if you prefer; or
-you could even use the \c{\\u} command (see \k{input-unicode}) to
-generate \i{Unicode matched quotes} (single or double) and fall back
-to the normal ASCII one if they aren't available. But I recommend
-using the built-in \c{\\q} command in most cases, because it's
-simple and does the best it can everywhere.
+You can still use the ordinary quote characters of your choice if
+you prefer; or you could even use the \c{\\u} command (see
+\k{input-unicode}) to generate \i{Unicode matched quotes} (single or
+double) in a way which will automatically fall back to the normal
+ASCII one if they aren't available. But I recommend using the
+built-in \c{\\q} command in most cases, because it's simple and does
+the best it can everywhere.
 
 (Note that if you're using the \c{\\c} or \c{\\cw} commands to
 display literal computer code, you probably \e{will} want to use
@@ -324,23 +329,18 @@ indexing.)
 \S{input-unicode} \c{\\u}: Specifying arbitrary \i{Unicode}
 characters
 
-When Halibut is finished, it should have full Unicode support. You
-should be able to specify any (reasonably well known) \i{character
-set} for your input document, and Halibut should convert it all to
-Unicode as it reads it in. Similarly, you should be able to specify
-the character set you want for each output format and have all the
-conversion done automatically.
-
-Currently, none of this is actually supported. Input text files are
-assumed to be in \i{ISO 8859-1}, and each output format has its own
-non-configurable character set (although the HTML output can use the
-\c{&#1234;} mechanism to output any Unicode character it likes).
+Halibut has extensive support for Unicode and character set
+conversion. You can specify any (reasonably well known) \i{character
+set} for your input document, and Halibut will convert it all to
+Unicode as it reads it in. See \k{input-config} for more details of
+this.
 
 If you need to specify a Unicode character in your input document
-which is not supported by the input character set, you can use the
-\i\c{\\u} command to do this. \c{\\u} expects to be followed by a
-sequence of hex digits; so that \c{\\u0041}, for example, denotes
-the Unicode character \cw{0x0041}, which is the capital letter A.
+which is not supported by the input character set you have chosen,
+you can use the \i\c{\\u} command to do this. \c{\\u} expects to be
+followed by a sequence of hex digits; so that \c{\\u0041}, for
+example, denotes the Unicode character \cw{0x0041}, which is the
+capital letter A.
 
 If a Unicode character specified in this way is not supported in a
 particular \e{output} format, you probably don't just want it to be
@@ -1272,6 +1272,31 @@ subsections of a chapter.
 
 \dd Exactly like \c{chapter}, but changes the name given to
 appendices.
+
+\dt \I\cw{\\cfg\{input-charset\}}\cw{\\cfg\{input-charset\}\{}\e{character set name}\cw{\}}
+
+\dd This tells Halibut what \i{character set} you are writing your
+input file in. By default, it is assumed to be US-ASCII (meaning
+\e{only} plain \i{ASCII}, with no accented characters at all).
+
+\lcont{
+
+You can specify any well-known name for any supported character set.
+For example, \c{iso-8859-1}, \c{iso8859-1} and \c{iso_8859-1} are
+all recognised, \c{GB2312} and \c{EUC-CN} both work, and so on.
+
+This directive takes effect immediately after the \c{\\cfg} command.
+All text after that in the file is expected to be in the new
+character set. You can even change character set several times
+within a file if you really want to.
+
+When Halibut reads the input file, everything you type will be
+converted into \i{Unicode} from the character set you specify here,
+will be processed as Unicode by Halibut internally, and will be
+written to the various output formats in whatever character sets
+they deem appropriate.
+
+}
 
 In addition to these configuration commands, there are also
 configuration commands provided by each individual output format.

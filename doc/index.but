@@ -221,6 +221,9 @@ directive
 \IM{\\cfg\{appendix\}} \c{appendix} configuration directive
 \IM{\\cfg\{appendix\}} \cw{\\cfg\{appendix\}}
 
+\IM{\\cfg\{input-charset\}} \c{input-charset} configuration directive
+\IM{\\cfg\{input-charset\}} \cw{\\cfg\{input-charset\}}
+
 \IM{configuring heading display} configuring heading display
 \IM{configuring heading display} headings, configuring display
 \IM{configuring heading display} section headings, configuring display

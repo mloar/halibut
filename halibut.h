@@ -6,6 +6,8 @@
 #include <time.h>
 #include <string.h>
 
+#include "charset.h"
+
 #ifdef __GNUC__
 #define NORETURN __attribute__((__noreturn__))
 #else
@@ -66,6 +68,10 @@ struct input_Tag {
     filepos pos;
     int reportcols;		       /* report column numbers in errors */
     macrostack *stack;		       /* macro expansions in force */
+    int defcharset, charset;	       /* character sets for input files */
+    charset_state csstate;
+    wchar_t wc[16];		       /* wide chars from input conversion */
+    int nwc, wcpos;		       /* size of, and position in, wc[] */
 };
 
 /*

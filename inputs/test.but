@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.26 2004/04/09 18:47:33 simon Exp $
+\versionid $Id: test.but,v 1.27 2004/04/19 17:09:49 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -167,6 +167,24 @@ Use of macros: let's talk about \coopt. And about \coopt some more.
 And a nested macro: \metacoopt.
 
 A slightly more difficult macro: \eur\.2500.
+
+Test of input character set switching.
+
+\b 8859 character in ASCII mode: expect nothing useful. [coöpt]
+
+\cfg{input-charset}{ISO-8859-1}
+
+\b 8859 character in 8859 mode: expect the right thing. [coöpt]
+
+\cfg{input-charset}{UTF-8}
+
+\b 8859 character in UTF-8 mode: expect the wrong thing. [coöpt]
+
+\b UTF-8 sequence in UTF-8 mode: expect the right thing again. [coÃ¶pt]
+
+\cfg{input-charset}{ASCII}
+
+Back to ASCII again.
 
 Oh, while I'm here: some special characters. The \\, \{ and \}
 characters, to be precise. And their code equivalents, \c{\\},

@@ -82,6 +82,16 @@ static void macrocleanup(tree234 *macros) {
     freetree234(macros);
 }
 
+static void input_configure(input *in, paragraph *cfg) {
+    assert(cfg->type == para_Config);
+
+    if (!ustricmp(cfg->keyword, L"input-charset")) {
+	char *csname = utoa_dup(uadv(cfg->keyword));
+	in->charset = charset_from_localenc(csname);
+	sfree(csname);
+    }
+}
+
 /*
  * Can return EOF
  */
@@ -103,36 +113,63 @@ static int get(input *in, filepos *pos) {
 	return c;
     }
     else if (in->currfp) {
-	int c = getc(in->currfp);
 
-	if (c == EOF) {
-	    fclose(in->currfp);
-	    in->currfp = NULL;
-	}
-	/* Track line numbers, for error reporting */
-	if (pos)
-	    *pos = in->pos;
-	if (in->reportcols) {
-	    switch (c) {
-	      case '\t':
-		in->pos.col = 1 + (in->pos.col + TAB_STOP-1) % TAB_STOP;
-		break;
-	      case '\n':
-		in->pos.col = 1;
-		in->pos.line++;
-		break;
-	      default:
-		in->pos.col++;
-		break;
+	while (in->wcpos >= in->nwc) {
+
+	    int c = getc(in->currfp);
+
+	    if (c == EOF) {
+		fclose(in->currfp);
+		in->currfp = NULL;
+		return EOF;
 	    }
-	} else {
-	    in->pos.col = -1;
-	    if (c == '\n')
-		in->pos.line++;
+	    /* Track line numbers, for error reporting */
+	    if (pos)
+		*pos = in->pos;
+	    if (in->reportcols) {
+		switch (c) {
+		  case '\t':
+		    in->pos.col = 1 + (in->pos.col + TAB_STOP-1) % TAB_STOP;
+		    break;
+		  case '\n':
+		    in->pos.col = 1;
+		    in->pos.line++;
+		    break;
+		  default:
+		    in->pos.col++;
+		    break;
+		}
+	    } else {
+		in->pos.col = -1;
+		if (c == '\n')
+		    in->pos.line++;
+	    }
+
+	    /*
+	     * Do input character set translation, so that we return
+	     * Unicode.
+	     */
+	    {
+		char buf[1];
+		char const *p;
+		int inlen;
+
+		buf[0] = (char)c;
+		p = buf;
+		inlen = 1;
+
+		in->nwc = charset_to_unicode(&p, &inlen,
+					     in->wc, lenof(in->wc),
+					     in->charset, &in->csstate,
+					     NULL, 0);
+		assert(p == buf+1 && inlen == 0);
+
+		in->wcpos = 0;
+	    }
 	}
-	/* FIXME: do input charmap translation. We should be returning
-	 * Unicode here. */
-	return c;
+
+	return in->wc[in->wcpos++];
+
     } else
 	return EOF;
 }
@@ -884,6 +921,10 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			already = TRUE;/* inhibit get_token at top of loop */
 		    prev_para_type = par.type;
 		    addpara(par, ret);
+
+		    if (par.type == para_Config) {
+			input_configure(in, &par);
+		    }
 		    continue;	       /* next paragraph */
 		}
 	    }
@@ -1421,6 +1462,8 @@ paragraph *read_input(input *in, indexdata *idx) {
 	in->currfp = fopen(in->filenames[in->currindex], "r");
 	if (in->currfp) {
 	    setpos(in, in->filenames[in->currindex]);
+	    in->charset = in->defcharset;
+	    in->csstate = charset_init_state;
 	    read_file(&hptr, in, idx);
 	}
 	in->currindex++;

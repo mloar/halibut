@@ -270,6 +270,7 @@ int main(int argc, char **argv) {
 	in.pushback = NULL;
 	in.reportcols = reportcols;
 	in.stack = NULL;
+	in.defcharset = CS_ASCII;
 
 	idx = make_index();
 
