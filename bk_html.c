@@ -2101,7 +2101,7 @@ static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
 
     /* If there's nothing left, make something valid up */
     if (!*text) {
-	static const char *const anonfrag = "anon";
+	static const char anonfrag[] = "anon";
 	text = sresize(text, lenof(anonfrag), char);
 	strcpy(text, anonfrag);
     }
