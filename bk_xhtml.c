@@ -470,11 +470,32 @@ static void xhtml_do_files(xhtmlfile *file)
     xhtml_do_files(file->next);
 }
 
+/*
+ * Free up all memory used by the file tree from 'xfile' downwards
+ */
+static void xhtml_free_file(xhtmlfile* xfile)
+{
+  if (xfile==NULL) {
+    return;
+  }
+
+  if (xfile->filename) {
+    sfree(xfile->filename);
+  }
+  xhtml_free_file(xfile->child);
+  xhtml_free_file(xfile->next);
+  sfree(xfile);
+}
+
+/*
+ * Main function.
+ */
 void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_idx)
 {
 /*  int i;*/
   indexentry *ientry;
   enum23 e;
+  xhtmlsection *xsect;
 
   sourceparas = sourceform;
   conf = xhtml_configure(sourceform);
@@ -502,7 +523,15 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_id
   assert(!topfile->next); /* shouldn't have a sibling at all */
   xhtml_do_files(topfile->child);
   xhtml_do_index();
-  /* FIXME: release file, section data structures */
+
+  /* release file, section, index data structures */
+  for (xsect = topsection; xsect!=NULL; xsect=xsect->chain) {
+    if (xsect->fragment) {
+      sfree(xsect->fragment);
+    }
+    sfree(xsect);
+  }
+  xhtml_free_file(topfile);
   for (ientry = (indexentry *)first23(idx->entries, &e); ientry;
        ientry = (indexentry *)next23(&e)) {
     if (ientry->backend_data!=NULL) {
@@ -700,316 +729,6 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
   xhtml_dofooter(fp);
   fclose(fp);
 }
-
-#if 0 /* remove the old contents and sections code */
-
-/* Create all the output files needed at this level. (Never called with level==0.) */
-static void xhtml_level(paragraph *sourceform, int level)
-{
-  int sections=0; /* the number of sections at this level */
-  int i; /* which of the sections at this level are we doing? */
-  paragraph *p;
-  for (p=sourceform; p; p=p->next)
-  {
-    if (xhtml_para_level(p)==level)
-      sections++;
-  }
-/*  printf("Generating level %i; I think there are %i at this level.\n", level, sections);*/
-  p=sourceform;
-  for (i=0; i<sections; i++)
-  {
-    /* basically what we want to do, is to go through sourceform until we find
-     * the bit that starts the section we're working on (i). Then we open a
-     * file for it, and go through dumping appropriate stuff into there until
-     * we find the next section at this level.
-     */
-     while (xhtml_para_level(p)!=level && p)
-       p=p->next;
-     if (p)
-     {
-       char *fname;
-       char *c;
-       FILE *fp;
-       word *w;
-       rdstringc fname_c = { 0, 0, NULL };
-/*       printf("Found a suitable level heading: ");
-       if (p->kwtext)
-         xhtml_para(stdout, conf, p->kwtext);
-       else
-         xhtml_para(stdout, conf, p->words);
-       printf("\n");*/
-       for (w=(p->kwtext)?(p->kwtext):(p->words); w; w=w->next)
-       {
-/*         if (removeattr(w->type)==word_Normal)
-         {
-           xhtml_utostr(w->text, &c);
-           printf(" * word type %i, text %s\n", w->type, c);
-           sfree(c);
-         }
-         else
-           printf(" * word type %i\n", w->type);*/
-         switch (removeattr(w->type))
-         {
-         case word_Normal:
-         /*case word_Emph:
-         case word_Code:
-         case word_WeakCode:*/
-           xhtml_utostr(w->text, &c);
-           rdaddsc(&fname_c,c);
-           sfree(c);
-           break;
-         }
-       }
-       rdaddsc(&fname_c, ".alt");
-       fname = rdtrimc(&fname_c);
-       fp = fopen(fname, "w");
-       if (fp==NULL)
-         fatal(err_cantopenw, fname);
-       sfree(fname_c.text);
-       xhtml_dobody(fp, p, level);
-       fclose(fp);
-       p=p->next;
-     }
-     else
-     {
-       fatal(err_whatever, "Ran out of level %i sections before I should have done (xhtml_backend).", level);
-     }
-  }
-}
-
-/* Create the highest-level file. This is either called Contents.html, or Manual.html,
- * depending on whether conf.leaf_level != 0 or not respectively.
- */
-static void xhtml_level_0(paragraph *sourceform)
-{
-  char *fname = (conf.leaf_level==0)?("Manual.alt"):("Contents.alt");
-  FILE *fp = fopen(fname, "w");
-  paragraph *p;
-  int done=FALSE;
-  if (fp==NULL)
-    fatal(err_cantopenw, fname);
-
-  /* Do the title -- only one allowed */
-  for (p = sourceform; p && !done; p = p->next)
-  {
-    if (p->type == para_Title)
-    {
-      xhtml_doheader(fp, p->words);
-      done=TRUE;
-    }
-  }
-  if (!done)
-    xhtml_doheader(fp, NULL /* Eek! */);
-
-  /* Do the preamble and copyright */
-  for (p = sourceform; p; p = p->next)
-  {
-    if (p->type == para_Preamble)
-    {
-      fprintf(fp, "<p>");
-      xhtml_para(fp, p->words);
-      fprintf(fp, "</p>\n");
-    }
-  }
-  for (p = sourceform; p; p = p->next)
-  {
-    if (p->type == para_Copyright)
-    {
-      fprintf(fp, "<p>");
-      xhtml_para(fp, p->words);
-      fprintf(fp, "</p>\n");
-    }
-  }
-
-  xhtml_docontents(fp, sourceform, 0);
-  xhtml_dosections(fp, sourceform, 0);
-  xhtml_dofooter(fp);
-  fclose(fp);
-}
-
-/*
- * Output main body (contents and formatted paragraphs) from p until we hit a paragraph
- * of level (<=) 'level'.
- */
-static void xhtml_dobody(FILE *fp, paragraph *p, int level)
-{
-  if (p->kwtext) {
-    xhtml_doheader(fp, p->kwtext);
-  } else if (p->words) {
-    xhtml_doheader(fp, p->words);
-  } else {
-    xhtml_doheader(fp, NULL);
-  }
-  if (conf.leaf_level == level && conf.leaf_contains_contents)
-    xhtml_docontents(fp, p, level);
-  xhtml_dosections(fp, p, level);
-  if (conf.leaf_level != level)
-    xhtml_docontents(fp, p->next, level);
-  xhtml_dofooter(fp);
-}
-
-/*
- * Write 'level' contents from p until we hit a paragraph of level (<=) 'level'.
- */
-static void xhtml_docontents(FILE *fp, paragraph *p, int level)
-{
-  int last_level=(conf.leaf_level==level)?(level-1):(level);
-  int first=TRUE;
-  fprintf(fp, "\n");
-  for (; p && (xhtml_para_level(p)>level || xhtml_para_level(p)==-1 || first); p=p->next)
-  {
-    if (xhtml_para_level(p)!=-1)
-    {
-      xhtmlsection *sect = xhtml_find_section(p);
-      char *fragment, *file;
-
-      first=FALSE;
-      if (sect) {
-        fragment = sect->fragment;
-        file = sect->file->filename;
-      } else {
-        fragment = "";
-        file = "";
-        error(err_whatever, "Couldn't locate contents cross-reference!");
-      }
-      while (last_level > xhtml_para_level(p))
-      {
-        last_level--;
-        fprintf(fp, "</ul>\n");
-      }
-      while (last_level < xhtml_para_level(p))
-      {
-        last_level++;
-        fprintf(fp, "<ul>\n");
-      }
-      fprintf(fp, "<li><a href=\"%s#%s\">", file, fragment);
-      if (p->kwtext) {
-        xhtml_para(fp, p->kwtext);
-      } else if (p->words) {
-        xhtml_para(fp, p->words);
-      }
-      fprintf(fp, "</a></li>\n");
-    }
-  }
-  while (last_level > ((conf.leaf_level==level)?(level-1):(level)))
-  {
-    last_level--;
-    fprintf(fp, "</ul>\n");
-  }
-}
-
-/*
- * Write all the sections from p until either we hit the end, or we find a paragraph of
- * level >= break_level (or level <= break_level if conf.leaf_level==break_level).
- */
-static void xhtml_dosections(FILE *fp, paragraph *p, int break_level)
-{
-  int last_type = -1, first=TRUE;
-  /* Do the main document */
-
-    for (;
-         p && (first==TRUE || xhtml_para_level(p)==-1 || ((conf.leaf_level==break_level)?(xhtml_para_level(p)>break_level):(xhtml_para_level(p)<break_level)));
-         p = p->next)
-    {
-      first=FALSE;
-      switch (p->type)
-      {
-        /*
-         * Things we ignore because we've already processed them or
-	 * aren't going to touch them in this pass.
-	 */
-	case para_IM:
-	case para_BR:
-	case para_Biblio:		       /* only touch BiblioCited */
-	case para_VersionID:
-	case para_Copyright:
-	case para_Preamble:
-	case para_NoCite:
-	case para_Title:
-	  break;
-
-	  /*
- 	   * Chapter titles.
- 	   */
-        case para_Chapter:
-        case para_Appendix:
-        case para_UnnumberedChapter:
-          xhtml_heading(fp, p);
-           break;
-
-        case para_Heading:
-        case para_Subsect:
-          xhtml_heading(fp, p);
-          break;
-
-        case para_Rule:
-          fprintf(fp, "\n<hr />\n");
-          break;
-
-        case para_Normal:
-          fprintf(fp, "\n<p>");
-	  xhtml_para(fp, p->words);
-	  fprintf(fp, "</p>\n");
-	  break;
-
-        case para_Bullet:
-        case para_NumberedList:
-        case para_BiblioCited:
-          if (last_type!=p->type) /* start up list if necessary */
-          {
-            if (p->type == para_Bullet) {
-              fprintf(fp, "<ul>\n");
-            } else if (p->type == para_NumberedList) {
-              fprintf(fp, "<ol>\n");
-            } else if (p->type == para_BiblioCited) {
-              fprintf(fp, "<dl>\n");
-            }
-          }
-          if (p->type == para_Bullet || p->type == para_NumberedList)
-            fprintf(fp, "<li>");
-	  else if (p->type == para_BiblioCited) {
-	      fprintf(fp, "<dt>");
-	      xhtml_para(fp, p->kwtext);
-	      fprintf(fp, "</dt>\n<dd>");
-	  }
-	  xhtml_para(fp, p->words);
-	  if (p->type == para_BiblioCited) {
-	    fprintf(fp, "</dd>\n");
-	  } else if (p->type == para_Bullet || p->type == para_NumberedList) {
-	    fprintf(fp, "</li>");
-	  }
-	  if (p->type == para_Bullet || p->type == para_NumberedList || p->type == para_BiblioCited)
-	    /* close off list if necessary */
-	  {
-	    paragraph *p2 = p->next;
-	    int close_off=FALSE;
-	    if (p && (xhtml_para_level(p)==-1 ||
-	             ((conf.leaf_level==break_level)?(xhtml_para_level(p)>break_level):(xhtml_para_level(p)<break_level)))) {
-	      if (p2->type != p->type)
-	        close_off=TRUE;
-	    } else {
-	        close_off=TRUE;
-	    }
-	    if (close_off) {
-	      if (p->type == para_Bullet) {
-	        fprintf(fp, "</ul>\n");
-	      } else if (p->type == para_NumberedList) {
-	        fprintf(fp, "</ol>\n");
-	      } else if (p->type == para_BiblioCited) {
-	        fprintf(fp, "</dl>\n");
-	      }
-	    }
-	  }
-	  break;
-
-	case para_Code:
-	  xhtml_codepara(fp, p->words);
-	  break;
-      }
-      last_type = p->type;
-    }
-}
-#endif /* removed old contents and sections code */
 
 /* Convert a Unicode string to an ASCII one. '?' is
  * used for unmappable characters.
