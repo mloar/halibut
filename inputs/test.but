@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.27 2004/04/19 17:09:49 simon Exp $
+\versionid $Id: test.but,v 1.28 2004/04/20 18:26:55 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -170,17 +170,19 @@ A slightly more difficult macro: \eur\.2500.
 
 Test of input character set switching.
 
-\b 8859 character in ASCII mode: expect nothing useful. [coöpt]
+\n 8859 character in ASCII mode: expect nothing useful. [coöpt]
 
 \cfg{input-charset}{ISO-8859-1}
 
-\b 8859 character in 8859 mode: expect the right thing. [coöpt]
+\n 8859 character in 8859 mode: expect the right thing. [coöpt]
 
 \cfg{input-charset}{UTF-8}
 
-\b 8859 character in UTF-8 mode: expect the wrong thing. [coöpt]
+\n 8859 character in UTF-8 mode: expect the wrong thing. [coöpt]
 
-\b UTF-8 sequence in UTF-8 mode: expect the right thing again. [coÃ¶pt]
+\cfg{silliness}{coÃ¶pt}
+
+\n UTF-8 sequence in UTF-8 mode: expect the right thing again. [coÃ¶pt]
 
 \cfg{input-charset}{ASCII}
 
