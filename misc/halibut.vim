@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.5 2004/04/01 22:52:46 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.6 2004/04/01 23:06:46 jtn Exp $
 
 " I've never been entirely comfortable with vim's syntax highlighting
 " facilities, so this may have all sorts of nasty loose ends, corner cases
@@ -32,12 +32,15 @@ syn match butIllegalChar "\\"
 
 " Simple-minded fallback to highlight any command we don't recognise,
 " and assume it has textual arguments.
-" XXX highlights all of "\date)."
-syn match butCmdGeneric "\\\(\S\&[^{}\\]\)\+" nextgroup=butTextArg
+" (matches current iscmd() in input.c; there are some oddballs which
+" don't fit this handled specially below)
+syn match butCmdGeneric "\\[A-Za-z0-9]\+" nextgroup=butTextArg
 " was: [A-Za-z0-9#]\+
 
 syn cluster butText contains=butLiteral,@butCmd,butTodo
 
+" The special one-character "commands".
+" XXX might want to split up? Can all these appear in \k{...}?
 syn match butLiteral "\\[-{}_.\\]"
 
 " This isn't specific to Halibut, but is often useful.
