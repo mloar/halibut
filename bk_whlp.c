@@ -474,14 +474,6 @@ static void whlp_rdaddwc(rdstringc *rs, word *text) {
       case word_WkCodeQuote:
 	assert(text->type != word_CodeQuote &&
 	       text->type != word_WkCodeQuote);
-	if (towordstyle(text->type) == word_Emph &&
-	    (attraux(text->aux) == attr_First ||
-	     attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (towordstyle(text->type) == word_Code &&
-		 (attraux(text->aux) == attr_First ||
-		  attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '\x91');	       /* FIXME: configurability */
 	if (removeattr(text->type) == word_Normal) {
 	    if (whlp_convert(text->text, &c, FALSE))
 		rdaddsc(rs, c);
@@ -494,14 +486,6 @@ static void whlp_rdaddwc(rdstringc *rs, word *text) {
 	    rdaddc(rs, quoteaux(text->aux) == quote_Open ? '\x91' : '\x92');
 				       /* FIXME: configurability */
 	}
-	if (towordstyle(text->type) == word_Emph &&
-	    (attraux(text->aux) == attr_Last ||
-	     attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (towordstyle(text->type) == word_Code &&
-		 (attraux(text->aux) == attr_Last ||
-		  attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '\x92');	       /* FIXME: configurability */
 	break;
     }
 }
