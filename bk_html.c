@@ -834,7 +834,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    for (s = sects.head; s; s = s->next) {
 		if (s->file == f && s->text) {
 		    for (p = s->text;
-			 p && (p == s->text || !is_heading_type(p->type));
+			 p && (p == s->text || p->type == para_Title ||
+			       !is_heading_type(p->type));
 			 p = p->next) {
 			if (p->type == para_Config) {
 			    if (!ustricmp(p->keyword, L"html-local-head")) {
