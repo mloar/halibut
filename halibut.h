@@ -326,7 +326,7 @@ struct tagWrappedLine {
     int nspaces;		       /* number of whitespaces in line */
     int shortfall;		       /* how much shorter than max width */
 };
-wrappedline *wrap_para(word *, int, int, int (*)(word *));
+wrappedline *wrap_para(word *, int, int, int (*)(void *, word *), void *, int);
 void wrap_free(wrappedline *);
 
 /*
@@ -422,31 +422,48 @@ struct userstyle_Tag {
 /*
  * bk_text.c
  */
-void text_backend(paragraph *, keywordlist *, indexdata *);
+void text_backend(paragraph *, keywordlist *, indexdata *, void *);
 paragraph *text_config_filename(char *filename);
 
 /*
  * bk_xhtml.c
  */
-void xhtml_backend(paragraph *, keywordlist *, indexdata *);
+void xhtml_backend(paragraph *, keywordlist *, indexdata *, void *);
 paragraph *xhtml_config_filename(char *filename);
 
 /*
  * bk_whlp.c
  */
-void whlp_backend(paragraph *, keywordlist *, indexdata *);
+void whlp_backend(paragraph *, keywordlist *, indexdata *, void *);
 paragraph *whlp_config_filename(char *filename);
 
 /*
  * bk_man.c
  */
-void man_backend(paragraph *, keywordlist *, indexdata *);
+void man_backend(paragraph *, keywordlist *, indexdata *, void *);
 paragraph *man_config_filename(char *filename);
 
 /*
  * bk_info.c
  */
-void info_backend(paragraph *, keywordlist *, indexdata *);
+void info_backend(paragraph *, keywordlist *, indexdata *, void *);
 paragraph *info_config_filename(char *filename);
+
+/*
+ * bk_paper.c
+ */
+void *paper_pre_backend(paragraph *, keywordlist *, indexdata *);
+
+/*
+ * bk_ps.c
+ */
+void ps_backend(paragraph *, keywordlist *, indexdata *, void *);
+paragraph *ps_config_filename(char *filename);
+
+/*
+ * bk_pdf.c
+ */
+void pdf_backend(paragraph *, keywordlist *, indexdata *, void *);
+paragraph *pdf_config_filename(char *filename);
 
 #endif

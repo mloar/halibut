@@ -209,7 +209,7 @@ paragraph *text_config_filename(char *filename)
 }
 
 void text_backend(paragraph *sourceform, keywordlist *keywords,
-		  indexdata *idx) {
+		  indexdata *idx, void *unused) {
     paragraph *p;
     textconfig conf;
     word *prefix, *body, *wp;
@@ -219,6 +219,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     int nesting, nestindent;
     int indentb, indenta;
 
+    IGNORE(unused);
     IGNORE(keywords);		       /* we don't happen to need this */
     IGNORE(idx);		       /* or this */
 
@@ -472,18 +473,20 @@ static void text_rdaddwc(rdstringc *rs, word *text, word *end) {
     }
 }
 
-static int text_width(word *);
+static int text_width(void *, word *);
 
-static int text_width_list(word *text) {
+static int text_width_list(void *ctx, word *text) {
     int w = 0;
     while (text) {
-	w += text_width(text);
+	w += text_width(ctx, text);
 	text = text->next;
     }
     return w;
 }
 
-static int text_width(word *text) {
+static int text_width(void *ctx, word *text) {
+    IGNORE(ctx);
+
     switch (text->type) {
       case word_HyperLink:
       case word_HyperEnd:
@@ -504,7 +507,7 @@ static int text_width(word *text) {
 		 : 0) +
 		(text_convert(text->text, NULL) ?
 		 ustrlen(text->text) :
-		 text_width_list(text->alt)));
+		 text_width_list(ctx, text->alt)));
 
       case word_WhiteSpace:
       case word_EmphSpace:
@@ -560,7 +563,7 @@ static void text_heading(FILE *fp, word *tprefix, word *nprefix, word *text,
 	wrapwidth = indent + width;
     }
 
-    wrapping = wrap_para(text, firstlinewidth, wrapwidth, text_width);
+    wrapping = wrap_para(text, firstlinewidth, wrapwidth, text_width, NULL, 0);
     for (p = wrapping; p; p = p->next) {
 	text_rdaddwc(&t, p->begin, p->end);
 	length = (t.text ? strlen(t.text) : 0);
@@ -628,7 +631,7 @@ static void text_para(FILE *fp, word *prefix, char *prefixextra, word *text,
     } else
 	e = indent + extraindent;
 
-    wrapping = wrap_para(text, firstlinewidth, width, text_width);
+    wrapping = wrap_para(text, firstlinewidth, width, text_width, NULL, 0);
     for (p = wrapping; p; p = p->next) {
 	rdstringc t = { 0, 0, NULL };
 	text_rdaddwc(&t, p->begin, p->end);

@@ -119,7 +119,7 @@ paragraph *info_config_filename(char *filename)
 }
 
 void info_backend(paragraph *sourceform, keywordlist *keywords,
-		  indexdata *idx) {
+		  indexdata *idx, void *unused) {
     paragraph *p;
     infoconfig conf;
     word *prefix, *body, *wp;
@@ -140,8 +140,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     int width = 70, listindentbefore = 1, listindentafter = 3;
     int indent_code = 2, index_width = 40;
 
-    IGNORE(keywords);		       /* we don't happen to need this */
-    IGNORE(idx);		       /* or this */
+    IGNORE(unused);
 
     conf = info_configure(sourceform);
 
@@ -839,12 +838,14 @@ static int info_width_internal(word *words, int xrefs) {
     return 0;			       /* should never happen */
 }
 
-static int info_width_noxrefs(word *words)
+static int info_width_noxrefs(void *ctx, word *words)
 {
+    IGNORE(ctx);
     return info_width_internal(words, FALSE);
 }
-static int info_width_xrefs(word *words)
+static int info_width_xrefs(void *ctx, word *words)
 {
+    IGNORE(ctx);
     return info_width_internal(words, TRUE);
 }
 
@@ -866,7 +867,8 @@ static void info_heading(rdstringc *text, word *tprefix,
     firstlinewidth = width - length;
     wrapwidth = width;
 
-    wrapping = wrap_para(words, firstlinewidth, wrapwidth, info_width_noxrefs);
+    wrapping = wrap_para(words, firstlinewidth, wrapwidth,
+			 info_width_noxrefs, NULL, 0);
     for (p = wrapping; p; p = p->next) {
 	info_rdaddwc(&t, p->begin, p->end, FALSE);
 	length = (t.text ? strlen(t.text) : 0);
@@ -930,7 +932,8 @@ static void info_para(rdstringc *text, word *prefix, char *prefixextra,
     } else
 	e = indent + extraindent;
 
-    wrapping = wrap_para(words, firstlinewidth, width, info_width_xrefs);
+    wrapping = wrap_para(words, firstlinewidth, width, info_width_xrefs,
+			 NULL, 0);
     for (p = wrapping; p; p = p->next) {
 	for (i = 0; i < e; i++)
 	    rdaddc(text, ' ');

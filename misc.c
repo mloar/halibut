@@ -228,8 +228,39 @@ void mark_attr_ends(paragraph *sourceform) {
     }
 }
 
+/*
+ * This function implements the optimal paragraph wrapping
+ * algorithm, pretty much as used in TeX. A cost function is
+ * defined for each line of the wrapped paragraph (typically some
+ * convex function of the difference between the line's length and
+ * its desired length), and a dynamic programming approach is used
+ * to optimise globally across all possible layouts of the
+ * paragraph to find the one with the minimum total cost.
+ * 
+ * The function as implemented here gives a choice of two options
+ * for the cost function:
+ * 
+ *  - If `natural_space' is zero, then the algorithm attempts to
+ *    make each line the maximum possible width (either `width' or
+ *    `subsequentwidth' depending on whether it's the first line of
+ *    the paragraph or not), and the cost function is simply the
+ *    square of the unused space at the end of each line. This is a
+ *    simple mechanism suitable for use in fixed-pitch environments
+ *    such as plain text displayed on a terminal.
+ * 
+ *  - However, if `natural_space' is positive, the algorithm
+ *    assumes the medium is fully graphical and that the width of
+ *    space characters can be adjusted finely, and it attempts to
+ *    make each _space character_ the width given in
+ *    `natural_space'. (The provided width function should return
+ *    the _minimum_ acceptable width of a space character in this
+ *    case.) Therefore, the cost function for a line is dependent
+ *    on the number of spaces on that line as well as the amount by
+ *    which the line width differs from the optimum.
+ */
 wrappedline *wrap_para(word *text, int width, int subsequentwidth,
-		       int (*widthfn)(word *)) {
+		       int (*widthfn)(void *, word *), void *ctx,
+		       int natural_space) {
     wrappedline *head = NULL, **ptr = &head;
     int nwords, wordsize;
     struct wrapword {
@@ -254,7 +285,7 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	wrapwords[nwords].width = 0;
 	wrapwords[nwords].begin = text;
 	while (text) {
-	    wrapwords[nwords].width += widthfn(text);
+	    wrapwords[nwords].width += widthfn(ctx, text);
 	    wrapwords[nwords].end = text->next;
 	    if (text->next && (text->next->type == word_WhiteSpace ||
 			       text->next->type == word_EmphSpace ||
@@ -264,7 +295,7 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	}
 	if (text && text->next && (text->next->type == word_WhiteSpace ||
 			   text->next->type == word_EmphSpace)) {
-	    wrapwords[nwords].spacewidth = widthfn(text->next);
+	    wrapwords[nwords].spacewidth = widthfn(ctx, text->next);
 	    text = text->next;
 	} else {
 	    wrapwords[nwords].spacewidth = 0;
@@ -283,18 +314,20 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	int best = -1;
 	int bestcost = 0;
 	int cost;
-	int linelen = 0, spacewidth = 0;
-	int seenspace;
+	int linelen = 0, spacewidth = 0, minspacewidth = 0;
+	int nspaces;
 	int thiswidth = (i == 0 ? width : subsequentwidth);
 
 	j = 0;
-	seenspace = 0;
+	nspaces = 0;
 	while (i+j < nwords) {
 	    /*
 	     * See what happens if we put j+1 words on this line.
 	     */
-	    if (spacewidth)
-		seenspace = 1;
+	    if (spacewidth) {
+		nspaces++;
+		minspacewidth = spacewidth;
+	    }
 	    linelen += spacewidth + wrapwords[i+j].width;
 	    spacewidth = wrapwords[i+j].spacewidth;
 	    j++;
@@ -308,17 +341,80 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 		if (best > 0)
 		    break;
 	    }
-	    if (i+j == nwords) {
-		/*
-		 * Special case: if we're at the very end of the
-		 * paragraph, we don't score penalty points for the
-		 * white space left on the line.
-		 */
-		cost = 0;
+
+	    /*
+	     * Compute the cost of this line. The method of doing
+	     * this differs hugely depending on whether
+	     * natural_space is nonzero or not.
+	     */
+	    if (natural_space) {
+		if (!nspaces && linelen > thiswidth) {
+		    /*
+		     * Special case: if there are no spaces at all
+		     * on the line because one single word is too
+		     * long for its line, cost is zero because
+		     * there's nothing we can do about it anyway.
+		     */
+		    cost = 0;
+		} else {
+		    int shortfall = thiswidth - linelen;
+		    int spaceextra = shortfall / (nspaces ? nspaces : 1);
+		    int spaceshortfall = natural_space -
+			(minspacewidth + spaceextra);
+
+		    if (i+j == nwords && spaceshortfall < 0) {
+			/*
+			 * Special case: on the very last line of
+			 * the paragraph, we don't score penalty
+			 * points for having to _stretch_ the line,
+			 * since we won't stretch it anyway.
+			 * However, we score penalties as normal
+			 * for having to squeeze it.
+			 */
+			cost = 0;
+		    } else {
+			/*
+			 * Squaring this number is tricky since
+			 * it's liable to be quite big. Let's
+			 * divide it through by 256.
+			 */
+			int x = spaceshortfall >> 8;
+			int xf = spaceshortfall & 0xFF;
+
+			/*
+			 * Not counting strange variable-fixed-
+			 * point oddities, we are computing
+			 * 
+			 *   (x+xf)^2 = x^2 + 2*x*xf + xf*xf
+			 * 
+			 * except that _our_ xf is 256 times the
+			 * one listed there.
+			 */
+
+			cost = x * x;
+			cost += (2 * x * xf) >> 8;
+		    }
+		}
 	    } else {
-		cost = (thiswidth-linelen) * (thiswidth-linelen);
-		cost += wrapwords[i+j].cost;
+		if (i+j == nwords) {
+		    /*
+		     * Special case: if we're at the very end of the
+		     * paragraph, we don't score penalty points for the
+		     * white space left on the line.
+		     */
+		    cost = 0;
+		} else {
+		    cost = (thiswidth-linelen) * (thiswidth-linelen);
+		}
 	    }
+
+	    /*
+	     * Add in the cost of wrapping all lines after this
+	     * point too.
+	     */
+	    if (i+j < nwords)
+		cost += wrapwords[i+j].cost;
+
 	    /*
 	     * We compare bestcost >= cost, not bestcost > cost,
 	     * because in cases where the costs are identical we

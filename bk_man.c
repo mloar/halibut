@@ -94,13 +94,14 @@ paragraph *man_config_filename(char *filename)
 #define QUOTE_QUOTES   2 /* quote double quotes by doubling them */
 
 void man_backend(paragraph *sourceform, keywordlist *keywords,
-		 indexdata *idx) {
+		 indexdata *idx, void *unused) {
     paragraph *p;
     FILE *fp;
     manconfig conf;
 
-    IGNORE(keywords);		       /* we don't happen to need this */
-    IGNORE(idx);		       /* or this */
+    IGNORE(unused);
+    IGNORE(keywords);
+    IGNORE(idx);
 
     conf = man_configure(sourceform);
 
