@@ -363,7 +363,7 @@ cent sign, you can write \c{%%}.)
 
 The formatting commands used in this template are:
 
-\dt \i\c{%N}
+\dt \I{%N-upper}\c{%N}
 
 \dd Expands to the visible title of the section, with white space
 removed. So in a chapter declared as \q{\cw{\\C\{fish\} Catching

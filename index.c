@@ -109,8 +109,6 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 	    t->implicit_text = text;
 	    t->implicit_fpos = *fpos;
 	} else {
-	    sfree(t);
-	    t = existing;
 	    if (!is_explicit) {
  		/*
 		 * An implicit \IM for a tag that's had an implicit
@@ -119,12 +117,25 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 		 * differences. And check the tag for case match
 		 * against the existing tag, likewise.
 		 */
+
+		/*
+		 * Check the tag against its previous occurrence to
+		 * see if the cases match.
+		 */
+		if (ustrcmp(t->name, existing->name)) {
+		    error(err_indexcase, fpos, t->name,
+			  &existing->implicit_fpos, existing->name);
+		}
+
+		sfree(t);
 	    } else {
 		/*
 		 * An explicit \IM added to a valid tag. In
 		 * particular, this removes the implicit \IM if
 		 * present.
 		 */
+		sfree(t);
+		t = existing;
 		if (t->implicit_text) {
 		    free_word_list(t->implicit_text);
 		    t->implicit_text = NULL;

@@ -126,7 +126,7 @@ static int compare_wordlists_literally(word *a, word *b) {
 	} else {
 	    wchar_t *ap = a->text, *bp = b->text;
 	    while (*ap && *bp) {
-		wchar_t ac = utolower(*ap), bc = utolower(*bp);
+		wchar_t ac = *ap, bc = *bp;
 		if (ac != bc)
 		    return (ac < bc ? -1 : +1);
 		if (!*++ap && a->next && a->next->type == t && !a->next->alt)

@@ -314,7 +314,7 @@ directive
 \IM{\\W} \c{\\W} command
 \IM{\\u} \c{\\u} command
 \IM{\\k} \c{\\k} command
-\IM{\\K} \c{\\K} command
+\IM{\\K-upper} \c{\\K} command
 \IM{\\#} \c{\\#} command
 \IM{\\b} \c{\\b} command
 \IM{\\n} \c{\\n} command
@@ -323,23 +323,23 @@ directive
 \IM{\\lcont} \c{\\lcont} command
 \IM{\\rule} \c{\\rule} command
 \IM{\\quote} \c{\\quote} command
-\IM{\\C} \c{\\C} command
+\IM{\\C-upper} \c{\\C} command
 \IM{\\H} \c{\\H} command
 \IM{\\S} \c{\\S} command
 \IM{\\A} \c{\\A} command
-\IM{\\U} \c{\\U} command
+\IM{\\U-upper} \c{\\U} command
 \IM{\\S2} \c{\\S2}, \c{\\S3} commands etc.
 \IM{\\title} \c{\\title} command
 \IM{\\copyright} \c{\\copyright} command
 \IM{\\versionid} \c{\\versionid} command
-\IM{\\B} \c{\\B} command
+\IM{\\B-upper} \c{\\B} command
 \IM{\\BR} \c{\\BR} command
 \IM{\\nocite} \c{\\nocite} command
 \IM{\\i} \c{\\i} command
 \IM{\\i\\c} \c{\\i\\c} combination
 \IM{\\i\\cw} \c{\\i\\cw} combination
 \IM{\\i\\e} \c{\\i\\e} combination
-\IM{\\I} \c{\\I} command
+\IM{\\I-upper} \c{\\I} command
 \IM{\\ii} \c{\\ii} command
 \IM{\\IM} \c{\\IM} command
 \IM{\\cfg} \c{\\cfg} command
@@ -425,3 +425,5 @@ directive
 \IM{INFO-DIR-ENTRY} \cw{INFO-DIR-ENTRY}
 \IM{INFO-DIR-ENTRY} \cw{START-INFO-DIR-ENTRY}
 \IM{INFO-DIR-ENTRY} \cw{END-INFO-DIR-ENTRY}
+
+\IM{%N-upper} \c{%N}

@@ -18,7 +18,7 @@ static void do_error(int code, va_list ap) {
     char c;
     int i, j;
     char *sp, *sp2;
-    wchar_t *wsp;
+    wchar_t *wsp, *wsp2;
     filepos fpos, fpos2;
     int flags;
 
@@ -141,6 +141,20 @@ static void do_error(int code, va_list ap) {
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "unable to nest index markings");
 	flags = FILEPOS;
+	break;
+      case err_indexcase:
+	fpos = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = utoa_locale_dup(wsp);
+	fpos2 = *va_arg(ap, filepos *);
+	wsp2 = va_arg(ap, wchar_t *);
+	sp2 = utoa_locale_dup(wsp2);
+	sprintf(error, "warning: index tag `%.200s' used with ", sp);
+	sprintf(error + strlen(error), "different case (`%.200s') at %s:%d",
+		sp2, fpos2.filename, fpos2.line);
+	flags = FILEPOS;
+	sfree(sp);
+	sfree(sp2);
 	break;
       case err_nosuchkw:
 	fpos = *va_arg(ap, filepos *);

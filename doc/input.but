@@ -362,8 +362,8 @@ This is likely to cost \u20AC{EUR\_}2500 at least.
 
 If you read it in other formats, you may see different results.
 
-\S{input-xref} \i\c{\\k} and \i\c{\\K}: \ii{Cross-references} to
-other sections
+\S{input-xref} \i\c{\\k} and \I{\\K-upper}\c{\\K}:
+\ii{Cross-references} to other sections
 
 \K{intro-features} mentions that Halibut \I{section numbers}numbers
 the sections of your document automatically, and can generate
@@ -844,8 +844,8 @@ So now you know.
 
 }
 
-\S{input-sections} \i\c{\\C}, \i\c{\\H}, \i\c{\\S}, \i\c{\\A},
-\i\c{\\U}: Chapter and \i{section headings}
+\S{input-sections} \I{\\C-upper}\c{\\C}, \i\c{\\H}, \i\c{\\S},
+\i\c{\\A}, \I{\\U-upper}\c{\\U}: Chapter and \i{section headings}
 
 \K{intro-features} mentions that Halibut \I{section
 numbering}numbers the sections of your document automatically, and
@@ -1020,10 +1020,10 @@ If you need your document to refer to other documents (research
 papers, books, websites, whatever), you might find a bibliography
 feature useful.
 
-You can define a bibliography entry using the \i\c{\\B} command. This
-looks very like the \c{\\C} command and friends: it expects a
-keyword in braces, followed by some text describing the document
-being referred to. For example:
+You can define a bibliography entry using the \I{\\B-upper}\c{\\B}
+command. This looks very like the \c{\\C} command and friends: it
+expects a keyword in braces, followed by some text describing the
+document being referred to. For example:
 
 \c \B{freds-book} \q{The Taming Of The Mongoose}, by Fred Bloggs.
 \c Published by Paperjam & Notoner, 1993.
@@ -1126,8 +1126,8 @@ appear emphasised, you must say so explicitly using \c{\\IM}; see
 Sometimes you might want to index a term which is not explicitly
 mentioned, but which is highly relevant to the text and you think
 that somebody looking up that term in the index might find it useful
-to be directed here. To do this you can use the \i\c{\\I} command,
-to create an \i{\e{invisible} index tag}:
+to be directed here. To do this you can use the \I{\\I-upper}\c{\\I}
+command, to create an \i{\e{invisible} index tag}:
 
 \c If your printer runs out of toner, \I{replacing toner
 \c cartridge}here is what to do:
@@ -1231,6 +1231,39 @@ default one (typically \c{\\IM\{foo\}\_foo}, although it might be
 \c{\\i\\c}); but as soon as you specify an explicit \c{\\IM},
 Halibut discards its default implicit one, and you must then specify
 that one explicitly as well if you wanted to keep it.
+
+\S{input-index-case} Indexing terms that differ only in case
+
+The \e{tags} you use to define an index term (that is, the text in
+the braces after \c{\\i}, \c{\\I} and \c{\\IM}) are treated
+case-insensitively by Halibut. So if, as in this manual itself, you
+need two index terms that differ only in case, doing this will not
+work:
+
+\c The \i\c{\\c} command defines computer code.
+\c
+\c The \i\c{\\C} command defines a chapter.
+
+Halibut will treat these terms as the same, and will fold the two
+sets of references into one combined list (although it will warn you
+that it is doing this). The idea is to ensure that people who forget
+to use \c{\\ii} find out about it rather than Halibut silently
+generating a bad index; checking an index for errors is very hard
+work, so Halibut tries to avoid errors in the first place as much as
+it can.
+
+If you do come across this situation, you will need to define two
+distinguishable index terms. What I did in this manual was something
+like this:
+
+\c The \i\c{\\c} command defines computer code.
+\c
+\c The \I{\\C-upper}\c{\\C} command defines a chapter.
+\c
+\c \IM{\\C-upper} \c{\\C}
+
+The effect of this will be two separate index entries, one reading
+\c{\\c} and the other reading \c{\\C}, pointing to the right places.
 
 \H{input-config} \ii{Configuring} Halibut
 

@@ -226,6 +226,7 @@ enum {
     err_missingrbrace2,		       /* unclosed braces at end of file */
     err_nestedstyles,		       /* unable to nest text styles */
     err_nestedindex,		       /* unable to nest `\i' thingys */
+    err_indexcase,		       /* two \i differing only in case */
     err_nosuchkw,		       /* unresolved cross-reference */
     err_multiBR,		       /* multiple \BRs on same keyword */
     err_nosuchidxtag,		       /* \IM on unknown index tag (warning) */
