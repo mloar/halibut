@@ -693,8 +693,9 @@ This output format generates data that can be used by the \i{Windows
 Help} program \cw{WINHELP.EXE}. There are two actual files
 generated, one ending in \c{.hlp} and the other ending in \c{.cnt}.
 
-Currently, the output is harcoded to be in the \q{\i{Win1252}}
-character set.
+Currently, the output is hardcoded to be in the \q{\i{Win1252}}
+character set. (If anyone knows how character sets are encoded in
+Windows Help, we'd appreciate help.)
 
 The Windows Help output format supports the following configuration
 directives:
