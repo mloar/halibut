@@ -1,4 +1,6 @@
-\title Buttress: A Test Document
+\title Buttress: A Test Document With A Stupidly Long Title Just To
+See If Wrapping Titles Works OK. In Fact This Title Will Span Three
+Lines, Not Just Two. How's That For Ludicrous?
 
 \cfg{xhtml-leaf-smallest-contents}{2}
 
@@ -17,9 +19,11 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.12 2000/12/21 16:59:38 james Exp $
+\versionid $Id: test.but,v 1.13 2001/10/25 12:48:31 simon Exp $
 
-\C{ch\\ap} First chapter title
+\C{ch\\ap} First chapter title; for similar wrapping reasons this
+chapter title will be ludicrously long. I wonder how much more
+chapter title I can write before feeling silly.
 
 This is a para\#{another{} comment}graph of text. It
 has line\#{yet another one} breaks in   between words, multiple
@@ -29,7 +33,9 @@ fragments}.
 \cw{This} is weak code. And \k{head} contains some other stuff.
 \K{subhead} does too.
 
-\H{head} First section title
+\H{head} First section title (very long again, no prizes for
+guessing the reason why this time, and here's yet more text to pad
+it out to three lines of output)
 
 Here's a code paragraph:
 
