@@ -1318,7 +1318,9 @@ static int string_width(font_data *font, wchar_t const *string, int *errs)
     for (; *string; string++) {
 	int index;
 
-	index = font->bmp[(unsigned short)*string];
+	index = (*string < 0 || *string > 0xFFFF ? 0xFFFF :
+		 font->bmp[*string]);
+
 	if (index == 0xFFFF) {
 	    if (errs)
 		*errs = 1;
@@ -1766,7 +1768,8 @@ static int render_string(page_data *page, font_data *font, int fontsize,
     textpos = textwid = 0;
 
     while (*str) {
-	glyph = font->bmp[*str];
+	glyph = (*str < 0 || *str > 0xFFFF ? 0xFFFF :
+		 font->bmp[*str]);
 
 	if (glyph == 0xFFFF) {
 	    str++;
