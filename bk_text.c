@@ -360,22 +360,6 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     sfree(conf.filename);
 }
 
-static int text_ok(int charset, const wchar_t *s)
-{
-    char buf[256];
-    charset_state state = CHARSET_INIT_STATE;
-    int err, len = ustrlen(s);
-
-    err = 0;
-    while (len > 0) {
-	(void)charset_from_unicode(&s, &len, buf, lenof(buf),
-				   charset, &state, &err);
-	if (err)
-	    return FALSE;
-    }
-    return TRUE;
-}
-
 static void text_output(textfile *tf, const wchar_t *s)
 {
     char buf[256];
@@ -441,7 +425,7 @@ static void text_rdaddw(int charset, rdstring *rs, word *text, word *end) {
 		  attraux(text->aux) == attr_Only))
 	    rdadd(rs, L'`');	       /* FIXME: configurability */
 	if (removeattr(text->type) == word_Normal) {
-	    if (text_ok(charset, text->text) || !text->alt)
+	    if (cvt_ok(charset, text->text) || !text->alt)
 		rdadds(rs, text->text);
 	    else
 		text_rdaddw(charset, rs, text->alt, NULL);
@@ -495,7 +479,7 @@ static int text_width(void *ctx, word *text) {
 		 ? (attraux(text->aux) == attr_Only ? 2 :
 		    attraux(text->aux) == attr_Always ? 0 : 1)
 		 : 0) +
-		(text_ok(charset, text->text) || !text->alt ?
+		(cvt_ok(charset, text->text) || !text->alt ?
 		 ustrlen(text->text) :
 		 text_width_list(ctx, text->alt)));
 

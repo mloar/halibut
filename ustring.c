@@ -314,3 +314,23 @@ wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
     sfree(text);
     return wblk;
 }
+
+/*
+ * Determine whether a Unicode string can be translated into a
+ * given charset without any missing characters.
+ */
+int cvt_ok(int charset, const wchar_t *s)
+{
+    char buf[256];
+    charset_state state = CHARSET_INIT_STATE;
+    int err, len = ustrlen(s);
+
+    err = 0;
+    while (len > 0) {
+	(void)charset_from_unicode(&s, &len, buf, lenof(buf),
+				   charset, &state, &err);
+	if (err)
+	    return FALSE;
+    }
+    return TRUE;
+}

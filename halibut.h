@@ -294,6 +294,7 @@ int utob(wchar_t *);
 int uisdigit(wchar_t);
 wchar_t *ustrlow(wchar_t *s);
 wchar_t *ustrftime(wchar_t *fmt, struct tm *timespec);
+int cvt_ok(int charset, const wchar_t *s);
 
 /*
  * help.c
