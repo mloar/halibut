@@ -188,6 +188,8 @@ int main(int argc, char **argv) {
 	if (!sourceform)
 	    exit(EXIT_FAILURE);
 
+	mark_attr_ends(sourceform);
+
 	sfree(infiles);
 
 	keywords = get_keywords(sourceform);

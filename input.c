@@ -417,7 +417,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
     paragraph par;
     word wd, **whptr, **idximplicit;
     wchar_t utext[2], *wdtext;
-    int style;
+    int style, spcstyle;
     int already;
     int iswhite, seenwhite;
     int type;
@@ -618,6 +618,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	 */
 	parsestk = stk_new();
 	style = word_Normal;
+	spcstyle = word_WhiteSpace;
 	indexing = FALSE;
 	seenwhite = TRUE;
 	while (t.type != tok_eop && t.type != tok_eof) {
@@ -630,7 +631,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		if (whptr == &par.words)
 		    break;	       /* strip whitespace at start of para */
 		wd.text = NULL;
-		wd.type = word_WhiteSpace;
+		wd.type = spcstyle;
 		wd.alt = NULL;
 		wd.fpos = t.pos;
 		if (indexing)
@@ -672,8 +673,10 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			whptr = sitem->whptr;
 			idximplicit = sitem->idximplicit;
 		    }
-		    if (sitem->type & stack_style)
+		    if (sitem->type & stack_style) {
 			style = word_Normal;
+			spcstyle = word_WhiteSpace;
+		    }
 		    if (sitem->type & stack_idx) {
 			indexword->text = ustrdup(indexstr.text);
 			if (index_downcase)
@@ -810,6 +813,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 				style = (t.cmd == c_c ? word_Code :
 					 t.cmd == c_cw ? word_WeakCode :
 					 word_Emph);
+				spcstyle = tospacestyle(style);
 				sitem->type |= stack_style;
 			    }
 			    dtor(t), t = get_token(in);
@@ -842,6 +846,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			style = (type == c_c ? word_Code :
 				 type == c_cw ? word_WeakCode :
 				 word_Emph);
+			spcstyle = tospacestyle(style);
 			sitem = mknew(struct stack_item);
 			sitem->type = stack_style;
 			stk_push(parsestk, sitem);
@@ -874,6 +879,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			    style = (t.cmd == c_c ? word_Code :
 				     t.cmd == c_cw ? word_WeakCode :
 				     word_Emph);
+			    spcstyle = tospacestyle(style);
 			    sitem->type |= stack_style;
 			}
 			dtor(t), t = get_token(in);

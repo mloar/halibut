@@ -262,23 +262,42 @@ static void text_rdaddwc(rdstringc *rs, word *text, word *end) {
       case word_Emph:
       case word_Code:
       case word_WeakCode:
-	if (text->type == word_Emph)
+	if (text->type == word_Emph &&
+	    (text->aux == attr_First || text->aux == attr_Only))
 	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (text->type == word_Code)
+	else if (text->type == word_Code &&
+		 (text->aux == attr_First || text->aux == attr_Only))
 	    rdaddc(rs, '`');	       /* FIXME: configurability */
 	if (text_convert(text->text, &c))
 	    rdaddsc(rs, c);
 	else
 	    text_rdaddwc(rs, text->alt, NULL);
 	sfree(c);
-	if (text->type == word_Emph)
+	if (text->type == word_Emph &&
+	    (text->aux == attr_Last || text->aux == attr_Only))
 	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (text->type == word_Code)
+	else if (text->type == word_Code &&
+		 (text->aux == attr_Last || text->aux == attr_Only))
 	    rdaddc(rs, '\'');	       /* FIXME: configurability */
 	break;
 
       case word_WhiteSpace:
+      case word_EmphSpace:
+      case word_CodeSpace:
+      case word_WkCodeSpace:
+	if (text->type == word_EmphSpace &&
+	    (text->aux == attr_First || text->aux == attr_Only))
+	    rdaddc(rs, '_');	       /* FIXME: configurability */
+	else if (text->type == word_CodeSpace &&
+		 (text->aux == attr_First || text->aux == attr_Only))
+	    rdaddc(rs, '`');	       /* FIXME: configurability */
 	rdaddc(rs, ' ');
+	if (text->type == word_EmphSpace &&
+	    (text->aux == attr_Last || text->aux == attr_Only))
+	    rdaddc(rs, '_');	       /* FIXME: configurability */
+	else if (text->type == word_CodeSpace &&
+		 (text->aux == attr_Last || text->aux == attr_Only))
+	    rdaddc(rs, '\'');	       /* FIXME: configurability */
 	break;
     }
 }
@@ -308,13 +327,24 @@ static int text_width(word *text) {
       case word_Emph:
       case word_Code:
       case word_WeakCode:
-	return ((text->type == word_Emph || text->type == word_Code ? 2 : 0) +
+	return (((text->type == word_Emph ||
+		  text->type == word_Code)
+		 ? (text->aux == attr_Only ? 2 :
+		    text->aux == attr_Always ? 0 : 1)
+		 : 0) +
 		(text_convert(text->text, NULL) ?
 		 ustrlen(text->text) :
 		 text_width_list(text->alt)));
 
       case word_WhiteSpace:
-	return 1;
+      case word_EmphSpace:
+      case word_CodeSpace:
+      case word_WkCodeSpace:
+	return (((text->type == word_EmphSpace ||
+		  text->type == word_CodeSpace)
+		 ? (text->aux == attr_Only ? 2 :
+		    text->aux == attr_Always ? 0 : 1)
+		 : 0) + 1);
     }
     return 0;			       /* should never happen */
 }

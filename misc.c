@@ -132,6 +132,26 @@ int compare_wordlists(word *a, word *b) {
 	return 0;
 }
 
+void mark_attr_ends(paragraph *sourceform) {
+    paragraph *p;
+    word *w, *wp;
+    for (p = sourceform; p; p = p->next) {
+	wp = NULL;
+	for (w = p->words; w; w = w->next) {
+	    if (isattr(w->type)) {
+		int before = (wp && isattr(wp->type) &&
+			      sameattr(wp->type, w->type));
+		int after = (w->next && isattr(w->next->type) &&
+			     sameattr(w->next->type, w->type));
+		w->aux = (before ?
+			  (after ? attr_Always : attr_Last) :
+			  (after ? attr_First : attr_Only));
+	    }
+	    wp = w;
+	}
+    }
+}
+
 wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 		       int (*widthfn)(word *)) {
     wrappedline *head = NULL, **ptr = &head;
@@ -151,7 +171,8 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	thiswidth = lastgood = 0;
 	while (text) {
 	    thiswidth += widthfn(text);
-	    if (text->next && text->next->type == word_WhiteSpace) {
+	    if (text->next && (text->next->type == word_WhiteSpace ||
+			       text->next->type == word_EmphSpace)) {
 		if (thiswidth > width)
 		    break;
 		spc = text->next;

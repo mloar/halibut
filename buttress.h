@@ -99,22 +99,41 @@ enum {
 struct word_Tag {
     word *next, *alt;
     int type;
+    int aux;
     wchar_t *text;
     filepos fpos;
 };
 enum {
+    /* ORDERING CONSTRAINT: these normal-word types ... */
     word_Normal,
     word_Emph,
     word_Code,			       /* monospaced; `quoted' in text */
     word_WeakCode,		       /* monospaced, normal in text */
+    /* ... must be in the same order as these space types ... */
+    word_WhiteSpace,		       /* text is NULL or ignorable */
+    word_EmphSpace,		       /* WhiteSpace when emphasised */
+    word_CodeSpace,		       /* WhiteSpace when code */
+    word_WkCodeSpace,		       /* WhiteSpace when weak code */
+    /* END ORDERING CONSTRAINT */
+    word_internal_endattrs,
     word_UpperXref,		       /* \K */
     word_LowerXref,		       /* \k */
     word_XrefEnd,		       /* (invisible; no text) */
     word_IndexRef,		       /* (always an invisible one) */
-    word_WhiteSpace,		       /* text is NULL or ignorable */
     word_HyperLink,		       /* (invisible) */
     word_HyperEnd		       /* (also invisible; no text) */
 };
+/* aux values for attributed words */
+enum {
+    attr_Only,			       /* a lone word with the attribute */
+    attr_First,			       /* the first of a series */
+    attr_Last,			       /* the last of a series */
+    attr_Always			       /* any other part of a series */
+};
+#define isattr(x) ( ( (x) > word_Normal && (x) < word_WhiteSpace ) || \
+                    ( (x) > word_WhiteSpace && (x) < word_internal_endattrs ) )
+#define sameattr(x,y) ( (x)-(y) == 0 || (x)-(y) == 4 || (x)-(y) == -4 )
+#define tospacestyle(x) ( (x) + 4 )
 
 /*
  * error.c
@@ -230,6 +249,8 @@ void rdaddsc(rdstringc *rs, char *p);
 char *rdtrimc(rdstringc *rs);
 
 int compare_wordlists(word *a, word *b);
+
+void mark_attr_ends(paragraph *sourceform);
 
 typedef struct tagWrappedLine wrappedline;
 struct tagWrappedLine {
