@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.16 2001/12/06 12:59:37 simon Exp $
+\versionid $Id: test.but,v 1.17 2001/12/14 12:44:40 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -107,7 +107,7 @@ and here's a reference to it: \k{sub-sub}.
 Here's an \i{appendix}, for no terribly good reason at all. See
 \k{book}.
 
-It also contains a \W{http://www.gallery.uk.eu.org/}{hyperlink}.
+It also contains a \W{http://www.tartarus.org/}{hyperlink}.
 
 \U Bibliography
 
