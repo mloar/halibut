@@ -80,7 +80,7 @@ static infoconfig info_configure(paragraph *source) {
 	if (source->type == para_Config) {
 	    if (!ustricmp(source->keyword, L"info-filename")) {
 		sfree(ret.filename);
-		ret.filename = utoa_dup(uadv(source->keyword));
+		ret.filename = dupstr(adv(source->origkeyword));
 	    } else if (!ustricmp(source->keyword, L"info-max-file-size")) {
 		ret.maxfilesize = utoi(uadv(source->keyword));
 	    }
@@ -92,30 +92,7 @@ static infoconfig info_configure(paragraph *source) {
 
 paragraph *info_config_filename(char *filename)
 {
-    paragraph *p;
-    wchar_t *ufilename, *up;
-    int len;
-
-    p = mknew(paragraph);
-    memset(p, 0, sizeof(*p));
-    p->type = para_Config;
-    p->next = NULL;
-    p->fpos.filename = "<command line>";
-    p->fpos.line = p->fpos.col = -1;
-
-    ufilename = ufroma_dup(filename);
-    len = ustrlen(ufilename) + 2 + lenof(L"info-filename");
-    p->keyword = mknewa(wchar_t, len);
-    up = p->keyword;
-    ustrcpy(up, L"info-filename");
-    up = uadv(up);
-    ustrcpy(up, ufilename);
-    up = uadv(up);
-    *up = L'\0';
-    assert(up - p->keyword < len);
-    sfree(ufilename);
-
-    return p;
+    return cmdline_cfg_simple("info-filename", filename, NULL);
 }
 
 void info_backend(paragraph *sourceform, keywordlist *keywords,
@@ -235,11 +212,11 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    }
 
 	    rdaddsc(&intro_text, "INFO-DIR-SECTION ");
-	    s = utoa_dup(section);
+	    s = utoa_dup(section, CS_FIXME);
 	    rdaddsc(&intro_text, s);
 	    sfree(s);
 	    rdaddsc(&intro_text, "\nSTART-INFO-DIR-ENTRY\n* ");
-	    s = utoa_dup(shortname);
+	    s = utoa_dup(shortname, CS_FIXME);
 	    rdaddsc(&intro_text, s);
 	    sfree(s);
 	    rdaddsc(&intro_text, ": (");
@@ -257,7 +234,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 		}
 	    }
 	    rdaddsc(&intro_text, ".   ");
-	    s = utoa_dup(longname);
+	    s = utoa_dup(longname, CS_FIXME);
 	    rdaddsc(&intro_text, s);
 	    sfree(s);
 	    rdaddsc(&intro_text, "\nEND-INFO-DIR-ENTRY\n\n");

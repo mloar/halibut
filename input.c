@@ -86,7 +86,7 @@ static void input_configure(input *in, paragraph *cfg) {
     assert(cfg->type == para_Config);
 
     if (!ustricmp(cfg->keyword, L"input-charset")) {
-	char *csname = utoa_dup(uadv(cfg->keyword));
+	char *csname = utoa_dup(uadv(cfg->keyword), CS_ASCII);
 	in->charset = charset_from_localenc(csname);
 	sfree(csname);
     }
@@ -95,7 +95,7 @@ static void input_configure(input *in, paragraph *cfg) {
 /*
  * Can return EOF
  */
-static int get(input *in, filepos *pos) {
+static int get(input *in, filepos *pos, rdstringc *rsc) {
     int pushbackpt = in->stack ? in->stack->npushback : 0;
     if (in->npushback > pushbackpt) {
 	--in->npushback;
@@ -123,6 +123,10 @@ static int get(input *in, filepos *pos) {
 		in->currfp = NULL;
 		return EOF;
 	    }
+
+	    if (rsc)
+		rdaddc(rsc, c);
+
 	    /* Track line numbers, for error reporting */
 	    if (pos)
 		*pos = in->pos;
@@ -182,6 +186,7 @@ struct token_Tag {
     int type;
     int cmd, aux;
     wchar_t *text;
+    char *origtext;
     filepos pos;
 };
 enum {
@@ -373,31 +378,48 @@ static void match_kw(token *tok) {
 token get_token(input *in) {
     int c;
     int nls;
+    int prevpos;
     token ret;
     rdstring rs = { 0, 0, NULL };
+    rdstringc rsc = { 0, 0, NULL };
     filepos cpos;
 
     ret.text = NULL;		       /* default */
-    c = get(in, &cpos);
+    ret.origtext = NULL;	       /* default */
+    if (in->pushback_chars) {
+	rdaddsc(&rsc, in->pushback_chars);
+	sfree(in->pushback_chars);
+	in->pushback_chars = NULL;
+    }
+    c = get(in, &cpos, &rsc);
     ret.pos = cpos;
     if (iswhite(c)) {		       /* tok_white or tok_eop */
 	nls = 0;
+	prevpos = 0;
 	do {
 	    if (isnl(c))
 		nls++;
-	} while ((c = get(in, &cpos)) != EOF && iswhite(c));
+	    prevpos = rsc.pos;
+	} while ((c = get(in, &cpos, &rsc)) != EOF && iswhite(c));
 	if (c == EOF) {
 	    ret.type = tok_eof;
+	    sfree(rsc.text);
 	    return ret;
+	}
+	if (rsc.text) {
+	    in->pushback_chars = dupstr(rsc.text + prevpos);
+	    sfree(rsc.text);
 	}
 	unget(in, c, &cpos);
 	ret.type = (nls > 1 ? tok_eop : tok_white);
 	return ret;
     } else if (c == EOF) {	       /* tok_eof */
 	ret.type = tok_eof;
+	sfree(rsc.text);
 	return ret;
     } else if (c == '\\') {	       /* tok_cmd */
-	c = get(in, &cpos);
+	rsc.pos = prevpos = 0;
+	c = get(in, &cpos, &rsc);
 	if (c == '-' || c == '\\' || c == '_' ||
 	    c == '#' || c == '{' || c == '}' || c == '.') {
 	    /* single-char command */
@@ -407,13 +429,15 @@ token get_token(input *in) {
 	    do {
 		rdadd(&rs, c);
 		len++;
-		c = get(in, &cpos);
+		prevpos = rsc.pos;
+		c = get(in, &cpos, &rsc);
 	    } while (ishex(c) && len < 5);
 	    unget(in, c, &cpos);
 	} else if (iscmd(c)) {
 	    do {
 		rdadd(&rs, c);
-		c = get(in, &cpos);
+		prevpos = rsc.pos;
+		c = get(in, &cpos, &rsc);
 	    } while (iscmd(c));
 	    unget(in, c, &cpos);
 	}
@@ -423,14 +447,24 @@ token get_token(input *in) {
 	 */
 	ret.type = tok_cmd;
 	ret.text = ustrdup(rs.text);
+	if (rsc.text) {
+	    in->pushback_chars = dupstr(rsc.text + prevpos);
+	    rsc.text[prevpos] = '\0';
+	    ret.origtext = dupstr(rsc.text);
+	} else {
+	    ret.origtext = dupstr("");
+	}
 	match_kw(&ret);
 	sfree(rs.text);
+	sfree(rsc.text);
 	return ret;
     } else if (c == '{') {	       /* tok_lbrace */
 	ret.type = tok_lbrace;
+	sfree(rsc.text);
 	return ret;
     } else if (c == '}') {	       /* tok_rbrace */
 	ret.type = tok_rbrace;
+	sfree(rsc.text);
 	return ret;
     } else {			       /* tok_word */
 	/*
@@ -442,6 +476,7 @@ token get_token(input *in) {
 	 * a hyphen.
 	 */
 	ret.aux = FALSE;	       /* assumed for now */
+	prevpos = 0;
 	while (1) {
 	    if (iswhite(c) || c=='{' || c=='}' || c=='\\' || c==EOF) {
 		/* Put back the character that caused termination */
@@ -450,15 +485,25 @@ token get_token(input *in) {
 	    } else {
 		rdadd(&rs, c);
 		if (c == '-') {
+		    prevpos = rsc.pos;
 		    ret.aux = TRUE;
 		    break;	       /* hyphen terminates word */
 		}
 	    }
-	    c = get(in, &cpos);
+	    prevpos = rsc.pos;
+	    c = get(in, &cpos, &rsc);
 	}
 	ret.type = tok_word;
 	ret.text = ustrdup(rs.text);
+	if (rsc.text) {
+	    in->pushback_chars = dupstr(rsc.text + prevpos);
+	    rsc.text[prevpos] = '\0';
+	    ret.origtext = dupstr(rsc.text);
+	} else {
+	    ret.origtext = dupstr("");
+	}
 	sfree(rs.text);
+	sfree(rsc.text);
 	return ret;
     }
 }
@@ -472,7 +517,7 @@ int isbrace(input *in) {
     int c;
     filepos cpos;
 
-    c = get(in, &cpos);
+    c = get(in, &cpos, NULL);
     unget(in, c, &cpos);
     return (c == '{');
 }
@@ -488,15 +533,16 @@ token get_codepar_token(input *in) {
     filepos cpos;
 
     ret.type = tok_word;
-    c = get(in, &cpos);		       /* expect (and discard) one space */
+    ret.origtext = NULL;
+    c = get(in, &cpos, NULL);	       /* expect (and discard) one space */
     ret.pos = cpos;
     if (c == ' ') {
-	c = get(in, &cpos);
+	c = get(in, &cpos, NULL);
 	ret.pos = cpos;
     }
     while (!isnl(c) && c != EOF) {
 	int c2 = c;
-	c = get(in, &cpos);
+	c = get(in, &cpos, NULL);
 	/* Discard \r just before \n. */
 	if (c2 != 13 || !isnl(c))
 	    rdadd(&rs, c2);
@@ -538,7 +584,7 @@ static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
  * Destructor before token is reassigned; should catch most memory
  * leaks
  */
-#define dtor(t) ( sfree(t.text) )
+#define dtor(t) ( sfree(t.text), sfree(t.origtext) )
 
 /*
  * Reads a single file (ie until get() returns EOF)
@@ -581,6 +627,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
     wchar_t uchr;
 
     t.text = NULL;
+    t.origtext = NULL;
     macros = newtree234(macrocmp);
     already = FALSE;
 
@@ -593,6 +640,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	int start_cmd = c__invalid;
 	par.words = NULL;
 	par.keyword = NULL;
+	par.origkeyword = NULL;
 	whptr = &par.words;
 
 	/*
@@ -840,6 +888,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 
 	    if (needkw > 0) {
 		rdstring rs = { 0, 0, NULL };
+		rdstringc rsc = { 0, 0, NULL };
 		int nkeys = 0;
 		filepos fp;
 
@@ -857,20 +906,25 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			   (t.type == tok_cmd && t.cmd == c__nbsp) ||
 			   (t.type == tok_cmd && t.cmd == c__escaped)) {
 			if (t.type == tok_white ||
-			    (t.type == tok_cmd && t.cmd == c__nbsp))
+			    (t.type == tok_cmd && t.cmd == c__nbsp)) {
 			    rdadd(&rs, ' ');
-			else
+			    rdaddc(&rsc, ' ');
+			} else {
 			    rdadds(&rs, t.text);
+			    rdaddsc(&rsc, t.origtext);
+			}
 		    }
 		    if (t.type != tok_rbrace) {
 			error(err_kwunclosed, &t.pos);
 			continue;
 		    }
 		    rdadd(&rs, 0);     /* add string terminator */
+		    rdaddc(&rsc, 0);   /* add string terminator */
 		    dtor(t), t = get_token(in); /* eat right brace */
 		}
 
-		rdadd(&rs, 0);     /* add string terminator */
+		rdadd(&rs, 0);	       /* add string terminator */
+		rdaddc(&rsc, 0);       /* add string terminator */
 
 		/* See whether we have the right number of keywords. */
 		if ((needkw & 48) && nkeys > 0)
@@ -901,6 +955,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		}
 
 		par.keyword = rdtrim(&rs);
+		par.origkeyword = rdtrimc(&rsc);
 
 		/* Move to EOP in case of needkw==8 or 16 (no body) */
 		if (needkw & 24) {
@@ -1464,6 +1519,8 @@ paragraph *read_input(input *in, indexdata *idx) {
 	    setpos(in, in->filenames[in->currindex]);
 	    in->charset = in->defcharset;
 	    in->csstate = charset_init_state;
+	    in->wcpos = in->nwc = 0;
+	    in->pushback_chars = NULL;
 	    read_file(&hptr, in, idx);
 	}
 	in->currindex++;

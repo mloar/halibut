@@ -27,6 +27,12 @@
 #include "tree234.h"
 
 /*
+ * FIXME: Charset temporary workarounds
+ */
+#define CS_FIXME CS_ISO8859_1
+#define CS_LOCAL CS_ISO8859_1
+
+/*
  * Structure tags
  */
 typedef struct input_Tag input;
@@ -72,6 +78,7 @@ struct input_Tag {
     charset_state csstate;
     wchar_t wc[16];		       /* wide chars from input conversion */
     int nwc, wcpos;		       /* size of, and position in, wc[] */
+    char *pushback_chars;	       /* used to save input-encoding data */
 };
 
 /*
@@ -82,6 +89,7 @@ struct paragraph_Tag {
     paragraph *next;
     int type;
     wchar_t *keyword;		       /* for most special paragraphs */
+    char *origkeyword;		       /* same again in original charset */
     word *words;		       /* list of words in paragraph */
     int aux;			       /* number, in a numbered paragraph
                                         * or subsection level
@@ -266,11 +274,14 @@ char *dupstr(char *s);
 /*
  * ustring.c
  */
-wchar_t *ustrdup(wchar_t *s);
-char *ustrtoa(wchar_t *s, char *outbuf, int size);
-wchar_t *ustrfroma(char *s, wchar_t *outbuf, int size);
-char *utoa_dup(wchar_t *s);
-wchar_t *ufroma_dup(char *s);
+wchar_t *ustrdup(wchar_t const *s);
+char *ustrtoa(wchar_t const *s, char *outbuf, int size, int charset);
+char *ustrtoa_careful(wchar_t const *s, char *outbuf, int size, int charset);
+wchar_t *ustrfroma(char const *s, wchar_t *outbuf, int size, int charset);
+char *utoa_dup(wchar_t const *s, int charset);
+char *utoa_dup_len(wchar_t const *s, int charset, int *len);
+char *utoa_careful_dup(wchar_t const *s, int charset);
+wchar_t *ufroma_dup(char const *s, int charset);
 int ustrlen(wchar_t const *s);
 wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t const *source);
@@ -304,6 +315,8 @@ const char *const version;
 /*
  * misc.c
  */
+char *adv(char *s);
+
 typedef struct stackTag *stack;
 stack stk_new(void);
 void stk_free(stack);
@@ -343,6 +356,9 @@ struct tagWrappedLine {
 };
 wrappedline *wrap_para(word *, int, int, int (*)(void *, word *), void *, int);
 void wrap_free(wrappedline *);
+void cmdline_cfg_add(paragraph *cfg, char *string);
+paragraph *cmdline_cfg_new(void);
+paragraph *cmdline_cfg_simple(char *string, ...);
 
 /*
  * input.c

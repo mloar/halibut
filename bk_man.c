@@ -48,7 +48,7 @@ static manconfig man_configure(paragraph *source) {
 		ret.mindepth = utoi(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"man-filename")) {
 		sfree(ret.filename);
-		ret.filename = utoa_dup(uadv(source->keyword));
+		ret.filename = dupstr(adv(source->origkeyword));
 	    }
 	}
     }
@@ -64,30 +64,7 @@ static void man_conf_cleanup(manconfig cf)
 
 paragraph *man_config_filename(char *filename)
 {
-    paragraph *p;
-    wchar_t *ufilename, *up;
-    int len;
-
-    p = mknew(paragraph);
-    memset(p, 0, sizeof(*p));
-    p->type = para_Config;
-    p->next = NULL;
-    p->fpos.filename = "<command line>";
-    p->fpos.line = p->fpos.col = -1;
-
-    ufilename = ufroma_dup(filename);
-    len = ustrlen(ufilename) + 2 + lenof(L"man-filename");
-    p->keyword = mknewa(wchar_t, len);
-    up = p->keyword;
-    ustrcpy(up, L"man-filename");
-    up = uadv(up);
-    ustrcpy(up, ufilename);
-    up = uadv(up);
-    *up = L'\0';
-    assert(up - p->keyword < len);
-    sfree(ufilename);
-
-    return p;
+    return cmdline_cfg_simple("man-filename", filename, NULL);
 }
 
 #define QUOTE_INITCTRL 1 /* quote initial . and ' on a line */

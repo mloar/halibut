@@ -82,7 +82,7 @@ static void do_error(int code, va_list ap) {
 	break;
       case err_badparatype:
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "command `%.200s' unrecognised at start of"
 		" paragraph", sp);
@@ -90,7 +90,7 @@ static void do_error(int code, va_list ap) {
 	break;
       case err_badmidcmd:
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "command `%.200s' unexpected in mid-paragraph", sp);
 	flags = FILEPOS;
@@ -138,20 +138,20 @@ static void do_error(int code, va_list ap) {
       case err_nosuchkw:
 	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	sprintf(error, "unable to resolve cross-reference to `%.200s'", sp);
 	flags = FILEPOS;
 	break;
       case err_multiBR:
 	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	sprintf(error, "multiple `\\BR' entries given for `%.200s'", sp);
 	flags = FILEPOS;
 	break;
       case err_nosuchidxtag:
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	sprintf(error, "`\\IM' on unknown index tag `%.200s'", sp);
 	flags = 0;
 	/* FIXME: need to get a filepos to here somehow */
@@ -164,7 +164,7 @@ static void do_error(int code, va_list ap) {
       case err_macroexists:
 	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	sprintf(error, "macro `%.200s' already defined", sp);
 	flags = FILEPOS;
 	break;
@@ -185,7 +185,7 @@ static void do_error(int code, va_list ap) {
 	fpos = *va_arg(ap, filepos *);
 	fpos2 = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
 	sprintf(error, "paragraph keyword `%.200s' already defined at ", sp);
 	sprintf(error + strlen(error), "%s:%d", fpos2.filename, fpos2.line);
 	flags = FILEPOS;

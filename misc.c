@@ -2,7 +2,12 @@
  * misc.c: miscellaneous useful items
  */
 
+#include <stdarg.h>
 #include "halibut.h"
+
+char *adv(char *s) {
+    return s + 1 + strlen(s);
+}
 
 struct stackTag {
     void **data;
@@ -478,4 +483,66 @@ void wrap_free(wrappedline *w) {
 	sfree(w);
 	w = t;
     }
+}
+
+void cmdline_cfg_add(paragraph *cfg, char *string)
+{
+    wchar_t *ustring;
+    int upos, ulen, pos, len;
+
+    ulen = 0;
+    while (cfg->keyword[ulen])
+	ulen += 1 + ustrlen(cfg->keyword+ulen);
+    len = 0;
+    while (cfg->origkeyword[len])
+	len += 1 + strlen(cfg->origkeyword+len);
+
+    ustring = ufroma_dup(string, CS_FIXME);
+
+    upos = ulen;
+    ulen += 2 + ustrlen(ustring);
+    cfg->keyword = resize(cfg->keyword, ulen);
+    ustrcpy(cfg->keyword+upos, ustring);
+    cfg->keyword[ulen-1] = L'\0';
+
+    pos = len;
+    len += 2 + strlen(string);
+    cfg->origkeyword = resize(cfg->origkeyword, len);
+    strcpy(cfg->origkeyword+pos, string);
+    cfg->origkeyword[len-1] = '\0';
+
+    sfree(ustring);
+}
+
+paragraph *cmdline_cfg_new(void)
+{
+    paragraph *p;
+
+    p = mknew(paragraph);
+    memset(p, 0, sizeof(*p));
+    p->type = para_Config;
+    p->next = NULL;
+    p->fpos.filename = "<command line>";
+    p->fpos.line = p->fpos.col = -1;
+    p->keyword = ustrdup(L"\0");
+    p->origkeyword = dupstr("\0");
+
+    return p;
+}
+
+paragraph *cmdline_cfg_simple(char *string, ...)
+{
+    va_list ap;
+    char *s;
+    paragraph *p;
+
+    p = cmdline_cfg_new();
+    cmdline_cfg_add(p, string);
+
+    va_start(ap, string);
+    while ((s = va_arg(ap, char *)) != NULL)
+	cmdline_cfg_add(p, s);
+    va_end(ap);
+
+    return p;
 }

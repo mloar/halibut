@@ -10,30 +10,7 @@ static void ps_versionid(FILE *fp, word *words);
 
 paragraph *ps_config_filename(char *filename)
 {
-    paragraph *p;
-    wchar_t *ufilename, *up;
-    int len;
-
-    p = mknew(paragraph);
-    memset(p, 0, sizeof(*p));
-    p->type = para_Config;
-    p->next = NULL;
-    p->fpos.filename = "<command line>";
-    p->fpos.line = p->fpos.col = -1;
-
-    ufilename = ufroma_dup(filename);
-    len = ustrlen(ufilename) + 2 + lenof(L"ps-filename");
-    p->keyword = mknewa(wchar_t, len);
-    up = p->keyword;
-    ustrcpy(up, L"ps-filename");
-    up = uadv(up);
-    ustrcpy(up, ufilename);
-    up = uadv(up);
-    *up = L'\0';
-    assert(up - p->keyword < len);
-    sfree(ufilename);
-
-    return p;
+    return cmdline_cfg_simple("ps-filename", filename, NULL);
 }
 
 void ps_backend(paragraph *sourceform, keywordlist *keywords,
@@ -55,7 +32,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	if (p->type == para_Config && p->parent) {
 	    if (!ustricmp(p->keyword, L"ps-filename")) {
 		sfree(filename);
-		filename = utoa_dup(uadv(p->keyword));
+		filename = dupstr(adv(p->origkeyword));
 	    }
 	}
     }
@@ -247,7 +224,7 @@ static void ps_versionid(FILE *fp, word *words)
 
 	switch (type) {
 	  case word_Normal:
-	    text = utoa_dup(words->text);
+	    text = utoa_dup(words->text, CS_ASCII);
 	    break;
 	  case word_WhiteSpace:
 	    text = dupstr(" ");

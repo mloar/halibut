@@ -6,7 +6,7 @@
 #include <time.h>
 #include "halibut.h"
 
-wchar_t *ustrdup(wchar_t *s) {
+wchar_t *ustrdup(wchar_t const *s) {
     wchar_t *r;
     if (s) {
 	r = mknewa(wchar_t, 1+ustrlen(s));
@@ -18,59 +18,145 @@ wchar_t *ustrdup(wchar_t *s) {
     return r;
 }
 
-char *ustrtoa(wchar_t *s, char *outbuf, int size) {
-    char *p;
+static char *ustrtoa_internal(wchar_t const *s, char *outbuf, int size,
+			      int charset, int careful) {
+    int len, ret, err;
+    charset_state state = CHARSET_INIT_STATE;
+
     if (!s) {
 	*outbuf = '\0';
 	return outbuf;
     }
-    for (p = outbuf; *s && p < outbuf+size; p++,s++)
-	*p = *s;
-    if (p < outbuf+size)
-	*p = '\0';
-    else
-	outbuf[size-1] = '\0';
+
+    len = ustrlen(s);
+    size--;			       /* leave room for terminating NUL */
+    *outbuf = '\0';
+    while (len > 0) {
+	err = 0;
+	ret = charset_from_unicode(&s, &len, outbuf, size, charset, &state,
+				   (careful ? &err : NULL));
+	if (err)
+	    return NULL;
+	if (!ret)
+	    return outbuf;
+	size -= ret;
+	outbuf += ret;
+	*outbuf = '\0';
+    }
+    /*
+     * Clean up
+     */
+    ret = charset_from_unicode(NULL, 0, outbuf, size, charset, &state, NULL);
+    size -= ret;
+    outbuf += ret;
+    *outbuf = '\0';
     return outbuf;
 }
 
-wchar_t *ustrfroma(char *s, wchar_t *outbuf, int size) {
-    wchar_t *p;
+char *ustrtoa(wchar_t const *s, char *outbuf, int size, int charset) {
+    return ustrtoa_internal(s, outbuf, size, charset, FALSE);
+}
+
+char *ustrtoa_careful(wchar_t const *s, char *outbuf, int size, int charset) {
+    return ustrtoa_internal(s, outbuf, size, charset, TRUE);
+}
+
+wchar_t *ustrfroma(char const *s, wchar_t *outbuf, int size, int charset) {
+    int len, ret;
+    charset_state state = CHARSET_INIT_STATE;
+
     if (!s) {
 	*outbuf = L'\0';
 	return outbuf;
     }
-    for (p = outbuf; *s && p < outbuf+size; p++,s++)
-	*p = *s;
-    if (p < outbuf+size)
-	*p = '\0';
-    else
-	outbuf[size-1] = '\0';
+
+    len = strlen(s);
+    size--;			       /* allow for terminating NUL */
+    *outbuf = L'\0';
+    while (len > 0) {
+	ret = charset_to_unicode(&s, &len, outbuf, size,
+				 charset, &state, NULL, 0);
+	if (!ret)
+	    return outbuf;
+	outbuf += ret;
+	size -= ret;
+	*outbuf = L'\0';
+    }
     return outbuf;
 }
 
-char *utoa_dup(wchar_t *s) {
-    int len;
-    char *buf = NULL;
+char *utoa_internal_dup(wchar_t const *s, int charset, int *lenp, int careful)
+{
+    char *outbuf;
+    int outpos, outlen, len, ret, err;
+    charset_state state = CHARSET_INIT_STATE;
 
-    len = ustrlen(s) + 1;
-    do {
-	buf = resize(buf, len);
-	ustrtoa(s, buf, len);
-	len = (3 * len) / 2 + 1;       /* this guarantees a strict increase */
-    } while ((int)strlen(buf) >= len-1);
+    if (!s) {
+	return dupstr("");
+    }
 
-    buf = resize(buf, strlen(buf)+1);
-    return buf;
+    len = ustrlen(s);
+
+    outlen = len + 10;
+    outbuf = mknewa(char, outlen);
+
+    outpos = 0;
+    outbuf[outpos] = '\0';
+
+    while (len > 0) {
+	err = 0;
+	ret = charset_from_unicode(&s, &len,
+				   outbuf + outpos, outlen - outpos - 1,
+				   charset, &state, (careful ? &err : NULL));
+	if (err) {
+	    sfree(outbuf);
+	    return NULL;
+	}
+	if (!ret) {
+	    outlen = outlen * 3 / 2;
+	    outbuf = resize(outbuf, outlen);
+	}
+	outpos += ret;
+	outbuf[outpos] = '\0';
+    }
+    /*
+     * Clean up
+     */
+    outlen = outpos + 32;
+    outbuf = resize(outbuf, outlen);
+    ret = charset_from_unicode(NULL, 0,
+			       outbuf + outpos, outlen - outpos + 1,
+			       charset, &state, NULL);
+    outpos += ret;
+    outbuf[outpos] = '\0';
+    if (lenp)
+	*lenp = outpos;
+    return outbuf;
 }
 
-wchar_t *ufroma_dup(char *s) {
+char *utoa_dup(wchar_t const *s, int charset)
+{
+    return utoa_internal_dup(s, charset, NULL, FALSE);
+}
+
+char *utoa_dup_len(wchar_t const *s, int charset, int *len)
+{
+    return utoa_internal_dup(s, charset, len, FALSE);
+}
+
+char *utoa_careful_dup(wchar_t const *s, int charset)
+{
+    return utoa_internal_dup(s, charset, NULL, TRUE);
+}
+
+wchar_t *ufroma_dup(char const *s, int charset) {
     int len;
     wchar_t *buf = NULL;
 
     len = strlen(s) + 1;
     do {
 	buf = resize(buf, len);
-	ustrfroma(s, buf, len);
+	ustrfroma(s, buf, len, charset);
 	len = (3 * len) / 2 + 1;       /* this guarantees a strict increase */
     } while (ustrlen(buf) >= len-1);
 
@@ -183,6 +269,12 @@ wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
     size_t len;
 
     /*
+     * FIXME: really we ought to copy non-% parts of the format
+     * ourselves, and only resort to strftime for % parts. Also we
+     * should use wcsftime if it's present.
+     */
+
+    /*
      * strftime has the entertaining property that it returns 0
      * _either_ on out-of-space _or_ on successful generation of
      * the empty string. Hence we must ensure our format can never
@@ -192,7 +284,7 @@ wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
     if (wfmt) {
 	len = ustrlen(wfmt);
 	fmt = mknewa(char, 2+len);
-	ustrtoa(wfmt, fmt+1, len+1);
+	ustrtoa(wfmt, fmt+1, len+1, CS_ASCII);   /* CS_FIXME? */
 	fmt[0] = ' ';
     } else
 	fmt = " %c";

@@ -510,7 +510,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 
 	for (page = pages; page; page = page->next) {
 	    sprintf(buf, "%d", ++pagenum);
-	    page->number = ufroma_dup(buf);
+	    page->number = ufroma_dup(buf, CS_ASCII);
 	}
 
 	if (has_index) {
@@ -524,7 +524,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 
 	    /* And don't forget the as-yet-uncreated index. */
 	    sprintf(buf, "%d", ++pagenum);
-	    first_index_page->number = ufroma_dup(buf);
+	    first_index_page->number = ufroma_dup(buf, CS_ASCII);
 	}
     }
 
@@ -683,7 +683,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	for (page = ipages->next; page; page = page->next) {
 	    char buf[40];
 	    sprintf(buf, "%d", ++pagenum);
-	    page->number = ufroma_dup(buf);
+	    page->number = ufroma_dup(buf, CS_ASCII);
 	}
 
 	/*
@@ -1682,7 +1682,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 
 	    if (text->type == word_HyperLink) {
 		dest.type = URL;
-		dest.url = utoa_dup(text->text);
+		dest.url = utoa_dup(text->text, CS_ASCII);
 		dest.page = NULL;
 	    } else if (text->type == word_PageXref) {
 		dest.type = PAGE;

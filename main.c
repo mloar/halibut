@@ -181,36 +181,25 @@ int main(int argc, char **argv) {
 			 * into a config paragraph.
 			 */
 			{
-			    wchar_t *keywords;
-			    char *q;
-			    wchar_t *u;
+			    char *s = dupstr(p), *q, *r;
 			    paragraph *para;
 
-			    keywords = mknewa(wchar_t, 2+strlen(p));
+			    para = cmdline_cfg_new();
 
-			    u = keywords;
-			    q = p;
-
+			    q = r = s;
 			    while (*q) {
 				if (*q == ':') {
-				    *u++ = L'\0';
+				    *r = '\0';
+				    cmdline_cfg_add(para, s);
+				    r = s;
 				} else {
 				    if (*q == '\\' && q[1])
 					q++;
-				    /* FIXME: lacks charset flexibility */
-				    *u++ = *q;
+				    *r++ = *q;
 				}
 				q++;
 			    }
-			    *u = L'\0';
-
-			    para = mknew(paragraph);
-			    memset(para, 0, sizeof(*para));
-			    para->type = para_Config;
-			    para->keyword = keywords;
-			    para->next = NULL;
-			    para->fpos.filename = "<command line>";
-			    para->fpos.line = para->fpos.col = -1;
+			    cmdline_cfg_add(para, s);
 
 			    if (cfg_tail)
 				cfg_tail->next = para;
