@@ -117,6 +117,26 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	fprintf(fp, "%%%%BeginPageSetup\n");
 	fprintf(fp, "%%%%EndPageSetup\n");
 
+#if 0
+	{
+	    xref *xr;
+	    /*
+	     * I used this diagnostic briefly to ensure that
+	     * cross-reference rectangles were being put where they
+	     * should be.
+	     */
+	    for (xr = page->first_xref; xr; xr = xr->next) {
+		fprintf(fp, "gsave 0.7 setgray %g %g moveto",
+			xr->lx/4096.0, xr->ty/4096.0);
+		fprintf(fp, " %g %g lineto %g %g lineto",
+			xr->lx/4096.0, xr->by/4096.0,
+			xr->rx/4096.0, xr->by/4096.0);
+		fprintf(fp, " %g %g lineto closepath fill grestore\n",
+			xr->rx/4096.0, xr->ty/4096.0);
+	    }
+	}
+#endif
+
 	for (frag = page->first_text; frag; frag = frag->next) {
 	    char *c;
 

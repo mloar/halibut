@@ -250,6 +250,54 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 	objstream(cstr, "ET");
 
+	/*
+	 * Also, we want an annotation dictionary containing the
+	 * cross-references from this page.
+	 */
+	if (page->first_xref) {
+	    xref *xr;
+	    objtext(opage, "/Annots [\n");
+
+	    for (xr = page->first_xref; xr; xr = xr->next) {
+		object *annot;
+		char buf[256];
+
+		annot = new_object(&olist);
+		objref(opage, annot);
+		objtext(opage, "\n");
+
+		objtext(annot, "<<\n/Type /Annot\n/Subtype /Link\n/Rect [");
+		sprintf(buf, "%g %g %g %g",
+			xr->lx / 4096.0, xr->by / 4096.0,
+			xr->rx / 4096.0, xr->ty / 4096.0);
+		objtext(annot, buf);
+		objtext(annot, "]\n/Border [0 0 0]\n");
+
+		if (xr->dest.type == PAGE) {
+		    objtext(annot, "/Dest [");
+		    objref(annot, (object *)xr->dest.page->spare);
+		    objtext(annot, " /XYZ null null null]\n");
+		} else {
+		    char *p;
+
+		    objtext(annot, "/A <<\n/Type /Action\n/S /URI\n/URI (");
+		    for (p = xr->dest.url; *p; p++) {
+			char c[2];
+			c[0] = *p;
+			c[1] = '\0';
+			if (*p == '(' || *p == ')' || *p == '\\')
+			    objtext(annot, "\\");
+			objtext(annot, c);
+		    }
+		    objtext(annot, ")\n>>\n");
+		}
+
+		objtext(annot, ">>\n");
+	    }
+
+	    objtext(opage, "]\n");
+	}
+
 	objtext(opage, ">>\n");
     }
 

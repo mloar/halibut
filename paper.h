@@ -17,6 +17,8 @@ typedef struct line_data_Tag line_data;
 typedef struct page_data_Tag page_data;
 typedef struct subfont_map_entry_Tag subfont_map_entry;
 typedef struct text_fragment_Tag text_fragment;
+typedef struct xref_Tag xref;
+typedef struct xref_dest_Tag xref_dest;
 
 /*
  * This data structure represents the overall document, in the form
@@ -215,6 +217,11 @@ struct page_data_Tag {
     text_fragment *first_text;
     text_fragment *last_text;
     /*
+     * Cross-references.
+     */
+    xref *first_xref;
+    xref *last_xref;
+    /*
      * This spare pointer field is for use by the client backends.
      */
     void *spare;
@@ -226,6 +233,18 @@ struct text_fragment_Tag {
     font_encoding *fe;
     int fontsize;
     char *text;
+};
+
+struct xref_dest_Tag {
+    enum { NONE, PAGE, URL } type;
+    page_data *page;
+    char *url;
+};
+
+struct xref_Tag {
+    xref *next;
+    int lx, rx, ty, by;
+    xref_dest dest;
 };
 
 /*

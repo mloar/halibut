@@ -15,8 +15,6 @@
  *  - set up contents section now we know what sections begin on
  *    which pages
  * 
- *  - do cross-reference rectangles
- * 
  *  - do PDF outline
  * 
  *  - all the missing features in text rendering (code paragraphs,
@@ -51,7 +49,8 @@ static void wrap_paragraph(para_data *pdata, word *words,
 			   int w, int i1, int i2);
 static page_data *page_breaks(line_data *first, line_data *last,
 			      int page_height);
-static void render_line(line_data *ldata, int left_x, int top_y);
+static void render_line(line_data *ldata, int left_x, int top_y,
+			xref_dest *dest, keywordlist *keywords);
 
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			indexdata *idx) {
@@ -257,8 +256,11 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	pdata = (para_data *)p->private_data;
 
 	if (pdata) {
+	    xref_dest dest;
+	    dest.type = NONE;
 	    for (ldata = pdata->first; ldata; ldata = ldata->next) {
-		render_line(ldata, left_margin, paper_height - top_margin);
+		render_line(ldata, left_margin, paper_height - top_margin,
+			    &dest, keywords);
 		if (ldata == pdata->last)
 		    break;
 	    }
@@ -660,6 +662,8 @@ static page_data *page_breaks(line_data *first, line_data *last,
 
 	page->first_text = page->last_text = NULL;
 
+	page->first_xref = page->last_xref = NULL;
+
 	/*
 	 * Now assign a y-coordinate to each line on the page.
 	 */
@@ -783,20 +787,77 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 /*
  * Returns the updated x coordinate.
  */
-static int render_text(page_data *page, para_data *pdata, int x, int y,
-		       word *text, word *text_end,
-		       int shortfall, int nspaces, int *nspace)
+static int render_text(page_data *page, para_data *pdata, line_data *ldata,
+		       int x, int y, word *text, word *text_end, xref **xr,
+		       int shortfall, int nspaces, int *nspace,
+		       keywordlist *keywords)
 {
     while (text && text != text_end) {
 	int style, type, findex, errs;
 	wchar_t *str;
+	xref_dest dest;
 
 	switch (text->type) {
+	    /*
+	     * Start a cross-reference.
+	     */
 	  case word_HyperLink:
-	  case word_HyperEnd:
 	  case word_UpperXref:
 	  case word_LowerXref:
+
+	    if (text->type == word_HyperLink) {
+		dest.type = URL;
+		dest.url = utoa_dup(text->text);
+		dest.page = NULL;
+	    } else {
+		keyword *kwl = kw_lookup(keywords, text->text);
+		para_data *pdata;
+
+		if (kwl) {
+		    assert(kwl->para->private_data);
+		    pdata = (para_data *) kwl->para->private_data;
+		    dest.type = PAGE;
+		    dest.page = pdata->first->page;
+		    dest.url = NULL;
+		} else {
+		    /*
+		     * Shouldn't happen, but *shrug*
+		     */
+		    dest.type = NONE;
+		    dest.page = NULL;
+		    dest.url = NULL;
+		}
+	    }
+	    if (dest.type != NONE) {
+		*xr = mknew(xref);
+		(*xr)->dest = dest;    /* structure copy */
+		if (page->last_xref)
+		    page->last_xref->next = *xr;
+		else
+		    page->first_xref = *xr;
+		page->last_xref = *xr;
+
+		/*
+		 * FIXME: Ideally we should have, and use, some
+		 * vertical font metric information here so that
+		 * our cross-ref rectangle can take account of
+		 * descenders and the font's cap height. This will
+		 * do for the moment, but it isn't ideal.
+		 */
+		(*xr)->lx = (*xr)->rx = x;
+		(*xr)->by = y;
+		(*xr)->ty = y + ldata->line_height;
+	    }
+	    goto nextword;
+	    
+	    /*
+	     * Finish extending a cross-reference box.
+	     */
+	  case word_HyperEnd:
 	  case word_XrefEnd:
+	    *xr = NULL;
+	    goto nextword;
+
 	  case word_IndexRef:
 	    goto nextword;
 	    /*
@@ -835,11 +896,14 @@ static int render_text(page_data *page, para_data *pdata, int x, int y,
 	(void) string_width(pdata->fonts[findex], str, &errs);
 
 	if (errs && text->alt)
-	    x = render_text(page, pdata, x, y, text->alt, NULL,
-			    shortfall, nspaces, nspace);
+	    x = render_text(page, pdata, ldata, x, y, text->alt, NULL,
+			    xr, shortfall, nspaces, nspace, keywords);
 	else
 	    x = render_string(page, pdata->fonts[findex],
 			      pdata->sizes[findex], x, y, str);
+
+	if (*xr)
+	    (*xr)->rx = x;
 
 	nextword:
 	text = text->next;
@@ -848,16 +912,49 @@ static int render_text(page_data *page, para_data *pdata, int x, int y,
     return x;
 }
 
-static void render_line(line_data *ldata, int left_x, int top_y)
+static void render_line(line_data *ldata, int left_x, int top_y,
+			xref_dest *dest, keywordlist *keywords)
 {
     int nspace;
+    xref *xr;
+    
     if (ldata->aux_text) {
+	xr = NULL;
 	nspace = 0;
-	render_text(ldata->page, ldata->pdata, left_x + ldata->aux_left_indent,
-		    top_y - ldata->ypos, ldata->aux_text, NULL, 0, 0, &nspace);
+	render_text(ldata->page, ldata->pdata, ldata,
+		    left_x + ldata->aux_left_indent,
+		    top_y - ldata->ypos,
+		    ldata->aux_text, NULL, &xr, 0, 0, &nspace, keywords);
     }
     nspace = 0;
-    render_text(ldata->page, ldata->pdata, left_x + ldata->xpos,
-		top_y - ldata->ypos, ldata->first, ldata->end,
-		ldata->hshortfall, ldata->nspaces, &nspace);
+
+    /*
+     * There might be a cross-reference carried over from a
+     * previous line.
+     */
+    if (dest->type != NONE) {
+	xr = mknew(xref);
+	xr->dest = *dest;    /* structure copy */
+	if (ldata->page->last_xref)
+	    ldata->page->last_xref->next = xr;
+	else
+	    ldata->page->first_xref = xr;
+	ldata->page->last_xref = xr;
+	xr->lx = xr->rx = left_x + ldata->xpos;
+	xr->by = top_y - ldata->ypos;
+	xr->ty = top_y - ldata->ypos + ldata->line_height;
+    } else
+	xr = NULL;
+
+    render_text(ldata->page, ldata->pdata, ldata, left_x + ldata->xpos,
+		top_y - ldata->ypos, ldata->first, ldata->end, &xr,
+		ldata->hshortfall, ldata->nspaces, &nspace, keywords);
+
+    if (xr) {
+	/*
+	 * There's a cross-reference continued on to the next line.
+	 */
+	*dest = xr->dest;
+    } else
+	dest->type = NONE;
 }
