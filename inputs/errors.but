@@ -1,0 +1,51 @@
+Bogus keyword: \k{nonexist}
+
+\BR{nonexist2} [Foogle]
+
+\B{book} Foo McBar, "A Lot Of Rubbish", 1992.
+
+\B{book} The same book again. Isn't that odd?
+
+\IM{nonexist3} Logical impossibilities
+
+\define{macro} macro definition
+
+\define{macro} same macro again
+
+\c Foo
+\c Bar
+Bombadillo. Now get out of _that_.
+
+\unngh This is a bit of a bizarre paragraph, now isn't it?
+
+\C{unfinished-symphony
+
+\U{thisshouldn'tbehere} Unnumbered chapter. Or is it?
+
+\C Numbered chapter. Or _is_ it?
+
+\BR{two}{too}{many} [Which One?]
+
+\nocite{ooh} With some illegal text.
+
+Paragraph with {bizarre braces}.
+
+Another one } .
+
+Bogus in-para comment: \# foobar.
+
+Bogus xrefs: \k and \k{foo{}}.
+
+Nest those styles! \c{foo\e{bar}}. And
+\c{foo\W{file:/dev/null}\e{bar}}. And \e{foo\i\c{bar}}.
+And one without brace: \e.
+
+Bogus hyperlinks: \W and \W{file:/dev/null}bar.
+
+Nested index: \i{foo\i{bar}}. Broken styled index: \i\c.
+
+Complete twaddle: \twaddle.
+
+Unclosed brace: \c{foo.
+
+Comment to EOF: \#{ and here we go.
