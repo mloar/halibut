@@ -16,17 +16,6 @@
  * 	 nav_prev_text, nav_next_text, nav_separator,
  * 	 index_main_sep, index_multi_sep, pre_versionid,
  * 	 post_versionid
- *     * Some means of specifying the distinction between
- * 	 restrict-charset and output-charset. It seems to me that
- * 	 `html-charset' is output-charset, and that
- * 	 restrict-charset usually wants to be either output-charset
- * 	 or UTF-8 (the latter indicating that any Unicode character
- * 	 is fair game and it will be specified using &#foo; if it
- * 	 isn't in output-charset). However, since XHTML defaults to
- * 	 UTF-8 and it's fiddly to tell it otherwise, it's just
- * 	 possible that some user may need to set restrict-charset
- * 	 to their charset of choice while leaving _output_-charset
- * 	 at UTF-8. Figure out some configuration, and apply it.
  * 
  *  - nonbreaking spaces.
  * 
@@ -142,7 +131,7 @@ typedef struct {
      * level.
      */
     FILE *fp;
-    int charset;
+    int charset, restrict_charset;
     charset_state cstate;
     int ver;
     enum {
@@ -242,7 +231,7 @@ static htmlconfig html_configure(paragraph *source) {
     ret.head_end = ret.body_tag = ret.body_start = ret.body_end =
 	ret.addr_start = ret.addr_end = ret.nav_attr = NULL;
     ret.author = ret.description = NULL;
-    ret.restrict_charset = CS_ASCII;
+    ret.restrict_charset = CS_UTF8;
     ret.output_charset = CS_ASCII;
     ret.htmlver = HTML_4;
     ret.index_text = L"Index";
@@ -287,10 +276,13 @@ static htmlconfig html_configure(paragraph *source) {
 	    if (!ustrnicmp(k, L"xhtml-", 6))
 		k++;		    /* treat `xhtml-' and `html-' the same */
 
-	    if (!ustricmp(k, L"html-charset")) {
+	    if (!ustricmp(k, L"html-restrict-charset")) {
 		char *csname = utoa_dup(uadv(k), CS_ASCII);
-		ret.restrict_charset = ret.output_charset =
-		    charset_from_localenc(csname);
+		ret.restrict_charset = charset_from_localenc(csname);
+		sfree(csname);
+	    } else if (!ustricmp(k, L"html-output-charset")) {
+		char *csname = utoa_dup(uadv(k), CS_ASCII);
+		ret.output_charset = charset_from_localenc(csname);
 		sfree(csname);
 	    } else if (!ustricmp(k, L"html-version")) {
 		wchar_t *vername = uadv(k);
@@ -732,6 +724,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 	    ho.fp = fopen(f->filename, "w");
 	    ho.charset = conf.output_charset;
+	    ho.restrict_charset = conf.restrict_charset;
 	    ho.cstate = charset_init_state;
 	    ho.ver = conf.htmlver;
 	    ho.state = HO_NEUTRAL;
@@ -1584,7 +1577,7 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	    else
 		html_text(ho, cfg->rquote);
 	} else {
-	    if (cvt_ok(ho->charset, w->text) || !w->alt)
+	    if (cvt_ok(ho->restrict_charset, w->text) || !w->alt)
 		html_text(ho, w->text);
 	    else
 		html_words(ho, w->alt, flags, file, keywords, cfg);
