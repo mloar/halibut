@@ -69,7 +69,7 @@ static void dospace(word ***wret) {
 
 static void donumber(word ***wret, int num) {
     wchar_t text[20];
-    wchar_t *p = text + sizeof(text);
+    wchar_t *p = text + lenof(text);
     *--p = L'\0';
     while (num != 0) {
 	assert(p > text);
@@ -93,7 +93,7 @@ static void doanumber(word ***wret, int num) {
 	else
 	    aton = INT_MAX;
     }
-    p = text + sizeof(text);
+    p = text + lenof(text);
     *--p = L'\0';
     while (nletters--) {
 	assert(p > text);
