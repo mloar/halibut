@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.34 2004/07/16 11:54:04 simon Exp $
+\versionid $Id: test.but,v 1.35 2004/08/06 12:17:56 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -156,6 +156,25 @@ to make up for it. I don't know. These mammals. Pa-thetic.
 
 \dd An exemplary contributor to the global economy. Unless he's CMOT
 Dibbler.
+
+This is a much more interesting description list, testing
+consecutive \c{\\dt}s and consecutive \c{\\dd}s:
+
+\dt One
+
+\dt Two
+
+\dt Three
+
+\dd Ay
+
+\dt Four
+
+\dd Bee
+
+\dd Cee
+
+\dd Dee
 
 A-paragraph-full-of-hyphens-to-test-the-idea-that-word-wrapping-can-happen-somewhere-in-all-this-hyphenatory-nonsense.
 

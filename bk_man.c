@@ -124,6 +124,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     paragraph *p;
     FILE *fp;
     manconfig conf;
+    int had_described_thing;
 
     IGNORE(unused);
     IGNORE(keywords);
@@ -165,6 +166,13 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 
     fprintf(fp, ".UC\n");
 
+    had_described_thing = FALSE;
+#define cleanup_described_thing do { \
+    if (had_described_thing) \
+	fprintf(fp, "\n"); \
+    had_described_thing = FALSE; \
+} while (0)
+
     for (p = sourceform; p; p = p->next) switch (p->type) {
 	/*
 	 * Things we ignore because we've already processed them or
@@ -187,6 +195,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Heading:
       case para_Subsect:
 
+	cleanup_described_thing;
 	{
 	    int depth;
 	    if (p->type == para_Subsect)
@@ -211,6 +220,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	 * Code paragraphs.
 	 */
       case para_Code:
+	cleanup_described_thing;
 	fprintf(fp, ".PP\n");
 	man_codepara(fp, p->words, conf.charset);
 	break;
@@ -220,6 +230,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	 */
       case para_Normal:
       case para_Copyright:
+	cleanup_described_thing;
 	fprintf(fp, ".PP\n");
 	man_text(fp, p->words, TRUE, 0, &conf);
 	break;
@@ -231,6 +242,9 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_BiblioCited:
       case para_Bullet:
       case para_NumberedList:
+	if (p->type != para_Description)
+	    cleanup_described_thing;
+
 	if (p->type == para_Bullet) {
 	    char *bullettext;
 	    man_convert(conf.bullet, -1, &bullettext, QUOTE_QUOTES,
@@ -242,22 +256,34 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, &conf);
 	    fprintf(fp, "\"\n");
 	} else if (p->type == para_Description) {
-	    /*
-	     * Do nothing; the .xP for this paragraph is the .IP
-	     * which has come before it in the DescribedThing.
-	     */
+	    if (had_described_thing) {
+		/*
+		 * Do nothing; the .xP for this paragraph is the
+		 * .IP which has come before it in the
+		 * DescribedThing.
+		 */
+	    } else {
+		/*
+		 * A \dd without a preceding \dt is given a blank
+		 * one.
+		 */
+		fprintf(fp, ".IP \"\"\n");
+	    }
 	} else if (p->type == para_BiblioCited) {
 	    fprintf(fp, ".IP \"");
 	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, &conf);
 	    fprintf(fp, "\"\n");
 	}
 	man_text(fp, p->words, TRUE, 0, &conf);
+	had_described_thing = FALSE;
 	break;
 
       case para_DescribedThing:
+	cleanup_described_thing;
 	fprintf(fp, ".IP \"");
 	man_text(fp, p->words, FALSE, QUOTE_QUOTES, &conf);
 	fprintf(fp, "\"\n");
+	had_described_thing = TRUE;
 	break;
 
       case para_Rule:
@@ -265,18 +291,22 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	 * This isn't terribly good. Anyone who wants to do better
 	 * should feel free!
 	 */
+	cleanup_described_thing;
 	fprintf(fp, ".PP\n----------------------------------------\n");
 	break;
 
       case para_LcontPush:
       case para_QuotePush:
+	cleanup_described_thing;
 	fprintf(fp, ".RS\n");
       	break;
       case para_LcontPop:
       case para_QuotePop:
+	cleanup_described_thing;
 	fprintf(fp, ".RE\n");
 	break;
     }
+    cleanup_described_thing;
 
     /*
      * Tidy up.

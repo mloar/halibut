@@ -672,6 +672,16 @@ This produces the following output:
 
 }
 
+If you really want to, you are allowed to use \c{\\dt} and \c{\\dd}
+without strictly interleaving them (multiple consecutive \c{\\dt}s
+or consecutive \c{\\dd}s, or a description list starting with
+\c{\\dd} or ending with \c{\\dt}). This is probably most useful if
+you are listing a sequence of things with \c{\\dt}, but only some of
+them actually need \c{\\dd} descriptions. You should \e{not} use
+multiple consecutive \c{\\dd}s to provide a multi-paragraph
+definition of something; that's what \c{\\lcont} is for, as
+explained in \k{input-list-continuation}.
+
 \S2{input-list-continuation} \ii{Continuing list items} into further
 paragraphs
 
