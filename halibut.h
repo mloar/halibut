@@ -252,6 +252,7 @@ int ustrlen(wchar_t *s);
 wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
 wchar_t utolower(wchar_t);
+int uisalpha(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);
 int ustricmp(wchar_t *lhs, wchar_t *rhs);
 int utoi(wchar_t *);

@@ -98,7 +98,7 @@ char *rdtrimc(rdstringc *rs) {
     return rs->text;
 }
 
-int compare_wordlists(word *a, word *b) {
+static int compare_wordlists_literally(word *a, word *b) {
     int t;
     while (a && b) {
 	if (a->type != b->type)
@@ -113,7 +113,7 @@ int compare_wordlists(word *a, word *b) {
 		if (c)
 		    return c;
 	    }
-	    c = compare_wordlists(a->alt, b->alt);
+	    c = compare_wordlists_literally(a->alt, b->alt);
 	    if (c)
 		return c;
 	    a = a->next;
@@ -140,6 +140,72 @@ int compare_wordlists(word *a, word *b) {
 	return (a ? +1 : -1);
     else
 	return 0;
+}
+
+int compare_wordlists(word *a, word *b) {
+    /*
+     * First we compare only the alphabetic content of the word
+     * lists, with case not a factor. If that comes out equal,
+     * _then_ we compare the word lists literally.
+     */
+    struct {
+	word *w;
+	int i;
+	wchar_t c;
+    } pos[2];
+
+    pos[0].w = a;
+    pos[1].w = b;
+    pos[0].i = pos[1].i = 0;
+
+    while (1) {
+	/*
+	 * Find the next alphabetic character in each word list.
+	 */
+	int k;
+
+	for (k = 0; k < 2; k++) {
+	    /*
+	     * Advance until we hit either an alphabetic character
+	     * or the end of the word list.
+	     */
+	    while (1) {
+		if (!pos[k].w) {
+		    /* End of word list. */
+		    pos[k].c = 0;
+		    break;
+		} else if (!pos[k].w->text || !pos[k].w->text[pos[k].i]) {
+		    /* No characters remaining in this word; move on. */
+		    pos[k].w = pos[k].w->next;
+		    pos[k].i = 0;
+		} else if (!uisalpha(pos[k].w->text[pos[k].i])) {
+		    /* This character isn't alphabetic; move on. */
+		    pos[k].i++;
+		} else {
+		    /* We have an alphabetic! Lowercase it and continue. */
+		    pos[k].c = utolower(pos[k].w->text[pos[k].i]);
+		    break;
+		}
+	    }
+	}
+
+	if (pos[0].c < pos[1].c)
+	    return -1;
+	else if (pos[0].c > pos[1].c)
+	    return +1;
+
+	if (!pos[0].c)
+	    break;		       /* they're equal */
+
+	pos[0].i++;
+	pos[1].i++;
+    }
+
+    /*
+     * If we reach here, the strings were alphabetically equal, so
+     * compare in more detail.
+     */
+    return compare_wordlists_literally(a, b);
 }
 
 void mark_attr_ends(paragraph *sourceform) {

@@ -73,6 +73,11 @@ wchar_t utolower(wchar_t c) {
     return c;
 }
 
+int uisalpha(wchar_t c) {
+    /* FIXME: this doesn't even come close */
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
 int ustricmp(wchar_t *lhs, wchar_t *rhs) {
     wchar_t lc, rc;
     while ((lc = utolower(*lhs)) == (rc = utolower(*rhs)) && lc && rc)
