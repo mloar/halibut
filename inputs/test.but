@@ -1,9 +1,12 @@
 \title Buttress: A Test Document
 
 \preamble This manual is a small joke effort, designed to use every
-feature that Buttress's input format supports.
+feature that Buttress's input format supports. Creation date
+\date{%Y.%m.%d} (default format is \date).
 
 \copyright Copyright 1999 Simon Tatham. All rights reserved.
+
+\versionid $Id: test.but,v 1.2 1999/02/07 13:17:47 simon Exp $
 
 \C{chap} First chapter title
 
@@ -15,18 +18,16 @@ fragments}.
 \cw{This} is weak code. And \k{sect} contains some other stuff.
 \K{head} does too.
 
-\S{sect} First section title
+\H{head} First section title
 
 Here's a code paragraph:
 
 \c No leading spaces
 \c  One leading space
-\c Blank line follows this one.
+\c Two blank lines follow this one.
 \c
 \c
-\c
-\c
-\c Blank line precedes this one.
+\c Two blank lines precede this one.
 \c   Two leading spaces
 \c We can use \ { and } with impunity here.
 
@@ -48,12 +49,13 @@ This is a numbered list:
 
 Oh, while I'm here: some special characters. The \\, \{ and \}
 characters, to be precise. And their code equivalents, \c{\\},
-\c{\{}, \c{\}}.
+\i\c{\{}, \c{\}}.
 
-\H{head} First subheading
+\S{subhead} First subheading
 
-So here's a subsection. Just incidentally, `this' is in quotes.
-Those quotes had better work in all formats.
+So here's a \I{subheading}{subsection}subsection. Just incidentally,
+`this' is in quotes. \ii{Those} quotes had better work in all
+formats.
 
 We'll try for some Unicode here: \i{Schr\u00F6{oe}dinger}.
 
@@ -61,10 +63,16 @@ An index tag containing non-alternatived Unicode: \i{\u00BFChe?}
 
 An invisible index tag: \I{she seems to have an invisible tag}yeah.
 
+\S0{subsub} Smaller heading still
+
+A tiny section. Awww. How cute.
+
 \A{app} Needless appendix
 
 Here's an \i{appendix}, for no terribly good reason at all. See
 \k{book}.
+
+It also contains a \W{http://www.gallery.uk.eu.org/}{hyperlink}.
 
 \U{bib} Bibliography
 
@@ -72,6 +80,8 @@ Here's an \i{appendix}, for no terribly good reason at all. See
 
 \B{nocite} Some text describing a book. This text should appear in
 the document even though there is no \cw{\\k} citing it.
+
+\BR{book} [SillyCitation]
 
 \nocite{nocite}
 
