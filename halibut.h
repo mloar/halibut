@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <time.h>
+#include <string.h>
 
 #ifdef __GNUC__
 #define NORETURN __attribute__((__noreturn__))
