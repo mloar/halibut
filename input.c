@@ -426,6 +426,7 @@ token get_token(input *in) {
 	    c == '#' || c == '{' || c == '}' || c == '.') {
 	    /* single-char command */
 	    rdadd(&rs, c);
+	    prevpos = rsc.pos;
 	} else if (c == 'u') {
 	    int len = 0;
 	    do {
