@@ -21,6 +21,7 @@ static indextag *make_indextag(void) {
     ret->name = NULL;
     ret->implicit_text = NULL;
     ret->explicit_texts = NULL;
+    ret->explicit_fpos = NULL;
     ret->nexplicit = ret->explicit_size = ret->nrefs = 0;
     ret->refs = NULL;
     return ret;
@@ -57,7 +58,8 @@ indextag *index_findtag(indexdata *idx, wchar_t *name) {
  * Guarantee on calling sequence: all implicit merges are given
  * before the explicit ones.
  */
-void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text) {
+void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
+		 filepos *fpos) {
     indextag *t, *existing;
 
     /*
@@ -105,6 +107,7 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text) {
 	     * Otherwise, this is a new tag with an implicit \IM.
 	     */
 	    t->implicit_text = text;
+	    t->implicit_fpos = *fpos;
 	} else {
 	    sfree(t);
 	    t = existing;
@@ -130,8 +133,12 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text) {
 		    t->explicit_size = t->nexplicit + 8;
 		    t->explicit_texts = resize(t->explicit_texts,
 					       t->explicit_size);
+		    t->explicit_fpos = resize(t->explicit_fpos,
+					      t->explicit_size);
 		}
-		t->explicit_texts[t->nexplicit++] = text;
+		t->explicit_texts[t->nexplicit] = text;
+		t->explicit_fpos[t->nexplicit] = *fpos;
+		t->nexplicit++;
 	    }
 	}
     }
@@ -147,6 +154,7 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text) {
 void build_index(indexdata *i) {
     indextag *t;
     word **ta;
+    filepos *fa;
     int ti;
     int j;
 
@@ -154,15 +162,18 @@ void build_index(indexdata *i) {
 	if (t->implicit_text) {
 	    t->nrefs = 1;
 	    ta = &t->implicit_text;
+	    fa = &t->implicit_fpos;
 	} else {
 	    t->nrefs = t->nexplicit;
 	    ta = t->explicit_texts;
+	    fa = t->explicit_fpos;
 	}
 	if (t->nrefs) {
 	    t->refs = mknewa(indexentry *, t->nrefs);
 	    for (j = 0; j < t->nrefs; j++) {
 		indexentry *ent = mknew(indexentry);
 		ent->text = *ta++;
+		ent->fpos = *fa++;
 		t->refs[j] = add234(i->entries, ent);
 		if (t->refs[j] != ent)     /* duplicate */
 		    sfree(ent);

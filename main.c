@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
 
 	for (p = sourceform; p; p = p->next)
 	    if (p->type == para_IM)
-		index_merge(idx, TRUE, p->keyword, p->words);
+		index_merge(idx, TRUE, p->keyword, p->words, &p->fpos);
 
 	build_index(idx);
 

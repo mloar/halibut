@@ -8,6 +8,12 @@ Bogus keyword: \k{nonexist}
 
 \IM{nonexist3} Logical impossibilities
 
+Fingly \i{eep}.
+
+\IM{eep} Thing: with a colon
+
+Flongly \i{eep:sping}.
+
 \define{macro} macro definition
 
 \define{macro} same macro again
@@ -47,5 +53,7 @@ Nested index: \i{foo\i{bar}}. Broken styled index: \i\c.
 Complete twaddle: \twaddle.
 
 Unclosed brace: \c{foo.
+
+\U Spong, wimble: flomp.
 
 Comment to EOF: \#{ and here we go.

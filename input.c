@@ -528,6 +528,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	} type;
 	word **whptr;		       /* to restore from \u alternatives */
 	word **idximplicit;	       /* to restore from \u alternatives */
+	filepos fpos;
     } *sitem;
     stack parsestk;
     struct crossparaitem {
@@ -988,6 +989,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		/* Error recovery: push nop */
 		sitem = mknew(struct stack_item);
 		sitem->type = stack_nop;
+		sitem->fpos = t.pos;
 		stk_push(parsestk, sitem);
 		break;
 	      case tok_rbrace:
@@ -1024,7 +1026,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			}
 			indexing = FALSE;
 			rdadd(&indexstr, L'\0');
-			index_merge(idx, FALSE, indexstr.text, idxwordlist);
+			index_merge(idx, FALSE, indexstr.text,
+				    idxwordlist, &sitem->fpos);
 			sfree(indexstr.text);
 		    }
 		    if (sitem->type & stack_hyper) {
@@ -1110,6 +1113,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			    addword(wd, &idximplicit);
 			}
 			sitem = mknew(struct stack_item);
+			sitem->fpos = t.pos;
 			sitem->type = stack_quote;
 			stk_push(parsestk, sitem);
 		    }
@@ -1189,6 +1193,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			 * Special cases: \W{}\c, \W{}\e, \W{}\cw
 			 */
 			sitem = mknew(struct stack_item);
+			sitem->fpos = wd.fpos;
 			sitem->type = stack_hyper;
 			if (t.type == tok_cmd &&
 			    (t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
@@ -1220,6 +1225,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
 			sitem = mknew(struct stack_item);
+			sitem->fpos = t.pos;
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
@@ -1232,6 +1238,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 				 word_Emph);
 			spcstyle = tospacestyle(style);
 			sitem = mknew(struct stack_item);
+			sitem->fpos = t.pos;
 			sitem->type = stack_style;
 			stk_push(parsestk, sitem);
 		    }
@@ -1245,10 +1252,12 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
 			sitem = mknew(struct stack_item);
+			sitem->fpos = t.pos;
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
 		    sitem = mknew(struct stack_item);
+		    sitem->fpos = t.pos;
 		    sitem->type = stack_idx;
 		    dtor(t), t = get_token(in);
 		    /*
@@ -1318,6 +1327,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			 * paragraph.
 			 */
 			sitem = mknew(struct stack_item);
+			sitem->fpos = t.pos;
 			sitem->type = stack_ualt;
 			sitem->whptr = whptr;
 			sitem->idximplicit = idximplicit;

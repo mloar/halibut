@@ -4,9 +4,7 @@
  * TODO:
  * 
  *  - configurable choice of how to allocate node names
- *  - escape, warn or simply remove commas and colons in node
- *    names; also test colons in index terms.
- *  - might be helpful to diagnose duplicate node names too!
+ *  - might be helpful to diagnose duplicate node names!
  *  - test everything in info(1), and probably jed too
  * 
  * Later:
@@ -184,14 +182,28 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
 	    info_idx *ii = mknew(info_idx);
 	    rdstringc rs = { 0, 0, NULL };
+	    char *p, *q;
 
 	    ii->nnodes = ii->nodesize = 0;
 	    ii->nodes = NULL;
 
 	    info_rdaddwc(&rs, entry->text, NULL, FALSE);
+
 	    /*
-	     * FIXME: splatter colons.
+	     * We cannot have colons in index terms, since they
+	     * disrupt the structure of the index menu. Remove any
+	     * that we find, with a warning.
 	     */
+	    p = q = rs.text;
+	    while (*p) {
+		if (*p == ':') {
+		    error(err_infoindexcolon, &entry->fpos);
+		} else {
+		    *q++ = *p;
+		}
+		p++;
+	    }
+
 	    ii->text = rs.text;
 
 	    entry->backend_data = ii;
@@ -976,10 +988,27 @@ static node *info_node_new(char *name)
     return n;
 }
 
-static char *info_node_name(paragraph *p)
+static char *info_node_name(paragraph *par)
 {
     rdstringc rsc = { 0, 0, NULL };
-    info_rdaddwc(&rsc, p->kwtext ? p->kwtext : p->words, NULL, FALSE);
+    char *p, *q;
+    info_rdaddwc(&rsc, par->kwtext ? par->kwtext : par->words, NULL, FALSE);
+
+    /*
+     * We cannot have commas or colons in a node name. Remove any
+     * that we find, with a warning.
+     */
+    p = q = rsc.text;
+    while (*p) {
+	if (*p == ':' || *p == ',') {
+	    error(err_infonodechar, &par->fpos, *p);
+	} else {
+	    *q++ = *p;
+	}
+	p++;
+    }
+    *p = '\0';
+
     return rsc.text;
 }
 

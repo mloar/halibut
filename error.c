@@ -16,6 +16,7 @@
 static void do_error(int code, va_list ap) {
     char error[1024];
     char auxbuf[256];
+    char c;
     char *sp, *sp2;
     wchar_t *wsp;
     filepos fpos, fpos2;
@@ -205,6 +206,19 @@ static void do_error(int code, va_list ap) {
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "\\cfg{info-dir-entry} expects at least three"
 		" parameters");
+	flags = FILEPOS;
+	break;
+      case err_infoindexcolon:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "info output format does not support colons in"
+		" index terms; removing");
+	flags = FILEPOS;
+	break;
+      case err_infonodechar:
+	fpos = *va_arg(ap, filepos *);
+	c = (char)va_arg(ap, int);
+	sprintf(error, "info output format does not support '%c' in"
+		" node names; removing", c);
 	flags = FILEPOS;
 	break;
       case err_whatever:

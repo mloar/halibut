@@ -219,6 +219,8 @@ enum {
     err_misplacedlcont,		       /* \lcont not after a list item */
     err_sectmarkerinblock,	       /* section marker appeared in block */
     err_infodirentry,		       /* \cfg{info-dir-entry} missing param */
+    err_infoindexcolon,		       /* colon in index term in info */
+    err_infonodechar,		       /* colon/comma in node name in info */
     err_whatever                       /* random error of another type */
 };
 
@@ -373,7 +375,9 @@ struct indexdata_Tag {
 struct indextag_Tag {
     wchar_t *name;
     word *implicit_text;
+    filepos implicit_fpos;
     word **explicit_texts;
+    filepos *explicit_fpos;
     int nexplicit, explicit_size;
     int nrefs;
     indexentry **refs;		       /* array of entries referenced by tag */
@@ -385,13 +389,14 @@ struct indextag_Tag {
 struct indexentry_Tag {
     word *text;
     void *backend_data;		       /* private to back end */
+    filepos fpos;
 };
 
 indexdata *make_index(void);
 void cleanup_index(indexdata *);
 /* index_merge takes responsibility for freeing arg 3 iff implicit; never
  * takes responsibility for arg 2 */
-void index_merge(indexdata *, int is_explicit, wchar_t *, word *);
+void index_merge(indexdata *, int is_explicit, wchar_t *, word *, filepos *);
 void build_index(indexdata *);
 void index_debug(indexdata *);
 indextag *index_findtag(indexdata *idx, wchar_t *name);
