@@ -279,16 +279,30 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    {
 		/*
 		 * Output the .cnt entry.
+		 * 
+		 * WinHelp has a bug involving having an internal
+		 * node followed by a leaf at the same level: the
+		 * leaf is output at the wrong level. We can mostly
+		 * work around this by modifying the leaf level
+		 * itself (see whlp_contents_write), but this
+		 * doesn't work for top-level sections since we
+		 * can't turn a level-1 leaf into a level-0 one. So
+		 * for top-level leaf sections (Bibliography
+		 * springs to mind), we output an internal node
+		 * containing only the leaf for that section.
 		 */
 		int i;
 		paragraph *q;
+
+		/* Count up the level. */
 		i = 1;
 		for (q = p; q->parent; q = q->parent) i++;
-		if (p->child) {
+
+		if (p->child || !p->parent) {
 		    /*
-		     * Need two entries: one directory, and then
-		     * one actual link. The link is on the next
-		     * level down.
+		     * If p has children then it needs to be a
+		     * folder; if it has no parent then it needs to
+		     * be a folder to work around the bug.
 		     */
 		    whlp_contents_write(&state, i, rs.text, NULL);
 		    i++;
