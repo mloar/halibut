@@ -392,7 +392,14 @@ static void xhtml_ponder_layout(paragraph *p)
         if (level>conf.leaf_level) { /* stick within the same file - link into currentsect */
           assert(currentfile->is_leaf);
           sect->file = currentfile;
+	  while (currentsect && currentsect->level > level &&
+		 currentsect->file==currentsect->parent->file) {
+	    currentsect = currentsect->parent;
+	  }
+	  assert(currentsect);
           currentsect->next = sect;
+	  assert(currentsect->level == sect->level);
+	  sect->parent = currentsect->parent;
           currentsect = sect;
 	  /*          printf("connected '%s' to existing file '%s' [II]\n", sect->fragment, currentfile->filename);*/
         } else { /* going sideways ... */
