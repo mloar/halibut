@@ -11,9 +11,14 @@ endif
 all:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile REALBUILD=yes
+clean:
+	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
+	@make -C $(BUILDDIR) -f ../Makefile clean REALBUILD=yes
 else
 
 # The `real' makefile part.
+
+CFLAGS += -Wall -W
 
 ifdef RELEASE
 ifndef VERSION
@@ -34,7 +39,8 @@ endif
 
 SRC := ../
 
-MODULES := main malloc error help licence version
+MODULES := main malloc ustring error help licence version misc
+MODULES += input
 
 OBJECTS := $(addsuffix .o,$(MODULES))
 DEPS := $(addsuffix .d,$(MODULES))
@@ -47,6 +53,9 @@ buttress: $(OBJECTS)
 
 version.o: FORCE
 	$(CC) $(VDEF) -MD -c $(SRC)version.c
+
+clean::
+	rm -f *.o buttress core
 
 FORCE: # phony target to force version.o to be rebuilt every time
 

@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 		     */
 		    switch (c) {
 		      case 'o':
-			ofile = p;
+			outfile = p;
 			break;
 		    }
 		    p = NULL;	       /* prevent continued processing */
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 
     {
 	input in;
-	paragraph sourceform;
+	paragraph *sourceform;
 
 	in.filenames = infiles;
 	in.nfiles = nfiles;
@@ -174,9 +174,31 @@ int main(int argc, char **argv) {
 	    paragraph *p;
 	    word *w;
 	    for (p = sourceform; p; p = p->next) {
-		printf("para %d \"%s\" {\n", p->type, p->keyword);
+		wchar_t *wp;
+		printf("para %d ", p->type);
+		if (p->keyword) {
+		    wp = p->keyword;
+		    while (*wp) {
+			putchar('\"');
+			for (; *wp; wp++)
+			    putchar(*wp);
+			putchar('\"');
+			if (*++wp)
+			    printf(", ");
+		    }
+		} else
+		    printf("(no keyword)");
+		printf(" {\n");
 		for (w = p->words; w; w = w->next) {
-		    printf("    word %d \"%s\"\n", w->type, w->text);
+		    printf("    word %d ", w->type);
+		    if (w->text) {
+			printf("\"");
+			for (wp = w->text; *wp; wp++)
+			    putchar(*wp);
+			printf("\"");
+		    } else
+			printf("(no text)");
+		    printf("\n");
 		}
 		printf("}\n");
 	    }

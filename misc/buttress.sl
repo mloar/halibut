@@ -1,4 +1,4 @@
-% The functions here are common to both TeX and LaTeX modes.
+% Buttress mode for Jed.
 
 $1 = "Buttress";
 create_syntax_table ($1);
@@ -24,7 +24,7 @@ define_highlight_rule (".", "normal", $1);
 build_highlight_table ($1);
 #endif
 
-%  This hook identifies lines containing TeX comments as paragraph separator
+%  This hook identifies lines containing comments as paragraph separator
 define buttress_is_comment() {
     bol ();
     while (ffind ("\\\\#")) go_right (3);

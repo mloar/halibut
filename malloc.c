@@ -35,5 +35,29 @@ void *srealloc(void *p, int size) {
 	q = malloc(size);
     if (!q)
 	fatal(err_nomemory);
-    return p;
+    return q;
+}
+
+/*
+ * Free a linked list of words
+ */
+void free_word_list(word *w) {
+    word *t;
+    while (w) {
+	t = w;
+	w = w->next;
+	sfree(t);
+    }
+}
+
+/*
+ * Free a linked list of paragraphs
+ */
+void free_para_list(paragraph *p) {
+    paragraph *t;
+    while (p) {
+	t = p;
+	p = p->next;
+	sfree(t);
+    }
 }

@@ -6,7 +6,7 @@ feature that Buttress's input format supports. Creation date
 
 \copyright Copyright 1999 Simon Tatham. All rights reserved.
 
-\versionid $Id: test.but,v 1.2 1999/02/07 13:17:47 simon Exp $
+\versionid $Id: test.but,v 1.3 1999/07/31 18:44:53 simon Exp $
 
 \C{chap} First chapter title
 
@@ -63,7 +63,7 @@ An index tag containing non-alternatived Unicode: \i{\u00BFChe?}
 
 An invisible index tag: \I{she seems to have an invisible tag}yeah.
 
-\S0{subsub} Smaller heading still
+\S1{subsub} Smaller heading still
 
 A tiny section. Awww. How cute.
 
@@ -74,7 +74,7 @@ Here's an \i{appendix}, for no terribly good reason at all. See
 
 It also contains a \W{http://www.gallery.uk.eu.org/}{hyperlink}.
 
-\U{bib} Bibliography
+\U Bibliography
 
 \B{book} Some text describing a book.
 
@@ -83,7 +83,7 @@ the document even though there is no \cw{\\k} citing it.
 
 \BR{book} [SillyCitation]
 
-\nocite{nocite}
+\nocite{bookwithoutcitation}{foo}
 
 \B{uncited} If this text appears, there's an actual error.
 
