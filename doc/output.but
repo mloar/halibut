@@ -322,9 +322,6 @@ The \i{default settings} for Halibut's plain text output format are:
 
 \H{output-html} HTML
 
-\e{NOTE:} This documentation is out of date with respect to the
-current HTML backend, and needs rewriting.
-
 This output format generates an \i{HTML} version of the document. By
 default, this will be in multiple files, starting with
 \c{Contents.html} and splitting the document into files by chapter
@@ -333,13 +330,12 @@ between HTML files using the configuration commands described in
 this section. In particular, you can configure Halibut to output one
 single HTML file instead of multiple ones.
 
-Strictly speaking, the output format is \i{XHTML} 1.0 Transitional,
-which is why all of the configuration directives start with the word
-\c{xhtml} rather than \c{html}.
+\I{\cw{\\cfg\{xhtml-anything\}}}Configuration directives with an
+\c{xhtml-} prefix are synonyms for those with an \c{html-} prefix.
 
 \S{output-html-file} Controlling the output file names
 
-\dt \I{\cw{\\cfg\{xhtml-contents-filename\}}}\cw{\\cfg\{xhtml-contents-filename\}\{}\e{filename}\cw{\}}
+\dt \I{\cw{\\cfg\{html-contents-filename\}}}\cw{\\cfg\{html-contents-filename\}\{}\e{filename}\cw{\}}
 
 \dd Sets the \i{output file name} in which to store the top-level
 contents page. Since this is the first page a user ought to see when
@@ -347,11 +343,11 @@ beginning to read the document, a good choice in many cases might be
 \c{index.html} (although this is not the default, for historical
 reasons).
 
-\dt \I{\cw{\\cfg\{xhtml-index-filename\}}}\cw{\\cfg\{xhtml-index-filename\}\{}\e{filename}\cw{\}}
+\dt \I{\cw{\\cfg\{html-index-filename\}}}\cw{\\cfg\{html-index-filename\}\{}\e{filename}\cw{\}}
 
 \dd Sets the file name in which to store the document's index.
 
-\dt \I{\cw{\\cfg\{xhtml-template-filename\}}}\cw{\\cfg\{xhtml-template-filename\}\{}\e{template}\cw{\}}
+\dt \I{\cw{\\cfg\{html-template-filename\}}}\cw{\\cfg\{html-template-filename\}\{}\e{template}\cw{\}}
 
 \dd Provides a \i{template} to be used when constructing the file
 names of each chapter or section of the document. This template
@@ -381,11 +377,12 @@ If the section has no number (an unnumbered chapter created using
 
 \dt \i\c{%b}
 
-\dd Expands to the bare number of the section. So in chapter 1 this
-would expand to \cq{1}; in section A.4.3 it would expand to
-\cq{A.4.3}, and so on. If the section has no number (an
-unnumbered chapter created using \c{\\U}), this directive falls back
-to doing the same thing as \c{%N}.
+\dd Expands to the number of the section, in a format suitable for an
+HTML fragment name. The first character of the section type is
+prepended to the section number. So in chapter 1 this would expand to
+\cq{C1}; in section A.4.3 it would expand to \cq{SA.4.3}, and so on.
+If the section has no number (an unnumbered chapter created using
+\c{\\U}), this directive falls back to doing the same thing as \c{%N}.
 
 \dt \i\c{%k}
 
@@ -396,17 +393,17 @@ no keyword (an unnumbered chapter created using \c{\\U}), this
 directive falls back to doing the same thing as \c{%N}.
 
 These formatting directives can also be used in the
-\cw{\\cfg\{xhtml-template-fragment\}} configuration directive (see
+\cw{\\cfg\{html-template-fragment\}} configuration directive (see
 \k{output-html-misc}).
 
 }
 
-\dt \I{\cw{\\cfg\{xhtml-single-filename\}}}\cw{\\cfg\{xhtml-single-filename\}\{}\e{filename}\cw{\}}
+\dt \I{\cw{\\cfg\{html-single-filename\}}}\cw{\\cfg\{html-single-filename\}\{}\e{filename}\cw{\}}
 
 \dd Sets the file name in which to store the entire document, if
-Halibut is configured (using \c{\\cfg\{xhtml-leaf-level\}\{0\}} to
+Halibut is configured (using \c{\\cfg\{html-leaf-level\}\{0\}} to
 produce a single self-contained file. Both this directive \e{and}
-\c{\\cfg\{xhtml-leaf-level\}\{0\}} are implicitly generated if you
+\c{\\cfg\{html-leaf-level\}\{0\}} are implicitly generated if you
 provide a file name parameter after the command-line option
 \i\c{--html} (see \k{running-options}).
 
@@ -423,7 +420,7 @@ sections in the file and/or the sections below it.
 The configuration directives listed below allow you to configure the
 splitting into files, and the details of the contents sections.
 
-\dt \I{\cw{\\cfg\{xhtml-leaf-level\}}}\cw{\\cfg\{xhtml-leaf-level\}\{}\e{depth}\cw{\}}
+\dt \I{\cw{\\cfg\{html-leaf-level\}}}\cw{\\cfg\{html-leaf-level\}\{}\e{depth}\cw{\}}
 
 \dd This setting indicates the depth of section which should be
 given a \I{leaf file}\q{leaf} file (a file with no sub-files). So if
@@ -437,7 +434,7 @@ file, and the chapter files will mostly just contain links to their
 
 If you set this option to zero, then the whole document will appear
 in a single file. If you do this, Halibut will call that file
-\i\c{Manual.html} instead of \i\c{Contents.html}.
+\i\c{Manual.html} instead of \i\c{Contents.html} by default.
 
 This option is automatically set to zero if you provide a file name
 parameter after the command-line option \i\c{--html} (see
@@ -447,10 +444,11 @@ that file.
 
 }
 
-\dt \I{\cw{\\cfg\{xhtml-contents-depth\}}}\cw{\\cfg\{xhtml-contents-depth-}\e{level}\cw{\}\{}\e{depth}\cw{\}}
+\dt \I{\cw{\\cfg\{html-contents-depth\}}}\cw{\\cfg\{html-contents-depth\}\{}\e{level}\cw{\}\{}\e{depth}\cw{\}}
 
 \dd This directive allows you to specify how \I{depth of
-contents}deep the contents section in a particular file should go.
+contents}deep any contents section in a particular level of file
+should go.
 
 \lcont{
 
@@ -458,29 +456,28 @@ The \e{level} parameter indicates which level of contents section
 you are dealing with. 0 denotes the main contents section in the
 topmost file \c{Contents.html}; 1 denotes a contents section in a
 chapter file; 2 is a contents section in a file containing a \c{\\H}
-heading, and so on. Currently you can't go below level 5 (which
-corresponds to a \c{\\S3} heading).
+heading, and so on.
 
 The \e{depth} parameter indicates the maximum depth of heading which
 will be shown in this contents section. Again, 1 denotes a chapter,
 2 is a \c{\\H} heading, 3 is a \c{\\S} heading, and so on.
 
-So, for example: \cw{\\cfg\{xhtml-contents-depth-1\}\{3\}} instructs
+So, for example: \cw{\\cfg\{html-contents-depth\}\{1\}\{3\}} instructs
 Halibut to put contents links in chapter files for all sections down
 to \c{\\S} level, but not to go into any more detail than that.
 
+For backwards compatibility, the alternative syntax
+\cw{\\cfg\{html-contents-depth-}\e{level}\cw{\}\{}\e{depth}\cw{\}}
+is also supported.
+
 }
 
-\# FIXME: this is utterly ghastly. For a start, it should include
-\# the level as a separate argument, like the text section config
-\# directives. Secondly, it shouldn't be limited in depth!
-
-\dt \I{\cw{\\cfg\{xhtml-leaf-contains-contents\}}}\cw{\\cfg\{xhtml-leaf-contains-contents\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{html-leaf-contains-contents\}}}\cw{\\cfg\{html-leaf-contains-contents\}\{}\e{boolean}\cw{\}}
 
 \dd If you set this to \c{true}, then each leaf file will contain
 its own contents section which summarises the text within it.
 
-\dt \I{\cw{\\cfg\{xhtml-leaf-smallest-contents\}}}\cw{\\cfg\{xhtml-leaf-smallest-contents\}\{}\e{number}\cw{\}}
+\dt \I{\cw{\\cfg\{html-leaf-smallest-contents\}}}\cw{\\cfg\{html-leaf-smallest-contents\}\{}\e{number}\cw{\}}
 
 \dd Contents sections in leaf files are not output at all if they
 contain very few entries (on the assumption that it just isn't worth
@@ -494,13 +491,17 @@ The directives in this section allow you to supply pieces of
 \I{HTML}\i{verbatim HTML} code, which will be included in various
 parts of the output files.
 
-\dt \I{\cw{\\cfg\{xhtml-head-end\}}}\cw{\\cfg\{xhtml-head-end\}\{}\e{HTML text}\cw{\}}
+Note that none of Halibut's usual character set translation is applied
+to this code; it is assumed to already be in a suitable encoding for
+the target HTML files.
+
+\dt \I{\cw{\\cfg\{html-head-end\}}}\cw{\\cfg\{html-head-end\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the end of
 the \i\cw{<HEAD>} section of each output HTML file. So this is a
 good place to put, for example, a link to a \i{CSS} \i{stylesheet}.
 
-\dt \I{\cw{\\cfg\{xhtml-local-head\}}}\cw{\\cfg\{xhtml-local-head\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-local-head\}}}\cw{\\cfg\{html-local-head\}\{}\e{HTML text}\cw{\}}
 
 \dd This configuration directive is local: you specify it within a
 document section, and it acts on that section only.
@@ -523,14 +524,14 @@ in the preamble or the introduction section, something like this:
 
 }
 
-\dt \I{\cw{\\cfg\{xhtml-body-tag\}}}\cw{\\cfg\{xhtml-body-tag\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-body-tag\}}}\cw{\\cfg\{html-body-tag\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is used in place of the
 \i\cw{<BODY>} tag in each output file. So if you wanted to define a
 \i{background colour}, for example, you could write
-\cw{\\cfg\{xhtml-body-tag\}\{<body bg="#123456">\}}.
+\cw{\\cfg\{html-body-tag\}\{<body bg="#123456">\}}.
 
-\dt \I{\cw{\\cfg\{xhtml-body-start\}}}\cw{\\cfg\{xhtml-body-start\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-body-start\}}}\cw{\\cfg\{html-body-start\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the
 beginning of the \i\cw{<BODY>} section of each output HTML file. So
@@ -538,41 +539,41 @@ if you intend your HTML files to be part of a web site with a
 standard \i{house style}, and the style needs a \i{header} at the
 top of every page, this is where you can add that header.
 
-\dt \I{\cw{\\cfg\{xhtml-body-end\}}}\cw{\\cfg\{xhtml-body-end\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-body-end\}}}\cw{\\cfg\{html-body-end\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the end of
-the \i\cw{<BODY>} section of each output HTML file. So if you intend
-your HTML files to be part of a web site with a standard \i{house
-style}, and the style needs a \i{footer} at the bottom of every
-page, this is where you can add that footer.
+the \i\cw{<BODY>} section of each output HTML file, before any address
+section. So if you intend your HTML files to be part of a web site
+with a standard \i{house style}, and the style needs a \i{footer} at
+the bottom of every page, this is where you can add that footer.
 
-\dt \I{\cw{\\cfg\{xhtml-address-start\}}}\cw{\\cfg\{xhtml-address-start\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-address-start\}}}\cw{\\cfg\{html-address-start\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the
 beginning of the \i\cw{<ADDRESS>} section at the bottom of each
 output HTML file. This might be a good place to put authors'
 \i{contact details}, for example.
 
-\dt \I{\cw{\\cfg\{xhtml-address-end\}}}\cw{\\cfg\{xhtml-address-end\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-address-end\}}}\cw{\\cfg\{html-address-end\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the end of
 the \i\cw{<ADDRESS>} section at the bottom of each output HTML file,
 after the version IDs (if present).
 
-\dt \I{\cw{\\cfg\{xhtml-navigation-attributes\}}}\cw{\\cfg\{xhtml-navigation-attributes\}\{}\e{HTML attributes}\cw{\}}
+\dt \I{\cw{\\cfg\{html-navigation-attributes\}}}\cw{\\cfg\{html-navigation-attributes\}\{}\e{HTML attributes}\cw{\}}
 
 \dd The text you provide in this directive is included inside the
 \cw{<P>} tag containing the \i{navigation links} at the top of each
 page (\i{\q{Previous}} / \i{\q{Contents}} / \i{\q{Next}}). So if you
 wanted the navigation links to have a particular CSS style, you
 could write
-\cw{\\cfg\{xhtml-navigation-attributes\}\{class="foo"\}}, and the
+\cw{\\cfg\{html-navigation-attributes\}\{class="foo"\}}, and the
 navigation-links paragraph would then begin with the tag \cw{<p
 class="foo">}.
 
 \S{output-html-headings} \ii{Configuring heading display}
 
-\dt \I{\cw{\\cfg\{xhtml-chapter-numeric\}}}\cw{\\cfg\{xhtml-chapter-numeric\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{html-chapter-numeric\}}}\cw{\\cfg\{html-chapter-numeric\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, then chapter headings will not
 contain the word \q{Chapter} (or whatever other word you have
@@ -581,14 +582,16 @@ they will just contain the chapter \e{number}, followed by the
 chapter title. If you set this to \c{false}, chapter headings will
 be prefixed by \q{Chapter} or equivalent.
 
-\dt \I{\cw{\\cfg\{xhtml-chapter-suffix\}}}\cw{\\cfg\{xhtml-chapter-suffix\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-chapter-suffix\}}}\cw{\\cfg\{html-chapter-suffix\}\{}\e{text}\cw{\}}
 
 \dd This specifies the suffix text to be appended to the chapter
 number, before displaying the chapter title. For example, if you set
 this to \cq{:\_}, then the chapter title might look something
 like \q{Chapter 2: Doing Things}.
 
-\dt \I{\cw{\\cfg\{xhtml-section-numeric\}}}\cw{\\cfg\{xhtml-section-numeric\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{html-section-numeric\}}}\cw{\\cfg\{html-section-numeric\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
+
+\# {level} can be omitted (defaults to 0). Is this intentional?
 
 \dd Specifies whether section headings at a particular level should
 contain the word \q{Section} or equivalent (if \c{false}), or should
@@ -597,17 +600,121 @@ which level of section headings you want to affect: 0 means
 first-level headings (\c{\\H}), 1 means second-level headings
 (\c{\\S}), 2 means the level below that (\c{\\S2}), and so on.
 
-\dt \I{\cw{\\cfg\{xhtml-section-suffix\}}}\cw{\\cfg\{xhtml-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-section-suffix\}}}\cw{\\cfg\{html-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
+
+\# {level} can be omitted (defaults to 0). Is this intentional?
 
 \dd Specifies the suffix text to be appended to section numbers at a
 particular level, before displaying the section title.
 
+\S{output-html-names} Configuring standard text
+
+These directives let you fine-tune the names Halibut uses in places
+such as the navigation bar to refer to various parts of the document,
+and other standard pieces of text, for instance to change them to a
+different language.
+
+\dt \I{\cw{\\cfg\{html-preamble-text\}}}\cw{\\cfg\{html-preamble-text\}\{}\e{text}\cw{\}}
+
+\dt \I{\cw{\\cfg\{html-contents-text\}}}\cw{\\cfg\{html-contents-text\}\{}\e{text}\cw{\}}
+
+\dt \I{\cw{\\cfg\{html-index-text\}}}\cw{\\cfg\{html-index-text\}\{}\e{text}\cw{\}}
+
+\dd Text used to refer to the preamble (i.e., any paragraphs before
+the first chapter heading), contents, and index respectively, in the
+navigation bar, contents, and index.
+
+\dt \I{\cw{\\cfg\{html-title-separator\}}}\cw{\\cfg\{html-title-separator\}\{}\e{text}\cw{\}}
+
+\dd If multiple headings are used in a file's \cw{<TITLE>} tag, this
+text is used to separate them.
+
+\# Under what circumstances can this occur?
+
+\dt \I{\cw{\\cfg\{html-index-main-separator\}}}\cw{\\cfg\{html-index-main-separator\}\{}\e{text}\cw{\}}
+
+\dd Separator between index term and references in the index.
+
+\dt \I{\cw{\\cfg\{html-index-multiple-separator\}}}\cw{\\cfg\{html-index-multiple-separator\}\{}\e{text}\cw{\}}
+
+\dd Separator between multiple references for a single index term in
+the index.
+
+\dt \I{\cw{\\cfg\{html-pre-versionid\}}}\cw{\\cfg\{html-pre-versionid\}\{}\e{text}\cw{\}}
+
+\dt \I{\cw{\\cfg\{html-post-versionid\}}}\cw{\\cfg\{html-post-versionid\}\{}\e{text}\cw{\}}
+
+\dd Text surrounding each output \i{version ID paragraph}.
+
+\dt \I{\cw{\\cfg\{html-nav-prev-text\}}}\cw{\\cfg\{html-nav-prev-text\}\{}\e{text}\cw{\}}
+
+\dt \I{\cw{\\cfg\{html-nav-next-text\}}}\cw{\\cfg\{html-nav-next-text\}\{}\e{text}\cw{\}}
+
+\dd The text used for the \q{previous page} and \q{next page} links on
+the navigation bar.
+
+\dt \I{\cw{\\cfg\{html-nav-separator\}}}\cw{\\cfg\{html-nav-separator\}\{}\e{text}\cw{\}}
+
+\dd Separator between links in the navigation bar.
+
+\S{output-html-characters} Configuring the characters used
+
+Unlike the other backends, HTML does not have a single
+\i\cw{\\cfg\{html-charset\}} directive, as there are several levels of
+character encoding to consider.
+
+The character set names are the same as for
+\cw{\\cfg\{input-charset\}} (see \k{input-config}). However, unlike
+\cw{\\cfg\{input-charset\}}, these directives affect the \e{entire}
+output; it's not possible to switch encodings halfway through.
+
+\dt \I\cw{\\cfg\{html-output-charset\}}\cw{\\cfg\{html-output-charset\}\{}\e{character set name}\cw{\}}
+
+\dd The character encoding of the HTML file to be output. Unicode
+characters in this encoding's repertoire are included literally rather
+than as \i{HTML entities}.
+
+\dt \I\cw{\\cfg\{html-restrict-charset\}}\cw{\\cfg\{html-restrict-charset\}\{}\e{character set name}\cw{\}}
+
+\dd Only Unicode characters representable in this character set will be
+output; any others will be omitted and use their fallback text, if
+any. Characters not in \q{html-output-charset} will be represented as
+HTML numeric entities.
+
+\dt \I{\cw{\\cfg\{html-quotes\}}}\cw{\\cfg\{html-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd Specifies the quotation marks to use, overriding any
+\cw{\\cfg\{quotes\}} directive. You can specify multiple
+fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
+directive (see \k{output-text-characters}).
+
 \S{output-html-misc} Miscellaneous options
 
-\dt \I{\cw{\\cfg\{xhtml-template-fragment\}}}\cw{\\cfg\{xhtml-template-fragment\}\{}\e{template}\cw{\}}
+\dt \I\cw{\\cfg\{html-version\}}\cw{\\cfg\{html-version\}\{}\e{version}\cw{\}}
+
+\dd Identifies the precise version of HTML that is output. This
+affects the declaration within the HTML, and also has minor effects on
+the body of the HTML so that it is valid for the declare version. The
+available variants are:
+
+\lcont{
+
+\b \cw{html3.2}
+
+\b \cw{html4}
+
+\b \cw{iso-html}
+
+\b \cw{xhtml1.0transitional}
+
+\b \cw{xhtml1.0strict}
+
+}
+
+\dt \I{\cw{\\cfg\{html-template-fragment\}}}\cw{\\cfg\{html-template-fragment\}\{}\e{template}\cw{\}}
 
 \dd This directive lets you specify a \i{template}, with exactly the
-same syntax used in \cw{\\cfg\{xhtml-template-filename\}} (see
+same syntax used in \cw{\\cfg\{html-template-filename\}} (see
 \k{output-html-file}), to be used for the anchor names (\i\cw{<A
 NAME="...">}) used to allow URLs to refer to specific sections
 within a particular HTML file. So if you set this to \cq{%k},
@@ -615,29 +722,35 @@ for example, then each individual section in your document will be
 addressable by means of a URL ending in a \c{#} followed by your
 internal section keyword.
 
-\dt \I{\cw{\\cfg\{xhtml-versionid\}}}\cw{\\cfg\{xhtml-versionid\}\{}\e{boolean}\cw{\}}
+\lcont{
+
+Note that no checking is done that the anchor name is valid HTML. So
+if you use \cq{%k}, for example, you may need to restrict your use of
+keyword names.
+
+}
+
+\dt \I{\cw{\\cfg\{html-versionid\}}}\cw{\\cfg\{html-versionid\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, \i{version ID paragraphs} (defined using
 the \i\c{\\versionid} command - see \k{input-blurb}) will be included
 visibly in the \i\cw{<ADDRESS>} section at the bottom of each HTML
-file. If it is set to \c{false}, they will be omitted completely.
+file. If it is set to \c{false}, they will only be included as HTML
+comments.
 
-\# FIXME: surely it would be better to include them in HTML
-\# comments? The only question is whether they should be _visible_.
-
-\dt \I{\cw{\\cfg\{xhtml-suppress-address\}}}\cw{\\cfg\{xhtml-suppress-address\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{html-suppress-address\}}}\cw{\\cfg\{html-suppress-address\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, the \i\cw{<ADDRESS>} section at the
 bottom of each HTML file will be omitted completely. (This will
-therefore also cause \i{version IDs} not to be included.)
+therefore also cause \i{version IDs} not to be included visibly.)
 
-\dt \I{\cw{\\cfg\{xhtml-author\}}}\cw{\\cfg\{xhtml-author\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-author\}}}\cw{\\cfg\{html-author\}\{}\e{text}\cw{\}}
 
 \dd The text supplied here goes in a \I{\cw{<META>} tags}\cw{<META
 name="author">} tag in the output HTML files, so that browsers which
 support this can automatically identify the \i{author} of the document.
 
-\dt \I{\cw{\\cfg\{xhtml-description\}}}\cw{\\cfg\{xhtml-description\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{html-description\}}}\cw{\\cfg\{html-description\}\{}\e{text}\cw{\}}
 
 \dd The text supplied here goes in a \I{\cw{<META>} tags}\cw{<META
 name="description">} tag in the output HTML files, so that browsers
@@ -648,46 +761,61 @@ document}description of the document.
 
 The \i{default settings} for Halibut's HTML output format are:
 
-\c \cfg{xhtml-contents-filename}{Contents.html}
-\c \cfg{xhtml-index-filename}{IndexPage.html}
-\c \cfg{xhtml-template-filename}{%n.html}
-\c \cfg{xhtml-single-filename}{Manual.html}
-\c \cfg{xhtml-template-fragment}{%b}
+\c \cfg{html-contents-filename}{Contents.html}
+\c \cfg{html-index-filename}{IndexPage.html}
+\c \cfg{html-template-filename}{%n.html}
+\c \cfg{html-single-filename}{Manual.html}
 \c
-\c \cfg{xhtml-leaf-level}{2}
-\c \cfg{xhtml-leaf-contains-contents}{false}
-\c \cfg{xhtml-leaf-smallest-contents}{4}
-\c \cfg{xhtml-contents-depth-0}{2}
-\c \cfg{xhtml-contents-depth-1}{3}
-\c \cfg{xhtml-contents-depth-2}{4}
-\c \cfg{xhtml-contents-depth-3}{5}
-\c \cfg{xhtml-contents-depth-4}{6}
-\c \cfg{xhtml-contents-depth-5}{7}
+\c \cfg{html-leaf-level}{2}
+\c \cfg{html-leaf-contains-contents}{false}
+\c \cfg{html-leaf-smallest-contents}{4}
+\c \cfg{html-contents-depth}{0}{2}
+\c \cfg{html-contents-depth}{1}{3}
+\c ... and so on for all section levels below this ...
+\e iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
 \c
-\c \cfg{xhtml-head-end}{}
-\c \cfg{xhtml-body-tag}{<body>}
-\c \cfg{xhtml-body-start}{}
-\c \cfg{xhtml-body-end}{}
-\c \cfg{xhtml-address-start}{}
-\c \cfg{xhtml-address-end}{}
-\c \cfg{xhtml-navigation-attributes}{}
+\c \cfg{html-head-end}{}
+\c \cfg{html-body-tag}{<body>}
+\c \cfg{html-body-start}{}
+\c \cfg{html-body-end}{}
+\c \cfg{html-address-start}{}
+\c \cfg{html-address-end}{}
+\c \cfg{html-navigation-attributes}{}
 \c
-\c \cfg{xhtml-versionid}{true}
-\c \cfg{xhtml-suppress-address}{false}
-\c \cfg{xhtml-author}{}
-\c \cfg{xhtml-description}{}
+\c \cfg{html-chapter-numeric}{false}
+\c \cfg{html-chapter-suffix}{: }
 \c
-\c \cfg{xhtml-chapter-numeric}{false}
-\c \cfg{xhtml-chapter-suffix}{: }
+\c \cfg{html-section-numeric}{0}{true}
+\c \cfg{html-section-suffix}{0}{ }
 \c
-\c \cfg{xhtml-section-numeric}{0}{true}
-\c \cfg{xhtml-section-suffix}{0}{ }
-\c
-\c \cfg{xhtml-section-numeric}{1}{true}
-\c \cfg{xhtml-section-suffix}{1}{ }
+\c \cfg{html-section-numeric}{1}{true}
+\c \cfg{html-section-suffix}{1}{ }
 \c
 \c ... and so on for all section levels below this ...
 \e iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+\c
+\c \cfg{html-preamble-text}{Preamble}
+\c \cfg{html-contents-text}{Contents}
+\c \cfg{html-index-text}{Index}
+\c \cfg{html-title-separator}{ - }
+\c \cfg{html-index-main-separator}{: }
+\c \cfg{html-index-multiple-separator}{, }
+\c \cfg{html-pre-versionid}{[}
+\c \cfg{html-post-versionid}{]}
+\c \cfg{html-nav-prev-text}{Previous}
+\c \cfg{html-nav-next-text}{Next}
+\c \cfg{html-nav-separator}{ | }
+\c
+\c \cfg{html-output-charset}{ASCII}
+\c \cfg{html-restrict-charset}{UTF-8}
+\c \cfg{html-quotes}{\u2018}{\u2019}{"}{"}
+\c
+\c \cfg{html-version}{html4}
+\c \cfg{html-template-fragment}{%b}
+\c \cfg{html-versionid}{true}
+\c \cfg{html-suppress-address}{false}
+\c \cfg{html-author}{}
+\c \cfg{html-description}{}
 
 \H{output-whlp} Windows Help
 

@@ -97,20 +97,23 @@ configuration directive
 \IM{\\cfg\{winhelp-list-suffix\}} \c{winhelp-list-suffix} configuration directive
 \IM{\\cfg\{winhelp-list-suffix\}} \cw{\\cfg\{winhelp-list-suffix\}}
 
-\IM{\\cfg\{xhtml-contents-filename\}} \c{xhtml-contents-filename} configuration directive
-\IM{\\cfg\{xhtml-contents-filename\}} \cw{\\cfg\{xhtml-contents-filename\}}
+\IM{\\cfg\{xhtml-anything\}} \c{xhtml-}\e{anything} configuration directives
+\IM{\\cfg\{xhtml-anything\}} \cw{\\cfg\{xhtml-}\e{anything}\cw{\}}
 
-\IM{\\cfg\{xhtml-index-filename\}} \c{xhtml-index-filename} configuration directive
-\IM{\\cfg\{xhtml-index-filename\}} \cw{\\cfg\{xhtml-index-filename\}}
+\IM{\\cfg\{html-contents-filename\}} \c{html-contents-filename} configuration directive
+\IM{\\cfg\{html-contents-filename\}} \cw{\\cfg\{html-contents-filename\}}
 
-\IM{\\cfg\{xhtml-template-filename\}} \c{xhtml-template-filename} configuration directive
-\IM{\\cfg\{xhtml-template-filename\}} \cw{\\cfg\{xhtml-template-filename\}}
+\IM{\\cfg\{html-index-filename\}} \c{html-index-filename} configuration directive
+\IM{\\cfg\{html-index-filename\}} \cw{\\cfg\{html-index-filename\}}
 
-\IM{\\cfg\{xhtml-single-filename\}} \c{xhtml-single-filename} configuration directive
-\IM{\\cfg\{xhtml-single-filename\}} \cw{\\cfg\{xhtml-single-filename\}}
+\IM{\\cfg\{html-template-filename\}} \c{html-template-filename} configuration directive
+\IM{\\cfg\{html-template-filename\}} \cw{\\cfg\{html-template-filename\}}
 
-\IM{\\cfg\{xhtml-template-fragment\}} \c{xhtml-template-fragment} configuration directive
-\IM{\\cfg\{xhtml-template-fragment\}} \cw{\\cfg\{xhtml-template-fragment\}}
+\IM{\\cfg\{html-single-filename\}} \c{html-single-filename} configuration directive
+\IM{\\cfg\{html-single-filename\}} \cw{\\cfg\{html-single-filename\}}
+
+\IM{\\cfg\{html-template-fragment\}} \c{html-template-fragment} configuration directive
+\IM{\\cfg\{html-template-fragment\}} \cw{\\cfg\{html-template-fragment\}}
 
 \IM{\\cfg\{text-width\}} \c{text-width} configuration directive
 \IM{\\cfg\{text-width\}} \cw{\\cfg\{text-width\}}
@@ -198,86 +201,137 @@ directive
 \IM{\\cfg\{text-emphasis\}} \c{text-emphasis} configuration directive
 \IM{\\cfg\{text-emphasis\}} \cw{\\cfg\{text-emphasis\}}
 
-\IM{\\cfg\{xhtml-leaf-level\}} \c{xhtml-leaf-level} configuration
+\IM{\\cfg\{html-leaf-level\}} \c{html-leaf-level} configuration
 directive
-\IM{\\cfg\{xhtml-leaf-level\}} \cw{\\cfg\{xhtml-leaf-level\}}
+\IM{\\cfg\{html-leaf-level\}} \cw{\\cfg\{html-leaf-level\}}
 
-\IM{\\cfg\{xhtml-contents-depth\}} \c{xhtml-contents-depth}
+\IM{\\cfg\{html-contents-depth\}} \c{html-contents-depth}
 configuration directive
-\IM{\\cfg\{xhtml-contents-depth\}} \cw{\\cfg\{xhtml-contents-depth\}}
+\IM{\\cfg\{html-contents-depth\}} \cw{\\cfg\{html-contents-depth\}}
 
-\IM{\\cfg\{xhtml-leaf-contains-contents\}}
-\c{xhtml-leaf-contains-contents} configuration directive
-\IM{\\cfg\{xhtml-leaf-contains-contents\}}
-\cw{\\cfg\{xhtml-leaf-contains-contents\}}
+\IM{\\cfg\{html-leaf-contains-contents\}}
+\c{html-leaf-contains-contents} configuration directive
+\IM{\\cfg\{html-leaf-contains-contents\}}
+\cw{\\cfg\{html-leaf-contains-contents\}}
 
-\IM{\\cfg\{xhtml-leaf-smallest-contents\}}
-\c{xhtml-leaf-smallest-contents} configuration directive
-\IM{\\cfg\{xhtml-leaf-smallest-contents\}}
-\cw{\\cfg\{xhtml-leaf-smallest-contents\}}
+\IM{\\cfg\{html-leaf-smallest-contents\}}
+\c{html-leaf-smallest-contents} configuration directive
+\IM{\\cfg\{html-leaf-smallest-contents\}}
+\cw{\\cfg\{html-leaf-smallest-contents\}}
 
-\IM{\\cfg\{xhtml-head-end\}} \c{xhtml-head-end} configuration
+\IM{\\cfg\{html-head-end\}} \c{html-head-end} configuration
 directive
-\IM{\\cfg\{xhtml-head-end\}} \cw{\\cfg\{xhtml-head-end\}}
+\IM{\\cfg\{html-head-end\}} \cw{\\cfg\{html-head-end\}}
 
-\IM{\\cfg\{xhtml-body-tag\}} \c{xhtml-body-tag} configuration
+\IM{\\cfg\{html-local-head\}} \c{html-local-head} configuration directive
+\IM{\\cfg\{html-local-head\}} \cw{\\cfg\{html-local-head\}}
+
+\IM{\\cfg\{html-body-tag\}} \c{html-body-tag} configuration
 directive
-\IM{\\cfg\{xhtml-body-tag\}} \cw{\\cfg\{xhtml-body-tag\}}
+\IM{\\cfg\{html-body-tag\}} \cw{\\cfg\{html-body-tag\}}
 
-\IM{\\cfg\{xhtml-body-start\}} \c{xhtml-body-start} configuration
+\IM{\\cfg\{html-body-start\}} \c{html-body-start} configuration
 directive
-\IM{\\cfg\{xhtml-body-start\}} \cw{\\cfg\{xhtml-body-start\}}
+\IM{\\cfg\{html-body-start\}} \cw{\\cfg\{html-body-start\}}
 
-\IM{\\cfg\{xhtml-body-end\}} \c{xhtml-body-end} configuration
+\IM{\\cfg\{html-body-end\}} \c{html-body-end} configuration
 directive
-\IM{\\cfg\{xhtml-body-end\}} \cw{\\cfg\{xhtml-body-end\}}
+\IM{\\cfg\{html-body-end\}} \cw{\\cfg\{html-body-end\}}
 
-\IM{\\cfg\{xhtml-address-start\}} \c{xhtml-address-start}
+\IM{\\cfg\{html-address-start\}} \c{html-address-start}
 configuration directive
-\IM{\\cfg\{xhtml-address-start\}} \cw{\\cfg\{xhtml-address-start\}}
+\IM{\\cfg\{html-address-start\}} \cw{\\cfg\{html-address-start\}}
 
-\IM{\\cfg\{xhtml-address-end\}} \c{xhtml-address-end} configuration
+\IM{\\cfg\{html-address-end\}} \c{html-address-end} configuration
 directive
-\IM{\\cfg\{xhtml-address-end\}} \cw{\\cfg\{xhtml-address-end\}}
+\IM{\\cfg\{html-address-end\}} \cw{\\cfg\{html-address-end\}}
 
-\IM{\\cfg\{xhtml-navigation-attributes\}}
-\c{xhtml-navigation-attributes} configuration directive
-\IM{\\cfg\{xhtml-navigation-attributes\}}
-\cw{\\cfg\{xhtml-navigation-attributes\}}
+\IM{\\cfg\{html-navigation-attributes\}}
+\c{html-navigation-attributes} configuration directive
+\IM{\\cfg\{html-navigation-attributes\}}
+\cw{\\cfg\{html-navigation-attributes\}}
 
-\IM{\\cfg\{xhtml-chapter-numeric\}} \c{xhtml-chapter-numeric}
+\IM{\\cfg\{html-chapter-numeric\}} \c{html-chapter-numeric}
 configuration directive
-\IM{\\cfg\{xhtml-chapter-numeric\}}
-\cw{\\cfg\{xhtml-chapter-numeric\}}
+\IM{\\cfg\{html-chapter-numeric\}}
+\cw{\\cfg\{html-chapter-numeric\}}
 
-\IM{\\cfg\{xhtml-chapter-suffix\}} \c{xhtml-chapter-suffix}
+\IM{\\cfg\{html-chapter-suffix\}} \c{html-chapter-suffix}
 configuration directive
-\IM{\\cfg\{xhtml-chapter-suffix\}} \cw{\\cfg\{xhtml-chapter-suffix\}}
+\IM{\\cfg\{html-chapter-suffix\}} \cw{\\cfg\{html-chapter-suffix\}}
 
-\IM{\\cfg\{xhtml-section-numeric\}} \c{xhtml-section-numeric}
+\IM{\\cfg\{html-section-numeric\}} \c{html-section-numeric}
 configuration directive
-\IM{\\cfg\{xhtml-section-numeric\}}
-\cw{\\cfg\{xhtml-section-numeric\}}
+\IM{\\cfg\{html-section-numeric\}}
+\cw{\\cfg\{html-section-numeric\}}
 
-\IM{\\cfg\{xhtml-section-suffix\}} \c{xhtml-section-suffix}
+\IM{\\cfg\{html-section-suffix\}} \c{html-section-suffix}
 configuration directive
-\IM{\\cfg\{xhtml-section-suffix\}} \cw{\\cfg\{xhtml-section-suffix\}}
+\IM{\\cfg\{html-section-suffix\}} \cw{\\cfg\{html-section-suffix\}}
 
-\IM{\\cfg\{xhtml-versionid\}} \c{xhtml-versionid} configuration
+\IM{\\cfg\{html-preamble-text\}} \c{html-preamble-text} configuration directive
+\IM{\\cfg\{html-preamble-text\}} \cw{\\cfg\{html-preamble-text\}}
+
+\IM{\\cfg\{html-contents-text\}} \c{html-contents-text} configuration directive
+\IM{\\cfg\{html-contents-text\}} \cw{\\cfg\{html-contents-text\}}
+
+\IM{\\cfg\{html-index-text\}} \c{html-index-text} configuration directive
+\IM{\\cfg\{html-index-text\}} \cw{\\cfg\{html-index-text\}}
+
+\IM{\\cfg\{html-title-separator\}} \c{html-title-separator} configuration directive
+\IM{\\cfg\{html-title-separator\}} \cw{\\cfg\{html-title-separator\}}
+
+\IM{\\cfg\{html-index-main-separator\}} \c{html-index-main-separator} configuration directive
+\IM{\\cfg\{html-index-main-separator\}} \cw{\\cfg\{html-index-main-separator\}}
+
+\IM{\\cfg\{html-index-multiple-separator\}} \c{html-index-multiple-separator} configuration directive
+\IM{\\cfg\{html-index-multiple-separator\}} \cw{\\cfg\{html-index-multiple-separator\}}
+
+\IM{\\cfg\{html-pre-versionid\}} \c{html-pre-versionid} configuration directive
+\IM{\\cfg\{html-pre-versionid\}} \cw{\\cfg\{html-pre-versionid\}}
+
+\IM{\\cfg\{html-post-versionid\}} \c{html-post-versionid} configuration directive
+\IM{\\cfg\{html-post-versionid\}} \cw{\\cfg\{html-post-versionid\}}
+
+\IM{\\cfg\{html-nav-prev-text\}} \c{html-nav-prev-text} configuration directive
+\IM{\\cfg\{html-nav-prev-text\}} \cw{\\cfg\{html-nav-prev-text\}}
+
+\IM{\\cfg\{html-nav-next-text\}} \c{html-nav-next-text} configuration directive
+\IM{\\cfg\{html-nav-next-text\}} \cw{\\cfg\{html-nav-next-text\}}
+
+\IM{\\cfg\{html-nav-separator\}} \c{html-nav-separator} configuration directive
+\IM{\\cfg\{html-nav-separator\}} \cw{\\cfg\{html-nav-separator\}}
+
+\IM{\\cfg\{html-charset\}} \c{html-charset} configuration directive, lack of
+\IM{\\cfg\{html-charset\}} \cw{\\cfg\{html-charset\}}, lack of
+
+\IM{\\cfg\{html-output-charset\}} \c{html-output-charset} configuration directive
+\IM{\\cfg\{html-output-charset\}} \cw{\\cfg\{html-output-charset\}}
+
+\IM{\\cfg\{html-restrict-charset\}} \c{html-restrict-charset} configuration directive
+\IM{\\cfg\{html-restrict-charset\}} \cw{\\cfg\{html-restrict-charset\}}
+
+\IM{\\cfg\{html-quotes\}} \c{html-quotes} configuration directive
+\IM{\\cfg\{html-quotes\}} \cw{\\cfg\{html-quotes\}}
+
+\IM{\\cfg\{html-version\}} \c{html-version} configuration directive
+\IM{\\cfg\{html-version\}} \cw{\\cfg\{html-version\}}
+
+\IM{\\cfg\{html-versionid\}} \c{html-versionid} configuration
 directive
-\IM{\\cfg\{xhtml-versionid\}} \cw{\\cfg\{xhtml-versionid\}}
+\IM{\\cfg\{html-versionid\}} \cw{\\cfg\{html-versionid\}}
 
-\IM{\\cfg\{xhtml-suppress-address\}} \c{xhtml-suppress-address}
+\IM{\\cfg\{html-suppress-address\}} \c{html-suppress-address}
 configuration directive
-\IM{\\cfg\{xhtml-suppress-address\}}
-\cw{\\cfg\{xhtml-suppress-address\}}
+\IM{\\cfg\{html-suppress-address\}}
+\cw{\\cfg\{html-suppress-address\}}
 
-\IM{\\cfg\{xhtml-author\}} \c{xhtml-author} configuration directive
-\IM{\\cfg\{xhtml-author\}} \cw{\\cfg\{xhtml-author\}}
+\IM{\\cfg\{html-author\}} \c{html-author} configuration directive
+\IM{\\cfg\{html-author\}} \cw{\\cfg\{html-author\}}
 
-\IM{\\cfg\{xhtml-description\}} \c{xhtml-description} configuration
+\IM{\\cfg\{html-description\}} \c{html-description} configuration
 directive
-\IM{\\cfg\{xhtml-description\}} \cw{\\cfg\{xhtml-description\}}
+\IM{\\cfg\{html-description\}} \cw{\\cfg\{html-description\}}
 
 \IM{\\cfg\{winhelp-topic\}} \c{winhelp-topic} configuration directive
 \IM{\\cfg\{winhelp-topic\}} \cw{\\cfg\{winhelp-topic\}}

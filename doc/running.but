@@ -178,7 +178,7 @@ identically to \c{--text -Ctext-filename:myfile.txt}. The Windows
 Help and man page formats work similarly. HTML is slightly
 different, since it also arranges for single-file output if you pass
 a filename to \c{--html}; so \c{--html=myfile.html} is equivalent to
-\c{--html -Cxhtml-single-filename:myfile.html -Cxhtml-leaf-level:0}.
+\c{--html -Chtml-single-filename:myfile.html -Chtml-leaf-level:0}.
 (See \k{output} for explanations of all these configuration
 directives.)
 
