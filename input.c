@@ -569,11 +569,13 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	 * Parse code paragraphs separately.
 	 */
 	if (t.type == tok_cmd && t.cmd == c_c && !isbrace(in)) {
+	    int wtype = word_WeakCode;
+
 	    par.type = para_Code;
 	    par.fpos = t.pos;
 	    while (1) {
 		dtor(t), t = get_codepar_token(in);
-		wd.type = word_WeakCode;
+		wd.type = wtype;
 		wd.breaks = FALSE;     /* shouldn't need this... */
 		wd.text = ustrdup(t.text);
 		wd.alt = NULL;
@@ -588,7 +590,12 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		}
 		if (t.type == tok_eop || t.type == tok_eof)
 		    break;
-		else if (t.type != tok_cmd || t.cmd != c_c) {
+		else if (t.type == tok_cmd && t.cmd == c_c)
+		    wtype = word_WeakCode;
+		else if (t.type == tok_cmd && t.cmd == c_e &&
+			 wtype == word_WeakCode)
+		    wtype = word_Emph;
+		else {
 		    error(err_brokencodepara, &t.pos);
 		    prev_para_type = par.type;
 		    addpara(par, ret);

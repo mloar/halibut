@@ -94,7 +94,7 @@ static void xhtml_utostr(wchar_t *, char **);
 static int xhtml_para_level(paragraph *);
 static int xhtml_reservedchar(int);
 
-static int xhtml_convert(wchar_t *, char **, int);
+static int xhtml_convert(wchar_t *, int, char **, int);
 static void xhtml_rdaddwc(rdstringc *, word *, word *);
 static void xhtml_para(FILE *, word *);
 static void xhtml_codepara(FILE *, word *);
@@ -1331,13 +1331,17 @@ static int xhtml_reservedchar(int c)
  * characters are OK but `result' is non-NULL, a result _will_
  * still be generated!
  */
-static int xhtml_convert(wchar_t *s, char **result, int hard_spaces) {
+static int xhtml_convert(wchar_t *s, int maxlen, char **result,
+			 int hard_spaces) {
     int doing = (result != 0);
     int ok = TRUE;
     char *p = NULL;
     int plen = 0, psize = 0;
 
-    for (; *s; s++) {
+    if (maxlen <= 0)
+	maxlen = -1;
+
+    for (; *s && maxlen != 0; s++, maxlen--) {
 	wchar_t c = *s;
 
 #define ensure_size(i) if (i>=psize) { psize = i+256; p = resize(p, psize); }
@@ -1504,7 +1508,7 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
 	    rdaddsc(rs, "<code>");
 
 	if (removeattr(text->type) == word_Normal) {
-	  if (xhtml_convert(text->text, &c, TRUE)) /* spaces in the word are hard */
+	  if (xhtml_convert(text->text, 0, &c, TRUE)) /* spaces in the word are hard */
 	    rdaddsc(rs, c);
 	  else
 	    xhtml_rdaddwc(rs, text->alt, NULL);
@@ -1564,7 +1568,7 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 	xhtml_rdaddwc(&t, nprefix, NULL);
 	if (fmt) {
 	    char *c;
-	    if (xhtml_convert(fmt->number_suffix, &c, FALSE)) {
+	    if (xhtml_convert(fmt->number_suffix, 0, &c, FALSE)) {
 		rdaddsc(&t, c);
 		sfree(c);
 	    }
@@ -1573,7 +1577,7 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 	xhtml_rdaddwc(&t, tprefix, NULL);
 	if (fmt) {
 	    char *c;
-	    if (xhtml_convert(fmt->number_suffix, &c, FALSE)) {
+	    if (xhtml_convert(fmt->number_suffix, 0, &c, FALSE)) {
 		rdaddsc(&t, c);
 		sfree(c);
 	    }
@@ -1616,10 +1620,49 @@ static void xhtml_codepara(FILE *fp, word *text)
 {
   fprintf(fp, "<pre>");
     for (; text; text = text->next) if (text->type == word_WeakCode) {
+	word *here, *next;
 	char *c;
-	xhtml_convert(text->text, &c, FALSE);
-	fprintf(fp, "%s\n", c);
-	sfree(c);
+
+	/*
+	 * See if this WeakCode is followed by an Emph to indicate
+	 * emphasis.
+	 */
+	here = text;
+	if (text->next && text->next->type == word_Emph) {
+	    next = text = text->next;
+	} else
+	    next = NULL;
+
+	if (next) {
+	    wchar_t *t, *e;
+	    int n;
+
+	    t = here->text;
+	    e = next->text;
+
+	    while (*e) {
+		int ec = *e;
+
+		for (n = 0; t[n] && e[n] && e[n] == ec; n++);
+		xhtml_convert(t, n, &c, FALSE);
+		fprintf(fp, "%s%s%s",
+			(ec == 'i' ? "<em>" : ec == 'b' ? "<b>" : ""),
+			c,
+			(ec == 'i' ? "</em>" : ec == 'b' ? "</b>" : ""));
+		sfree(c);
+
+		t += n;
+		e += n;
+	    }
+
+	    xhtml_convert(t, 0, &c, FALSE);
+	    fprintf(fp, "%s\n", c);
+	    sfree(c);
+	} else {
+	    xhtml_convert(here->text, 0, &c, FALSE);
+	    fprintf(fp, "%s\n", c);
+	    sfree(c);
+	}
     }
   fprintf(fp, "</pre>\n");
 }

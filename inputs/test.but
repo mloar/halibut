@@ -3,8 +3,8 @@ See If Wrapping Titles Works OK. In Fact This Title Will Span Three
 Lines, Not Just Two. How's That For Ludicrous?
 
 \cfg{xhtml-leaf-smallest-contents}{2}
-
 \cfg{xhtml-leaf-contains-contents}{true}
+\cfg{man-headnumbers}{true}
 
 \preamble This manual is a small joke effort, designed to use every
 feature \#{ comment } that Halibut's input format supports. Creation
@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.20 2004/03/23 20:10:23 simon Exp $
+\versionid $Id: test.but,v 1.21 2004/03/24 19:23:21 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -57,6 +57,9 @@ Here's a code paragraph:
 \c Two blank lines precede this one.
 \c   Two leading spaces
 \c We can use \ { and } with impunity here.
+\c We can use discretionary bold and italic in code paragraphs!
+\e                          bbbb     iiiiii
+\c Isn't that ludicrous?
 
 This is a list:
 

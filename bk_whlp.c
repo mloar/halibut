@@ -28,6 +28,8 @@ enum {
     FONT_NORMAL,
     FONT_EMPH,
     FONT_CODE,
+    FONT_ITAL_CODE,
+    FONT_BOLD_CODE,
     FONT_TITLE,
     FONT_TITLE_EMPH,
     FONT_TITLE_CODE,
@@ -35,7 +37,8 @@ enum {
 };
 
 static void whlp_rdaddwc(rdstringc *rs, word *text);
-static int whlp_convert(wchar_t *s, char **result, int hard_spaces);
+static int whlp_convert(wchar_t *s, int maxlen,
+			char **result, int hard_spaces);
 static void whlp_mkparagraph(struct bk_whlp_state *state,
 			     int font, word *text, int subsidiary);
 static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p);
@@ -73,6 +76,10 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		     WHLP_FONT_ITALIC, 0, 0, 0);
     whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
 		     0, 0, 0, 0);
+    whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
+		     WHLP_FONT_ITALIC, 0, 0, 0);
+    whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
+		     WHLP_FONT_BOLD, 0, 0, 0);
     whlp_create_font(h, "Arial", WHLP_FONTFAM_SERIF, 30,
 		     WHLP_FONT_BOLD, 0, 0, 0);
     whlp_create_font(h, "Arial", WHLP_FONTFAM_SERIF, 30,
@@ -91,7 +98,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	if (p->type == para_Config && p->parent) {
 	    if (!ustricmp(p->keyword, L"winhelp-topic")) {
 		char *topicname;
-		whlp_convert(uadv(p->keyword), &topicname, 0);
+		whlp_convert(uadv(p->keyword), 0, &topicname, 0);
 		/* Store the topic name in the private_data field of the
 		 * containing section. */
 		p->parent->private_data = topicname;
@@ -396,14 +403,41 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	 */
 	{
 	    word *w;
+	    wchar_t *t, *e;
 	    char *c;
-	    for (w = p->words; w; w = w->next) {
+
+	    for (w = p->words; w; w = w->next) if (w->type == word_WeakCode) {
+		t = w->text;
+		if (w->next && w->next->type == word_Emph) {
+		    w = w->next;
+		    e = w->text;
+		} else
+		    e = NULL;
+
 		if (!w->next)
 		    whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
+
 		whlp_para_attr(h, WHLP_PARA_LEFTINDENT, 72*nesting);
 		whlp_begin_para(h, WHLP_PARA_SCROLL);
+		while (e && *e && *t) {
+		    int n;
+		    int ec = *e;
+
+		    for (n = 0; t[n] && e[n] && e[n] == ec; n++);
+		    if (ec == 'i')
+			whlp_set_font(h, FONT_ITAL_CODE);
+		    else if (ec == 'b')
+			whlp_set_font(h, FONT_BOLD_CODE);
+		    else
+			whlp_set_font(h, FONT_CODE);
+		    whlp_convert(t, n, &c, FALSE);
+		    whlp_text(h, c);
+		    sfree(c);
+		    t += n;
+		    e += n;
+		}
 		whlp_set_font(h, FONT_CODE);
-		whlp_convert(w->text, &c, FALSE);
+		whlp_convert(t, 0, &c, FALSE);
 		whlp_text(h, c);
 		sfree(c);
 		whlp_end_para(h);
@@ -546,7 +580,7 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
 	    whlp_set_font(state->h, newfont);
 	}
 	if (removeattr(text->type) == word_Normal) {
-	    if (whlp_convert(text->text, &c, TRUE))
+	    if (whlp_convert(text->text, 0, &c, TRUE))
 		whlp_text(state->h, c);
 	    else
 		whlp_mkparagraph(state, deffont, text->alt, FALSE);
@@ -589,7 +623,7 @@ static void whlp_rdaddwc(rdstringc *rs, word *text) {
 	assert(text->type != word_CodeQuote &&
 	       text->type != word_WkCodeQuote);
 	if (removeattr(text->type) == word_Normal) {
-	    if (whlp_convert(text->text, &c, FALSE))
+	    if (whlp_convert(text->text, 0, &c, FALSE))
 		rdaddsc(rs, c);
 	    else
 		whlp_rdaddwc(rs, text->alt);
@@ -615,7 +649,8 @@ static void whlp_rdaddwc(rdstringc *rs, word *text) {
  * characters are OK but `result' is non-NULL, a result _will_
  * still be generated!
  */
-static int whlp_convert(wchar_t *s, char **result, int hard_spaces) {
+static int whlp_convert(wchar_t *s, int maxlen,
+			char **result, int hard_spaces) {
     /*
      * FIXME. Currently this is ISO8859-1 only.
      */
@@ -624,7 +659,10 @@ static int whlp_convert(wchar_t *s, char **result, int hard_spaces) {
     char *p = NULL;
     int plen = 0, psize = 0;
 
-    for (; *s; s++) {
+    if (maxlen <= 0)
+	maxlen = -1;
+
+    for (; *s && maxlen != 0; s++, maxlen--) {
 	wchar_t c = *s;
 	char outc;
 

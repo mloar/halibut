@@ -9,6 +9,51 @@
 
 static void man_text(FILE *, word *, int newline, int quote_props);
 static void man_codepara(FILE *, word *);
+static int man_convert(wchar_t *s, int maxlen,
+		       char **result, int quote_props);
+
+typedef struct {
+    wchar_t *th;
+    int headnumbers;
+    int mindepth;
+} manconfig;
+
+static manconfig man_configure(paragraph *source) {
+    manconfig ret;
+
+    /*
+     * Defaults.
+     */
+    ret.th = NULL;
+    ret.headnumbers = FALSE;
+    ret.mindepth = 0;
+
+    for (; source; source = source->next) {
+	if (source->type == para_Config) {
+	    if (!ustricmp(source->keyword, L"man-identity")) {
+		wchar_t *wp, *ep;
+
+		wp = uadv(source->keyword);
+		ep = wp;
+		while (*ep)
+		    ep = uadv(ep);
+		ret.th = mknewa(wchar_t, ep - wp + 1);
+		memcpy(ret.th, wp, (ep - wp + 1) * sizeof(wchar_t));
+	    } else if (!ustricmp(source->keyword, L"man-headnumbers")) {
+		ret.headnumbers = utob(uadv(source->keyword));
+	    } else if (!ustricmp(source->keyword, L"man-mindepth")) {
+		ret.mindepth = utoi(uadv(source->keyword));
+	    }
+	}
+    }
+
+    return ret;
+}
+
+static void man_conf_cleanup(manconfig cf)
+{
+    sfree(cf.th);
+}
 
 #define QUOTE_INITCTRL 1 /* quote initial . and ' on a line */
 #define QUOTE_QUOTES   2 /* quote double quotes by doubling them */
@@ -18,9 +63,12 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     paragraph *p;
     FILE *fp;
     char const *sep;
+    manconfig conf;
 
     IGNORE(keywords);		       /* we don't happen to need this */
     IGNORE(idx);		       /* or this */
+
+    conf = man_configure(sourceform);
 
     /*
      * Determine the output file name, and open the output file
@@ -41,8 +89,23 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	    man_text(fp, p->words, TRUE, 0);
 	}
 
-    /* FIXME: .TH name-of-program manual-section */
-    fprintf(fp, ".TH FIXME 1\n");
+    /* .TH name-of-program manual-section */
+    {
+	char *c;
+	if (conf.th && *conf.th) {
+	    wchar_t *wp;
+	    fprintf(fp, ".TH");
+
+	    for (wp = conf.th; *wp; wp = uadv(wp)) {
+		fputs(" \"", fp);
+		man_convert(wp, 0, &c, QUOTE_QUOTES);
+		fputs(c, fp);
+		sfree(c);
+		fputc('"', fp);
+	    }
+	    fputc('\n', fp);
+	}
+    }
 
     fprintf(fp, ".UC\n");
 
@@ -61,18 +124,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	    sep = "\n";
 	}
 
-    /*
-     * FIXME:
-     * 
-     *  - figure out precisely what needs to be escaped.
-     * 	   * A dot or apostrophe at the start of a line wants to be
-     * 	     preceded by `\&', which is a zero-width space.
-     *     * Literal backslashes always want doubling.
-     * 	   * Within double quotes, a double quote needs doubling
-     * 	     too.
-     * 
-     *  - work out what to do about hyphens / minuses...
-     */
     for (p = sourceform; p; p = p->next) switch (p->type) {
 	/*
 	 * Things we ignore because we've already processed them or
@@ -96,14 +147,25 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_UnnumberedChapter:
       case para_Heading:
       case para_Subsect:
-	fprintf(fp, ".SH \"");
-	/* FIXME: disable this, at _least_ by default */
-	if (p->kwtext)
-	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES);
-	fprintf(fp, " ");
-	man_text(fp, p->words, FALSE, QUOTE_QUOTES);
-	fprintf(fp, "\"\n");
-	break;
+	{
+	    int depth;
+	    if (p->type == para_Subsect)
+		depth = p->aux + 2;
+	    else if (p->type == para_Heading)
+		depth = 1;
+	    else
+		depth = 0;
+	    if (depth >= conf.mindepth) {
+		fprintf(fp, ".SH \"");
+		if (conf.headnumbers && p->kwtext) {
+		    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES);
+		    fprintf(fp, " ");
+		}
+		man_text(fp, p->words, FALSE, QUOTE_QUOTES);
+		fprintf(fp, "\"\n");
+	    }
+	    break;
+	}
 
 	/*
 	 * Code paragraphs.
@@ -155,8 +217,10 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 
       case para_Rule:
 	/*
-	 * FIXME.
+	 * This isn't terribly good. Anyone who wants to do better
+	 * should feel free!
 	 */
+	fprintf(fp, ".PP\n----------------------------------------\n");
 	break;
 
       case para_LcontPush:
@@ -171,6 +235,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
      * Tidy up.
      */
     fclose(fp);
+    man_conf_cleanup(conf);
 }
 
 /*
@@ -188,7 +253,8 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
  * of things. I know I at least need to escape backslash, and full
  * stops at the starts of words are probably trouble as well.
  */
-static int man_convert(wchar_t *s, char **result, int quote_props) {
+static int man_convert(wchar_t *s, int maxlen,
+		       char **result, int quote_props) {
     /*
      * FIXME. Currently this is ISO8859-1 only.
      */
@@ -197,7 +263,10 @@ static int man_convert(wchar_t *s, char **result, int quote_props) {
     char *p = NULL;
     int plen = 0, psize = 0;
 
-    for (; *s; s++) {
+    if (maxlen <= 0)
+	maxlen = -1;
+
+    for (; *s && maxlen != 0; s++, maxlen--) {
 	wchar_t c = *s;
 	char outc;
 
@@ -278,14 +347,15 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only))
 	    rdaddsc(rs, "\\fI");
-	else if (towordstyle(text->type) == word_Code &&
+	else if ((towordstyle(text->type) == word_Code ||
+		  towordstyle(text->type) == word_WeakCode) &&
 		 (attraux(text->aux) == attr_First ||
 		  attraux(text->aux) == attr_Only))
 	    rdaddsc(rs, "\\fB");
 	if (removeattr(text->type) == word_Normal) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    if (man_convert(text->text, &c, quote_props))
+	    if (man_convert(text->text, 0, &c, quote_props))
 		rdaddsc(rs, c);
 	    else
 		man_rdaddwc(rs, text->alt, NULL, quote_props);
@@ -293,14 +363,16 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	} else if (removeattr(text->type) == word_WhiteSpace) {
 	    rdaddc(rs, ' ');
 	} else if (removeattr(text->type) == word_Quote) {
-	    rdaddc(rs, quoteaux(text->aux) == quote_Open ? '`' : '\'');
-				       /* FIXME: configurability */
+	    rdaddc(rs, '"');
+	    if (quote_props & QUOTE_QUOTES)
+		rdaddc(rs, '"');
 	}
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_Last ||
 	     attraux(text->aux) == attr_Only))
 	    rdaddsc(rs, "\\fP");
-	else if (towordstyle(text->type) == word_Code &&
+	else if ((towordstyle(text->type) == word_Code ||
+		  towordstyle(text->type) == word_WeakCode) &&
 		 (attraux(text->aux) == attr_Last ||
 		  attraux(text->aux) == attr_Only))
 	    rdaddsc(rs, "\\fP");
@@ -322,7 +394,35 @@ static void man_codepara(FILE *fp, word *text) {
     fprintf(fp, ".nf\n");
     for (; text; text = text->next) if (text->type == word_WeakCode) {
 	char *c;
-	man_convert(text->text, &c, QUOTE_INITCTRL);
+	wchar_t *t, *e;
+	int quote_props = QUOTE_INITCTRL;
+
+	t = text->text;
+	if (text->next && text->next->type == word_Emph) {
+	    e = text->next->text;
+	    text = text->next;
+	} else
+	    e = NULL;
+
+	while (e && *e && *t) {
+	    int n;
+	    int ec = *e;
+
+	    for (n = 0; t[n] && e[n] && e[n] == ec; n++);
+	    if (ec == 'i')
+		fprintf(fp, "\\fI");
+	    else if (ec == 'b')
+		fprintf(fp, "\\fB");
+	    man_convert(t, n, &c, quote_props);
+	    quote_props &= ~QUOTE_INITCTRL;
+	    fprintf(fp, "%s", c);
+	    sfree(c);
+	    if (ec == 'i' || ec == 'b')
+		fprintf(fp, "\\fP");
+	    t += n;
+	    e += n;
+	}
+	man_convert(t, 0, &c, quote_props);
 	fprintf(fp, "%s\n", c);
 	sfree(c);
     }
