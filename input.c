@@ -448,8 +448,11 @@ token get_codepar_token(input *in) {
 	ret.pos = cpos;
     }
     while (!isnl(c) && c != EOF) {
-	rdadd(&rs, c);
+	int c2 = c;
 	c = get(in, &cpos);
+	/* Discard \r just before \n. */
+	if (c2 != 13 || !isnl(c))
+	    rdadd(&rs, c2);
     }
     unget(in, c, &cpos);
     ret.text = ustrdup(rs.text);
