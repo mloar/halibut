@@ -138,6 +138,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
+	fprintf(fp, "save\n");
 
 #if 0
 	{
@@ -206,7 +207,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    fprintf(fp, "]t\n");
 	}
 
-	fprintf(fp, "showpage\n");
+	fprintf(fp, "restore showpage\n");
     }
 
     fprintf(fp, "%%%%EOF\n");
