@@ -11,6 +11,7 @@ static char *helptext[] = {
     "         --html[=filename]     generate XHTML output",
     "         --winhelp[=filename]  generate Windows Help output",
     "         --man[=filename]      generate man page output",
+    "         --info[=filename]     generate GNU info output",
     "         -Cfoo:bar:baz         append \\cfg{foo}{bar}{baz} to input",
     "         --precise             report column numbers in error messages",
     "         --help                display this text",
