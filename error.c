@@ -79,6 +79,14 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "expected no text after paragraph keyword");
 	flags = FILEPOS;
 	break;
+      case err_badparatype:
+	wsp = va_arg(ap, wchar_t *);
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "command `%.200s' unrecognised at start of"
+		" paragraph", sp);
+	flags = FILEPOS;
+	break;
       case err_badmidcmd:
 	wsp = va_arg(ap, wchar_t *);
 	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));

@@ -134,6 +134,7 @@ enum {
     err_kwexpected,		       /* paragraph type expects a keyword */
     err_kwtoomany,		       /* paragraph type expects only 1 */
     err_bodyillegal,		       /* paragraph type expects only kws! */
+    err_badparatype,		       /* invalid command at start of para */
     err_badmidcmd,		       /* invalid command in mid-para */
     err_unexbrace,		       /* unexpected brace */
     err_explbr,			       /* expected `{' after command */
