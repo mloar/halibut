@@ -149,6 +149,12 @@ struct para_data_Tag {
 	RECT_NONE, RECT_CHAPTER_UNDERLINE, RECT_RULE
     } rect_type;
     /*
+     * We left- and right-justify in special circumstances.
+     */
+    enum {
+	JUST, LEFT, RIGHT
+    } justification;
+    /*
      * For constructing the page outline.
      */
     int outline_level;		       /* 0=title 1=C 2=H 3=S 4=S2... */
@@ -183,6 +189,7 @@ struct line_data_Tag {
     word *end;
     int xpos;
     int hshortfall, nspaces;	       /* for justifying paragraphs */
+    int real_shortfall;
     /*
      * Auxiliary text: a section number in a margin, or a list item
      * bullet or number. Also mention where to display this text
@@ -209,9 +216,9 @@ struct line_data_Tag {
     /*
      * These fields are used in the page breaking algorithm.
      */
-    int bestcost;
-    int vshortfall, text, space;
-    line_data *page_last;	       /* last line on a page starting here */
+    int *bestcost;
+    int *vshortfall, *text, *space;
+    line_data **page_last;	       /* last line on a page starting here */
     /*
      * After page breaking, we can assign an actual y-coordinate on
      * the page to each line. Also we store a pointer back to the

@@ -40,6 +40,7 @@
 #include "paper.h"
 
 typedef struct paper_conf_Tag paper_conf;
+typedef struct paper_idx_Tag paper_idx;
 
 struct paper_conf_Tag {
     int paper_width;
@@ -62,22 +63,44 @@ struct paper_conf_Tag {
     int contents_indent_step;
     int contents_margin;
     int leader_separation;
+    int index_gutter;
+    int index_cols;
+    int index_minsep;
     /* These are derived from the above */
     int base_width;
     int page_height;
+    int index_colwidth;
     /* Fonts used in the configuration */
     font_data *tr, *ti, *hr, *hi, *cr, *co, *cb;
+};
+
+struct paper_idx_Tag {
+    /*
+     * Word list giving the page numbers on which this index entry
+     * appears. Also the last word in the list, for ease of
+     * construction.
+     */
+    word *words;
+    word *lastword;
+    /*
+     * The last page added to the list (so we can ensure we don't
+     * add one twice).
+     */
+    page_data *lastpage;
 };
 
 static font_data *make_std_font(font_list *fontlist, char const *name);
 static void wrap_paragraph(para_data *pdata, word *words,
 			   int w, int i1, int i2);
 static page_data *page_breaks(line_data *first, line_data *last,
-			      int page_height);
+			      int page_height, int ncols, int headspace);
 static int render_string(page_data *page, font_data *font, int fontsize,
 			 int x, int y, wchar_t *str);
 static int render_line(line_data *ldata, int left_x, int top_y,
-		       xref_dest *dest, keywordlist *keywords);
+		       xref_dest *dest, keywordlist *keywords, indexdata *idx);
+static void render_para(para_data *pdata, paper_conf *conf,
+			keywordlist *keywords, indexdata *idx,
+			paragraph *index_placeholder, page_data *index_page);
 static int paper_width_simple(para_data *pdata, word *text);
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf);
 static para_data *rule_paragraph(int indent, paper_conf *conf);
@@ -89,8 +112,10 @@ static void standard_line_spacing(para_data *pdata, paper_conf *conf);
 static wchar_t *prepare_outline_title(word *first, wchar_t *separator,
 				      word *second);
 static word *fake_word(wchar_t *text);
+static word *fake_space_word(void);
 static word *prepare_contents_title(word *first, wchar_t *separator,
 				    word *second);
+static void fold_into_page(page_data *dest, page_data *src, int right_shift);
 
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			indexdata *idx) {
@@ -99,10 +124,14 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     int indent, used_contents;
     para_data *pdata, *firstpara = NULL, *lastpara = NULL;
     para_data *firstcont, *lastcont;
-    line_data *ldata, *firstline, *lastline, *firstcontline, *lastcontline;
+    line_data *firstline, *lastline, *firstcontline, *lastcontline;
     page_data *pages;
     font_list *fontlist;
     paper_conf *conf;
+    int has_index;
+    int pagenum;
+    paragraph index_placeholder_para;
+    page_data *first_index_page;
 
     /*
      * FIXME: All these things ought to become configurable.
@@ -128,11 +157,17 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     conf->contents_indent_step = 24 * 4096;
     conf->contents_margin = 84 * 4096;
     conf->leader_separation = 12 * 4096;
+    conf->index_gutter = 36 * 4096;
+    conf->index_cols = 2;
+    conf->index_minsep = 18 * 4096;
 
     conf->base_width =
 	conf->paper_width - conf->left_margin - conf->right_margin;
     conf->page_height =
 	conf->paper_height - conf->top_margin - conf->bottom_margin;
+    conf->index_colwidth =
+	(conf->base_width - (conf->index_cols-1) * conf->index_gutter)
+	/ conf->index_cols;
 
     IGNORE(idx);		       /* FIXME */
 
@@ -148,6 +183,28 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     conf->cr = make_std_font(fontlist, "Courier");
     conf->co = make_std_font(fontlist, "Courier-Oblique");
     conf->cb = make_std_font(fontlist, "Courier-Bold");
+
+    /*
+     * Set up a data structure to collect page numbers for each
+     * index entry.
+     */
+    {
+	int i;
+	indexentry *entry;
+
+	has_index = FALSE;
+
+	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
+	    paper_idx *pi = mknew(paper_idx);
+
+	    has_index = TRUE;
+
+	    pi->words = pi->lastword = NULL;
+	    pi->lastpage = NULL;
+
+	    entry->backend_data = pi;
+	}
+    }
 
     /*
      * Format the contents entry for each heading.
@@ -213,6 +270,31 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 		}
 
 		break;
+	    }
+	}
+
+	/*
+	 * And one extra one, for the index.
+	 */
+	if (has_index) {
+	    pdata = make_para_data(para_Normal, 0, 0,
+				   conf->contents_margin,
+				   NULL, NULL, fake_word(L"Index"), conf);
+	    pdata->next = NULL;
+	    pdata->contents_entry = &index_placeholder_para;
+	    lastcont->next = pdata;
+	    lastcont = pdata;
+
+	    if (pdata->first) {
+		if (lastcontline) {
+		    lastcontline->next = pdata->first;
+		    pdata->first->prev = lastcontline;
+		} else {
+		    firstcontline = pdata->first;
+		    pdata->first->prev = NULL;
+		}
+		lastcontline = pdata->last;
+		lastcontline->next = NULL;
 	    }
 	}
     }
@@ -362,18 +444,34 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
      * Now we have an enormous linked list of every line of text in
      * the document. Break it up into pages.
      */
-    pages = page_breaks(firstline, lastline, conf->page_height);
+    pages = page_breaks(firstline, lastline, conf->page_height, 0, 0);
 
     /*
      * Number the pages.
      */
     {
+	char buf[40];
 	page_data *page;
-	int num = 0;
+
+	pagenum = 0;
+
 	for (page = pages; page; page = page->next) {
-	    char buf[40];
-	    sprintf(buf, "%d", ++num);
+	    sprintf(buf, "%d", ++pagenum);
 	    page->number = ufroma_dup(buf);
+	}
+
+	if (has_index) {
+	    first_index_page = mknew(page_data);
+	    first_index_page->next = first_index_page->prev = NULL;
+	    first_index_page->first_line = NULL;
+	    first_index_page->last_line = NULL;
+	    first_index_page->first_text = first_index_page->last_text = NULL;
+	    first_index_page->first_xref = first_index_page->last_xref = NULL;
+	    first_index_page->first_rect = first_index_page->last_rect = NULL;
+
+	    /* And don't forget the as-yet-uncreated index. */
+	    sprintf(buf, "%d", ++pagenum);
+	    first_index_page->number = ufroma_dup(buf);
 	}
     }
 
@@ -382,117 +480,183 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
      * looping over _paragraphs_, since we may need to track cross-
      * references between lines and even across pages.
      */
-    for (pdata = firstpara; pdata; pdata = pdata->next) {
-	int last_x;
-	xref *cxref;
-	page_data *cxref_page;
-	xref_dest dest;
-	para_data *target;
+    for (pdata = firstpara; pdata; pdata = pdata->next)
+	render_para(pdata, conf, keywords, idx,
+		    &index_placeholder_para, first_index_page);
 
-	dest.type = NONE;
-	cxref = NULL;
-	cxref_page = NULL;
+    /*
+     * Now we've laid out the main body pages, we should have
+     * acquired a full set of page numbers for the index.
+     */
+    if (has_index) {
+	int i;
+	indexentry *entry;
+	word *index_title;
+	para_data *firstidx, *lastidx;
+	line_data *firstidxline, *lastidxline, *ldata;
+	page_data *ipages, *ipages2, *page;
 
-	for (ldata = pdata->first; ldata; ldata = ldata->next) {
+	/*
+	 * Create a set of paragraphs for the index.
+	 */
+	index_title = fake_word(L"Index");
+
+	firstidx = make_para_data(para_UnnumberedChapter, 0, 0, 0,
+				  NULL, NULL, index_title, conf);
+	lastidx = firstidx;
+	lastidx->next = NULL;
+	firstidxline = firstidx->first;
+	lastidxline = lastidx->last;
+	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
+	    paper_idx *pi = (paper_idx *)entry->backend_data;
+	    para_data *text, *pages;
+
+	    text = make_para_data(para_Normal, 0, 0,
+				  conf->base_width - conf->index_colwidth,
+				  NULL, NULL, entry->text, conf);
+
+	    pages  = make_para_data(para_Normal, 0, 0,
+				    conf->base_width - conf->index_colwidth,
+				    NULL, NULL, pi->words, conf);
+
+	    text->justification = LEFT;
+	    pages->justification = RIGHT;
+	    text->last->space_after = pages->first->space_before =
+		conf->base_leading / 2;
+
+	    pages->last->space_after = text->first->space_before =
+		conf->base_leading;
+
+	    assert(text->first);
+	    assert(pages->first);
+	    assert(lastidxline);
+	    assert(lastidx);
+
 	    /*
-	     * If this is a contents entry, we expect to have a single
-	     * enormous cross-reference rectangle covering the whole
-	     * thing. (Unless, of course, it spans multiple pages.)
+	     * If feasible, fold the two halves of the index entry
+	     * together.
 	     */
-	    if (pdata->contents_entry && ldata->page != cxref_page) {
-		cxref_page = ldata->page;
-		cxref = mknew(xref);
-		cxref->next = NULL;
-		cxref->dest.type = PAGE;
-		assert(pdata->contents_entry->private_data);
-		target = (para_data *)pdata->contents_entry->private_data;
-		cxref->dest.page = target->first->page;
-		cxref->dest.url = NULL;
-		if (ldata->page->last_xref)
-		    ldata->page->last_xref->next = cxref;
-		else
-		    ldata->page->first_xref = cxref;
-		ldata->page->last_xref = cxref;
-		cxref->lx = conf->left_margin;
-		cxref->rx = conf->paper_width - conf->right_margin;
-		cxref->ty = conf->paper_height - conf->top_margin
-		    - ldata->ypos + ldata->line_height;
-	    }
-	    if (pdata->contents_entry) {
-		assert(cxref != NULL);
-		cxref->by = conf->paper_height - conf->top_margin
-		    - ldata->ypos;
+	    if (text->last->real_shortfall + pages->first->real_shortfall >
+		conf->index_colwidth + conf->index_minsep) {
+		text->last->space_after = -1;
+		pages->first->space_before = -pages->first->line_height+1;
 	    }
 
-	    last_x = render_line(ldata, conf->left_margin,
-				 conf->paper_height - conf->top_margin,
-				 &dest, keywords);
-	    if (ldata == pdata->last)
-		break;
+	    lastidx->next = text;
+	    text->next = pages;
+	    pages->next = NULL;
+	    lastidx = pages;
+
+	    /*
+	     * Link all index line structures together into
+	     * a big list.
+	     */
+	    text->last->next = pages->first;
+	    pages->first->prev = text->last;
+
+	    lastidxline->next = text->first;
+	    text->first->prev = lastidxline;
+
+	    lastidxline = pages->last;
+
+	    /*
+	     * Breaking an index entry anywhere is so bad that I
+	     * think I'm going to forbid it totally.
+	     */
+	    for (ldata = text->first; ldata && ldata->next;
+		 ldata = ldata->next) {
+		ldata->next->space_before += ldata->space_after + 1;
+		ldata->space_after = -1;
+	    }
 	}
 
 	/*
-	 * If this is a contents entry, add leaders and a page
-	 * number.
+	 * Now break the index into pages.
 	 */
-	if (pdata->contents_entry) {
-	    word *w;
-	    wchar_t *num;
-	    int wid;
-	    int x;
+	ipages = page_breaks(firstidxline, firstidxline, conf->page_height,
+			      0, 0);
+	ipages2 = page_breaks(firstidxline->next, lastidxline,
+			     conf->page_height,
+			     conf->index_cols,
+			     firstidxline->space_before +
+			     firstidxline->line_height +
+			     firstidxline->space_after);
 
-	    assert(pdata->contents_entry->private_data);
-	    target = (para_data *)pdata->contents_entry->private_data;
-	    num = target->first->page->number;
+	/*
+	 * This will have put each _column_ of the index on a
+	 * separate page, which isn't what we want. Fold the pages
+	 * back together.
+	 */
+	page = ipages2;
+	while (page) {
+	    int i;
 
-	    w = fake_word(num);
-	    wid = paper_width_simple(pdata, w);
-	    sfree(w);
+	    for (i = 1; i < conf->index_cols; i++)
+		if (page->next) {
+		    page_data *tpage;
 
-	    render_string(pdata->last->page,
-			  pdata->fonts[FONT_NORMAL],
-			  pdata->sizes[FONT_NORMAL],
-			  conf->paper_width - conf->right_margin - wid,
-			  (conf->paper_height - conf->top_margin -
-			   pdata->last->ypos), num);
+		    fold_into_page(page, page->next,
+				   i * (conf->index_colwidth +
+					conf->index_gutter));
+		    tpage = page->next;
+		    page->next = page->next->next;
+		    if (page->next)
+			page->next->prev = page;
+		    sfree(tpage);
+		}
 
-	    for (x = 0; x < conf->base_width; x += conf->leader_separation)
-		if (x - conf->leader_separation > last_x - conf->left_margin &&
-		    x + conf->leader_separation < conf->base_width - wid)
-		    render_string(pdata->last->page,
-				  pdata->fonts[FONT_NORMAL],
-				  pdata->sizes[FONT_NORMAL],
-				  conf->left_margin + x,
-				  (conf->paper_height - conf->top_margin -
-				   pdata->last->ypos), L".");
+	    page = page->next;
+	}
+	/* Also fold the heading on to the same page as the index items. */
+	fold_into_page(ipages, ipages2, 0);
+	ipages->next = ipages2->next;
+	if (ipages->next)
+	    ipages->next->prev = ipages;
+	sfree(ipages2);
+	fold_into_page(first_index_page, ipages, 0);
+	first_index_page->next = ipages->next;
+	if (first_index_page->next)
+	    first_index_page->next->prev = first_index_page;
+	sfree(ipages);
+	ipages = first_index_page;
+
+	/*
+	 * Number the index pages, except the already-numbered
+	 * first one.
+	 */
+	for (page = ipages->next; page; page = page->next) {
+	    char buf[40];
+	    sprintf(buf, "%d", ++pagenum);
+	    page->number = ufroma_dup(buf);
 	}
 
 	/*
-	 * Render any rectangle (chapter title underline or rule)
-	 * that goes with this paragraph.
+	 * Render the index pages.
 	 */
-	switch (pdata->rect_type) {
-	  case RECT_CHAPTER_UNDERLINE:
-	    add_rect_to_page(pdata->last->page,
-			     conf->left_margin,
-			     (conf->paper_height - conf->top_margin -
-			      pdata->last->ypos -
-			      conf->chapter_underline_depth),
-			     conf->base_width,
-			     conf->chapter_underline_thickness);
-	    break;
-	  case RECT_RULE:
-	    add_rect_to_page(pdata->first->page,
-			     conf->left_margin + pdata->first->xpos,
-			     (conf->paper_height - conf->top_margin -
-			      pdata->last->ypos -
-			      pdata->last->line_height),
-			     conf->base_width - pdata->first->xpos,
-			     pdata->last->line_height);
-	    break;
-	  default:		       /* placate gcc */
-	    break;
+	for (pdata = firstidx; pdata; pdata = pdata->next)
+	    render_para(pdata, conf, keywords, idx,
+			&index_placeholder_para, first_index_page);
+
+	/*
+	 * Link the index page list on to the end of the main page
+	 * list.
+	 */
+	if (!pages)
+	    pages = ipages;
+	else {
+	    for (page = pages; page->next; page = page->next);
+	    page->next = ipages;
 	}
+
+	/*
+	 * Same with the paragraph list, which will cause the index
+	 * to be mentioned in the document outline.
+	 */
+	if (!firstpara)
+	    firstpara = firstidx;
+	else
+	    lastpara->next = firstidx;
+	lastpara = lastidx;
     }
 
     /*
@@ -563,6 +727,7 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
     pdata->outline_title = NULL;
     pdata->rect_type = RECT_NONE;
     pdata->contents_entry = NULL;
+    pdata->justification = JUST;
 
     /*
      * Choose fonts for this paragraph.
@@ -1087,6 +1252,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	 */
 	ldata->hshortfall += ctx.minspacewidth * spaces;
 	ldata->hshortfall -= spacewidth * spaces;
+	ldata->real_shortfall = ldata->hshortfall;
 	/*
 	 * Special case: on the last line of a paragraph, we
 	 * never stretch spaces.
@@ -1103,10 +1269,11 @@ static void wrap_paragraph(para_data *pdata, word *words,
 }
 
 static page_data *page_breaks(line_data *first, line_data *last,
-			      int page_height)
+			      int page_height, int ncols, int headspace)
 {
     line_data *l, *m;
     page_data *ph, *pt;
+    int n, n1, this_height;
 
     /*
      * Page breaking is done by a close analogue of the optimal
@@ -1118,70 +1285,111 @@ static page_data *page_breaks(line_data *first, line_data *last,
      * function for optimally page-breaking everything after that
      * page, and pick the best option.
      * 
+     * This is made slightly more complex by the fact that we have
+     * a multi-column index with a heading at the top of the
+     * _first_ page, meaning that the first _ncols_ pages must have
+     * a different length. Hence, we must do the wrapping ncols+1
+     * times over, hypothetically trying to put every subsequence
+     * on every possible page.
+     * 
      * Since my line_data structures are only used for this
      * purpose, I might as well just store the algorithm data
      * directly in them.
      */
 
     for (l = last; l; l = l->prev) {
-	int minheight, text = 0, space = 0;
-	int cost;
+	l->bestcost = mknewa(int, ncols+1);
+	l->vshortfall = mknewa(int, ncols+1);
+	l->text = mknewa(int, ncols+1);
+	l->space = mknewa(int, ncols+1);
+	l->page_last = mknewa(line_data *, ncols+1);
 
-	l->bestcost = -1;
-	for (m = l; m; m = m->next) {
-	    if (m != l && m->page_break)
-		break;		       /* we've gone as far as we can */
+	for (n = 0; n <= ncols; n++) {
+	    int minheight, text = 0, space = 0;
+	    int cost;
 
-	    if (m != l)
-		space += m->prev->space_after;
-	    if (m != l || m->page_break)
-		space += m->space_before;
-	    text += m->line_height;
-	    minheight = text + space;
+	    n1 = (n < ncols ? n+1 : ncols);
+	    if (n < ncols)
+		this_height = page_height - headspace;
+	    else
+		this_height = page_height;
 
-	    if (m != l && minheight > page_height)
-		break;
+	    l->bestcost[n] = -1;
+	    for (m = l; m; m = m->next) {
+		if (m != l && m->page_break)
+		    break;	       /* we've gone as far as we can */
 
-	    /*
-	     * Compute the cost of this arrangement, as the square
-	     * of the amount of wasted space on the page.
-	     * Exception: if this is the last page before a
-	     * mandatory break or the document end, we don't
-	     * penalise a large blank area.
-	     */
-	    if (m->next && !m->next->page_break)
-	    {
-		int x = page_height - minheight;
-		int xf;
+		if (m != l) {
+		    if (m->prev->space_after > 0)
+			space += m->prev->space_after;
+		    else
+			text += m->prev->space_after;
+		}
+		if (m != l || m->page_break) {
+		    if (m->space_before > 0)
+			space += m->space_before;
+		    else
+			text += m->space_before;
+		}
+		text += m->line_height;
+		minheight = text + space;
 
-		xf = x & 0xFF;
-		x >>= 8;
+		if (m != l && minheight > this_height)
+		    break;
 
-		cost = x*x;
-		cost += (x * xf) >> 8;
-	    } else
-		cost = 0;
-
-	    if (m->next && !m->next->page_break) {
-		cost += m->penalty_after;
-		cost += m->next->penalty_before;
-	    }
-
-	    if (m->next && !m->next->page_break)
-		cost += m->next->bestcost;
-	    if (l->bestcost == -1 || l->bestcost > cost) {
 		/*
-		 * This is the best option yet for this starting
-		 * point.
+		 * If the space after this paragraph is _negative_
+		 * (which means the next line is folded on to this
+		 * one, which happens in the index), we absolutely
+		 * cannot break here.
 		 */
-		l->bestcost = cost;
-		if (m->next && !m->next->page_break)
-		    l->vshortfall = page_height - minheight;
-		else
-		    l->vshortfall = 0;
-		l->text = text;
-		l->space = space;
-		l->page_last = m;
+		if (m->space_after >= 0) {
+
+		    /*
+		     * Compute the cost of this arrangement, as the
+		     * square of the amount of wasted space on the
+		     * page. Exception: if this is the last page
+		     * before a mandatory break or the document
+		     * end, we don't penalise a large blank area.
+		     */
+		    if (m != last && m->next && !m->next->page_break)
+		    {
+			int x = this_height - minheight;
+			int xf;
+
+			xf = x & 0xFF;
+			x >>= 8;
+
+			cost = x*x;
+			cost += (x * xf) >> 8;
+		    } else
+			cost = 0;
+
+		    if (m != last && m->next && !m->next->page_break) {
+			cost += m->penalty_after;
+			cost += m->next->penalty_before;
+		    }
+
+		    if (m != last && m->next && !m->next->page_break)
+			cost += m->next->bestcost[n1];
+		    if (l->bestcost[n] == -1 || l->bestcost[n] > cost) {
+			/*
+			 * This is the best option yet for this
+			 * starting point.
+			 */
+			l->bestcost[n] = cost;
+			if (m != last && m->next && !m->next->page_break)
+			    l->vshortfall[n] = this_height - minheight;
+			else
+			    l->vshortfall[n] = 0;
+			l->text[n] = text;
+			l->space[n] = space;
+			l->page_last[n] = m;
+		    }
+		}
+
+		if (m == last)
+		    break;
 	    }
 	}
     }
@@ -1193,9 +1401,10 @@ static page_data *page_breaks(line_data *first, line_data *last,
     ph = pt = NULL;
 
     l = first;
+    n = 0;
     while (l) {
 	page_data *page;
-	int text, space;
+	int text, space, head;
 
 	page = mknew(page_data);
 	page->next = NULL;
@@ -1207,7 +1416,7 @@ static page_data *page_breaks(line_data *first, line_data *last,
 	pt = page;
 
 	page->first_line = l;
-	page->last_line = l->page_last;
+	page->last_line = l->page_last[n];
 
 	page->first_text = page->last_text = NULL;
 	page->first_xref = page->last_xref = NULL;
@@ -1217,23 +1426,37 @@ static page_data *page_breaks(line_data *first, line_data *last,
 	 * Now assign a y-coordinate to each line on the page.
 	 */
 	text = space = 0;
+	head = (n < ncols ? headspace : 0);
 	for (l = page->first_line; l; l = l->next) {
-	    if (l != page->first_line)
-		space += l->prev->space_after;
-	    if (l != page->first_line || l->page_break)
-		space += l->space_before;
+	    if (l != page->first_line) {
+		if (l->prev->space_after > 0)
+		    space += l->prev->space_after;
+		else
+		    text += l->prev->space_after;
+	    }
+	    if (l != page->first_line || l->page_break) {
+		if (l->space_before > 0)
+		    space += l->space_before;
+		else
+		    text += l->space_before;
+	    }
 	    text += l->line_height;
 
 	    l->page = page;
-	    l->ypos = text + space +
-		space * (float)page->first_line->vshortfall /
-		page->first_line->space;
+	    l->ypos = text + space + head +
+		space * (float)page->first_line->vshortfall[n] /
+		page->first_line->space[n];
 
 	    if (l == page->last_line)
 		break;
 	}
 
-	l = page->last_line->next;
+	l = page->last_line;
+	if (l == last)
+	    break;
+	l = l->next;
+
+	n = (n < ncols ? n+1 : ncols);
     }
 
     return ph;
@@ -1356,7 +1579,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		       int x, int y, word *text, word *text_end, xref **xr,
 		       int shortfall, int nspaces, int *nspace,
-		       keywordlist *keywords)
+		       keywordlist *keywords, indexdata *idx)
 {
     while (text && text != text_end) {
 	int style, type, findex, errs;
@@ -1425,11 +1648,46 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 	    *xr = NULL;
 	    goto nextword;
 
-	  case word_IndexRef:
-	    goto nextword;
 	    /*
-	     * FIXME: we should do something with this.
+	     * Add the current page number to the list of pages
+	     * referenced by an index entry.
 	     */
+	  case word_IndexRef:
+	    {
+		indextag *tag;
+		int i;
+
+		tag = index_findtag(idx, text->text);
+		if (!tag)
+		    goto nextword;
+
+		for (i = 0; i < tag->nrefs; i++) {
+		    indexentry *entry = tag->refs[i];
+		    paper_idx *pi = (paper_idx *)entry->backend_data;
+
+		    /*
+		     * If the same index term is indexed twice
+		     * within the same section, we only want to
+		     * mention it once in the index.
+		     */
+		    if (pi->lastpage != page) {
+			if (pi->lastword) {
+			    pi->lastword = pi->lastword->next =
+				fake_word(L",");
+			    pi->lastword = pi->lastword->next =
+				fake_space_word();
+			    pi->lastword = pi->lastword->next =
+				fake_word(page->number);
+			} else {
+			    pi->lastword = pi->words =
+				fake_word(page->number);
+			}
+		    }
+
+		    pi->lastpage = page;
+		}
+	    }
+	    goto nextword;
 	}
 
 	style = towordstyle(text->type);
@@ -1461,7 +1719,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 
 	if (errs && text->alt)
 	    x = render_text(page, pdata, ldata, x, y, text->alt, NULL,
-			    xr, shortfall, nspaces, nspace, keywords);
+			    xr, shortfall, nspaces, nspace, keywords, idx);
 	else
 	    x = render_string(page, pdata->fonts[findex],
 			      pdata->sizes[findex], x, y, str);
@@ -1480,7 +1738,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
  * Returns the last x position used on the line.
  */
 static int render_line(line_data *ldata, int left_x, int top_y,
-		       xref_dest *dest, keywordlist *keywords)
+		       xref_dest *dest, keywordlist *keywords, indexdata *idx)
 {
     int nspace;
     xref *xr;
@@ -1493,11 +1751,13 @@ static int render_line(line_data *ldata, int left_x, int top_y,
 	x = render_text(ldata->page, ldata->pdata, ldata,
 			left_x + ldata->aux_left_indent,
 			top_y - ldata->ypos,
-			ldata->aux_text, NULL, &xr, 0, 0, &nspace, keywords);
+			ldata->aux_text, NULL, &xr, 0, 0, &nspace,
+			keywords, idx);
 	if (ldata->aux_text_2)
 	    render_text(ldata->page, ldata->pdata, ldata,
 			x, top_y - ldata->ypos,
-			ldata->aux_text_2, NULL, &xr, 0, 0, &nspace, keywords);
+			ldata->aux_text_2, NULL, &xr, 0, 0, &nspace,
+			keywords, idx);
     }
     nspace = 0;
 
@@ -1521,11 +1781,38 @@ static int render_line(line_data *ldata, int left_x, int top_y,
 	} else
 	    xr = NULL;
 
-	ret = render_text(ldata->page, ldata->pdata, ldata,
-			  left_x + ldata->xpos,
-			  top_y - ldata->ypos, ldata->first, ldata->end, &xr,
-			  ldata->hshortfall, ldata->nspaces, &nspace,
-			  keywords);
+	{
+	    int extra_indent, shortfall, spaces;
+	    int just = ldata->pdata->justification;
+
+	    /*
+	     * All forms of justification become JUST when we have
+	     * to squeeze the paragraph.
+	     */
+	    if (ldata->hshortfall < 0)
+		just = JUST;
+
+	    switch (just) {
+	      case JUST:
+		shortfall = ldata->hshortfall;
+		spaces = ldata->nspaces;
+		extra_indent = 0;
+		break;
+	      case LEFT:
+		shortfall = spaces = extra_indent = 0;
+		break;
+	      case RIGHT:
+		shortfall = spaces = 0;
+		extra_indent = ldata->real_shortfall;
+		break;
+	    }
+
+	    ret = render_text(ldata->page, ldata->pdata, ldata,
+			      left_x + ldata->xpos + extra_indent,
+			      top_y - ldata->ypos, ldata->first, ldata->end,
+			      &xr, shortfall, spaces, &nspace,
+			      keywords, idx);
+	}
 
 	if (xr) {
 	    /*
@@ -1537,6 +1824,131 @@ static int render_line(line_data *ldata, int left_x, int top_y,
     }
 
     return ret;
+}
+
+static void render_para(para_data *pdata, paper_conf *conf,
+			keywordlist *keywords, indexdata *idx,
+			paragraph *index_placeholder, page_data *index_page)
+{
+    int last_x;
+    xref *cxref;
+    page_data *cxref_page;
+    xref_dest dest;
+    para_data *target;
+    line_data *ldata;
+
+    dest.type = NONE;
+    cxref = NULL;
+    cxref_page = NULL;
+
+    for (ldata = pdata->first; ldata; ldata = ldata->next) {
+	/*
+	 * If this is a contents entry, we expect to have a single
+	 * enormous cross-reference rectangle covering the whole
+	 * thing. (Unless, of course, it spans multiple pages.)
+	 */
+	if (pdata->contents_entry && ldata->page != cxref_page) {
+	    cxref_page = ldata->page;
+	    cxref = mknew(xref);
+	    cxref->next = NULL;
+	    cxref->dest.type = PAGE;
+	    if (pdata->contents_entry == index_placeholder) {
+		cxref->dest.page = index_page;
+	    } else {
+		assert(pdata->contents_entry->private_data);
+		target = (para_data *)pdata->contents_entry->private_data;
+		cxref->dest.page = target->first->page;
+	    }
+	    cxref->dest.url = NULL;
+	    if (ldata->page->last_xref)
+		ldata->page->last_xref->next = cxref;
+	    else
+		ldata->page->first_xref = cxref;
+	    ldata->page->last_xref = cxref;
+	    cxref->lx = conf->left_margin;
+	    cxref->rx = conf->paper_width - conf->right_margin;
+	    cxref->ty = conf->paper_height - conf->top_margin
+		- ldata->ypos + ldata->line_height;
+	}
+	if (pdata->contents_entry) {
+	    assert(cxref != NULL);
+	    cxref->by = conf->paper_height - conf->top_margin
+		- ldata->ypos;
+	}
+
+	last_x = render_line(ldata, conf->left_margin,
+			     conf->paper_height - conf->top_margin,
+			     &dest, keywords, idx);
+	if (ldata == pdata->last)
+	    break;
+    }
+
+    /*
+     * If this is a contents entry, add leaders and a page
+     * number.
+     */
+    if (pdata->contents_entry) {
+	word *w;
+	wchar_t *num;
+	int wid;
+	int x;
+
+	if (pdata->contents_entry == index_placeholder) {
+	    num = index_page->number;
+	} else {
+	    assert(pdata->contents_entry->private_data);
+	    target = (para_data *)pdata->contents_entry->private_data;
+	    num = target->first->page->number;
+	}
+
+	w = fake_word(num);
+	wid = paper_width_simple(pdata, w);
+	sfree(w);
+
+	render_string(pdata->last->page,
+		      pdata->fonts[FONT_NORMAL],
+		      pdata->sizes[FONT_NORMAL],
+		      conf->paper_width - conf->right_margin - wid,
+		      (conf->paper_height - conf->top_margin -
+		       pdata->last->ypos), num);
+
+	for (x = 0; x < conf->base_width; x += conf->leader_separation)
+	    if (x - conf->leader_separation > last_x - conf->left_margin &&
+		x + conf->leader_separation < conf->base_width - wid)
+		render_string(pdata->last->page,
+			      pdata->fonts[FONT_NORMAL],
+			      pdata->sizes[FONT_NORMAL],
+			      conf->left_margin + x,
+			      (conf->paper_height - conf->top_margin -
+			       pdata->last->ypos), L".");
+    }
+
+    /*
+     * Render any rectangle (chapter title underline or rule)
+     * that goes with this paragraph.
+     */
+    switch (pdata->rect_type) {
+      case RECT_CHAPTER_UNDERLINE:
+	add_rect_to_page(pdata->last->page,
+			 conf->left_margin,
+			 (conf->paper_height - conf->top_margin -
+			  pdata->last->ypos -
+			  conf->chapter_underline_depth),
+			 conf->base_width,
+			 conf->chapter_underline_thickness);
+	break;
+      case RECT_RULE:
+	add_rect_to_page(pdata->first->page,
+			 conf->left_margin + pdata->first->xpos,
+			 (conf->paper_height - conf->top_margin -
+			  pdata->last->ypos -
+			  pdata->last->line_height),
+			 conf->base_width - pdata->first->xpos,
+			 pdata->last->line_height);
+	break;
+      default:		       /* placate gcc */
+	break;
+    }
 }
 
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
@@ -1559,6 +1971,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
     pdata->outline_level = -1;
     pdata->rect_type = RECT_NONE;
     pdata->contents_entry = NULL;
+    pdata->justification = LEFT;
 
     for (; words; words = words->next) {
 	wchar_t *t, *e, *start;
@@ -1688,6 +2101,7 @@ static para_data *rule_paragraph(int indent, paper_conf *conf)
     pdata->outline_level = -1;
     pdata->rect_type = RECT_RULE;
     pdata->contents_entry = NULL;
+    pdata->justification = LEFT;
 
     standard_line_spacing(pdata, conf);
 
@@ -1775,6 +2189,18 @@ static word *fake_word(wchar_t *text)
     return ret;
 }
 
+static word *fake_space_word(void)
+{
+    word *ret = mknew(word);
+    ret->next = NULL;
+    ret->alt = NULL;
+    ret->type = word_WhiteSpace;
+    ret->text = NULL;
+    ret->breaks = TRUE;
+    ret->aux = 0;
+    return ret;
+}
+
 static word *prepare_contents_title(word *first, wchar_t *separator,
 				    word *second)
 {
@@ -1802,4 +2228,26 @@ static word *prepare_contents_title(word *first, wchar_t *separator,
     }
 
     return ret;
+}
+
+static void fold_into_page(page_data *dest, page_data *src, int right_shift)
+{
+    line_data *ldata;
+
+    if (!src->first_line)
+	return;
+
+    if (dest->last_line) {
+	dest->last_line->next = src->first_line;
+	src->first_line->prev = dest->last_line;
+    }
+    dest->last_line = src->last_line;
+
+    for (ldata = src->first_line; ldata; ldata = ldata->next) {
+	ldata->page = dest;
+	ldata->xpos += right_shift;
+
+	if (ldata == src->last_line)
+	    break;
+    }
 }
