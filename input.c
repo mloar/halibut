@@ -486,10 +486,11 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    addpara(par, ret);
 		    while (t.type != tok_eop)   /* error recovery: */
 			dtor(t), t = get_token(in);   /* eat rest of paragraph */
-		    continue;
+		    goto codeparabroken;   /* ick, but such is life */
 		}
 	    }
 	    addpara(par, ret);
+	    codeparabroken:
 	    continue;
 	}
 
@@ -768,8 +769,10 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			    already = TRUE;
 			    wdtext = ustrftime(NULL, broken);
 			    wd.type = style;
-			} else
+			} else {
 			    error(err_explbr, &t.pos);
+			    wdtext = NULL;
+			}
 		    } else {
 			rdstring rs = { 0, 0, NULL };
 			while (dtor(t), t = get_token(in),
