@@ -12,9 +12,6 @@
 /*
  * TODO in future work:
  * 
- *  - the index should not refer to the contents, if an indexable
- *    term crops up in a section title!
- * 
  *  - include the version IDs.
  * 
  *  - linearised PDF, perhaps?
@@ -570,6 +567,9 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
 	    paper_idx *pi = (paper_idx *)entry->backend_data;
 	    para_data *text, *pages;
+
+	    if (!pi->words)
+		continue;
 
 	    text = make_para_data(para_Normal, 0, 0,
 				  conf->base_width - conf->index_colwidth,
@@ -1742,7 +1742,10 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 	     * referenced by an index entry.
 	     */
 	  case word_IndexRef:
-	    {
+	    /*
+	     * We don't create index references in contents entries.
+	     */
+	    if (!pdata->contents_entry) {
 		indextag *tag;
 		int i;
 
