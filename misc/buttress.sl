@@ -66,6 +66,10 @@ define buttress_wrap_hook() {
     }
 }
 
+#ifexists mode_set_mode_info
+mode_set_mode_info("Buttress", "fold_info", "\\# {{{\r\\# }}}\r\r");
+#endif
+
 define buttress_mode() {
     variable mode = "Buttress";
     % use_keymap (mode);
