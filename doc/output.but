@@ -320,8 +320,8 @@ The \i{default settings} for Halibut's plain text output format are:
 
 \H{output-html} HTML
 
-\# FIXME: this probably needs major revision due to the new HTML
-backend
+\e{NOTE:} This documentation is out of date with respect to the
+current HTML backend, and needs rewriting.
 
 This output format generates an \i{HTML} version of the document. By
 default, this will be in multiple files, starting with
