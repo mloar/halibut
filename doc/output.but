@@ -498,6 +498,29 @@ parts of the output files.
 the \i\cw{<HEAD>} section of each output HTML file. So this is a
 good place to put, for example, a link to a \i{CSS} \i{stylesheet}.
 
+\dt \I{\cw{\\cfg\{xhtml-local-head\}}}\cw{\\cfg\{xhtml-local-head\}\{}\e{HTML text}\cw{\}}
+
+\dd This configuration directive is local: you specify it within a
+document section, and it acts on that section only.
+
+\lcont{
+
+The text you provide in this directive is placed at the end of the
+\i\cw{<HEAD>} section of whichever output HTML file contains the
+section in which the directive was placed. You can specify this
+directive multiple times in multiple sections if you like.
+
+This directive is particularly useful for constructing \i{MacOS
+on-line help}, which is mostly normal HTML but which requires a
+special \i\cw{<META NAME="AppleTitle">} tag in the topmost source
+file. You can arrange this by placing this configuration directive
+in the preamble or the introduction section, something like this:
+
+\c \cfg{html-local-head}{<meta name="AppleTitle"
+\c content="MyApp Help">}
+
+}
+
 \dt \I{\cw{\\cfg\{xhtml-body-tag\}}}\cw{\\cfg\{xhtml-body-tag\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is used in place of the

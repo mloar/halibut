@@ -559,3 +559,6 @@ directive
 
 \IM{PDF} PDF
 \IM{PDF} Portable Document Format
+
+\IM{<META NAME="AppleTitle">} \cw{<META NAME="AppleTitle">}
+\IM{<META NAME="AppleTitle">} \cw{AppleTitle}, \cw{<META>} tag
