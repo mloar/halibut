@@ -240,6 +240,7 @@ enum {
     err_infodirentry,		       /* \cfg{info-dir-entry} missing param */
     err_infonodechar,		       /* colon/comma in node name in info */
     err_text_codeline,		       /* \c line too long in text backend */
+    err_htmlver,		       /* unrecognised HTML version keyword */
     err_whatever                       /* random error of another type */
 };
 

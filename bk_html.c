@@ -14,7 +14,6 @@
  *  - new configurability:
  *     * a few new things explicitly labelled as `FIXME:
  * 	 configurable' or similar.
- *     * HTML flavour.
  *     * Some means of specifying the distinction between
  * 	 restrict-charset and output-charset. It seems to me that
  * 	 `html-charset' is output-charset, and that
@@ -26,10 +25,6 @@
  * 	 possible that some user may need to set restrict-charset
  * 	 to their charset of choice while leaving _output_-charset
  * 	 at UTF-8. Figure out some configuration, and apply it.
- *
- *  - test all HTML flavours and ensure they validate sensibly. Fix
- *    remaining confusion issues such as <?xml?> and obsoleteness
- *    of <a name>.
  * 
  *  - nonbreaking spaces.
  * 
@@ -76,7 +71,7 @@ typedef struct {
     wchar_t *author, *description;
     int restrict_charset, output_charset;
     enum {
-	HTML_3_2, HTML_4,
+	HTML_3_2, HTML_4, ISO_HTML,
 	XHTML_1_0_TRANSITIONAL, XHTML_1_0_STRICT
     } htmlver;
     wchar_t *lquote, *rquote;
@@ -200,6 +195,7 @@ static void cleanup(htmloutput *ho);
 
 static void html_href(htmloutput *ho, htmlfile *thisfile,
 		      htmlfile *targetfile, char *targetfrag);
+static void html_fragment(htmloutput *ho, char const *fragment);
 
 static char *html_format(paragraph *p, char *template_string);
 static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
@@ -279,6 +275,28 @@ static htmlconfig html_configure(paragraph *source) {
 		ret.restrict_charset = ret.output_charset =
 		    charset_from_localenc(csname);
 		sfree(csname);
+	    } else if (!ustricmp(k, L"html-version")) {
+		wchar_t *vername = uadv(k);
+		static const struct {
+		    const wchar_t *name;
+		    int ver;
+		} versions[] = {
+		    {L"html3.2", HTML_3_2},
+		    {L"html4", HTML_4},
+		    {L"iso-html", ISO_HTML},
+		    {L"xhtml1.0transitional", XHTML_1_0_TRANSITIONAL},
+		    {L"xhtml1.0strict", XHTML_1_0_STRICT}
+		};
+		int i;
+
+		for (i = 0; i < (int)lenof(versions); i++)
+		    if (!ustricmp(versions[i].name, vername))
+			break;
+
+		if (i == lenof(versions))
+		    error(err_htmlver, &p->fpos, vername);
+		else
+		    ret.htmlver = versions[i].ver;
 	    } else if (!ustricmp(k, L"html-single-filename")) {
 		sfree(ret.single_filename);
 		ret.single_filename = dupstr(adv(p->origkeyword));
@@ -713,16 +731,20 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 			" 4.01//EN\"\n\"http://www.w3.org/TR/html4/"
 			"strict.dtd\">\n");
 		break;
+	      case ISO_HTML:
+		fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"ISO/IEC "
+			"15445:2000//DTD HTML//EN\">\n");
+		break;
 	      case XHTML_1_0_TRANSITIONAL:
-		/* FIXME: <?xml?> to specify character encoding.
-		 * This breaks HTML backwards compat, so perhaps avoid, or
-		 * perhaps only emit when not using the default UTF-8? */
+		fprintf(ho.fp, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
+			charset_to_mimeenc(conf.output_charset));
 		fprintf(ho.fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML"
 			" 1.0 Transitional//EN\"\n\"http://www.w3.org/TR/"
 			"xhtml1/DTD/xhtml1-transitional.dtd\">\n");
 		break;
 	      case XHTML_1_0_STRICT:
-		/* FIXME: <?xml?> to specify character encoding. */
+		fprintf(ho.fp, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
+			charset_to_mimeenc(conf.output_charset));
 		fprintf(ho.fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML"
 			" 1.0 Strict//EN\"\n\"http://www.w3.org/TR/xhtml1/"
 			"DTD/xhtml1-strict.dtd\">\n");
@@ -990,17 +1012,12 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    /*
 		     * Provide anchor for cross-links to target.
 		     * 
-		     * FIXME: AIcurrentlyUI, this needs to be done
-		     * differently in XHTML because <a name> is
-		     * deprecated or obsolete.
-		     * 
 		     * (Also we'll have to do this separately in
 		     * other paragraph types - NumberedList and
 		     * BiblioCited.)
 		     */
-		    element_open(&ho, "a");
-		    element_attr(&ho, "name", s->fragment);
-		    element_close(&ho, "a");
+		    if (s->fragment)
+			html_fragment(&ho, s->fragment);
 
 		    html_section_title(&ho, s, f, keywords, &conf, TRUE);
 
@@ -1132,9 +1149,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				element_open(&ho, "p");
 				if (p->private_data) {
 				    htmlsect *s = (htmlsect *)p->private_data;
-				    element_open(&ho, "a");
-				    element_attr(&ho, "name", s->fragment);
-				    element_close(&ho, "a");
+				    html_fragment(&ho, s->fragment);
 				}
 				html_nl(&ho);
 				html_words(&ho, p->kwtext, ALL,
@@ -1150,9 +1165,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				element_open(&ho, "li");
 				if (p->private_data) {
 				    htmlsect *s = (htmlsect *)p->private_data;
-				    element_open(&ho, "a");
-				    element_attr(&ho, "name", s->fragment);
-				    element_close(&ho, "a");
+				    html_fragment(&ho, s->fragment);
 				}
 				html_nl(&ho);
 				stackhead->itemtype = LI;
@@ -1263,18 +1276,30 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    html_raw(&ho, conf.body_end);
 
 		if (conf.address_section) {
+		    int started = FALSE;
+		    if (conf.htmlver == ISO_HTML) {
+			/*
+			 * The ISO-HTML validator complains if
+			 * there isn't a <div> tag surrounding the
+			 * <address> tag. I'm uncertain of why this
+			 * should be - there appears to be no
+			 * mention of this in the ISO-HTML spec,
+			 * suggesting that it doesn't represent a
+			 * change from HTML 4, but nonetheless the
+			 * HTML 4 validator doesn't seem to mind.
+			 */
+			element_open(&ho, "div");
+		    }
 		    element_open(&ho, "address");
 		    if (conf.addr_start) {
 			html_raw(&ho, conf.addr_start);
 			html_nl(&ho);
+			started = TRUE;
 		    }
 		    if (conf.visible_version_id) {
-			int started = FALSE;
 			for (p = sourceform; p; p = p->next)
 			    if (p->type == para_VersionID) {
-				if (!started)
-				    element_open(&ho, "p");
-				else
+				if (started)
 				    element_empty(&ho, "br");
 				html_nl(&ho);
 				html_text(&ho, L"[");   /* FIXME: conf? */
@@ -1283,13 +1308,16 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				html_text(&ho, L"]");   /* FIXME: conf? */
 				started = TRUE;
 			    }
-			if (started)
-			    element_close(&ho, "p");
 			done_version_ids = TRUE;
 		    }
-		    if (conf.addr_end)
+		    if (conf.addr_end) {
+			if (started)
+			    element_empty(&ho, "br");
 			html_raw(&ho, conf.addr_end);
+		    }
 		    element_close(&ho, "address");
+		    if (conf.htmlver == ISO_HTML)
+			element_close(&ho, "div");
 		}
 
 		if (!done_version_ids) {
@@ -1494,9 +1522,7 @@ static void html_words(htmloutput *ho, word *words, int flags,
       case word_IndexRef:
 	if (flags & INDEXENTS) {
 	    htmlindexref *hr = (htmlindexref *)w->private_data;
-	    element_open(ho, "a");
-	    element_attr(ho, "name", hr->fragment);
-	    element_close(ho, "a");
+	    html_fragment(ho, hr->fragment);
 	    hr->generated = TRUE;
 	}
 	break;
@@ -1767,6 +1793,15 @@ static void html_href(htmloutput *ho, htmlfile *thisfile,
     element_open(ho, "a");
     element_attr(ho, "href", url);
     sfree(url);
+}
+
+static void html_fragment(htmloutput *ho, char const *fragment)
+{
+    element_open(ho, "a");
+    element_attr(ho, "name", fragment);
+    if (is_xhtml(ho->ver))
+	element_attr(ho, "id", fragment);
+    element_close(ho, "a");
 }
 
 static char *html_format(paragraph *p, char *template_string)

@@ -249,6 +249,14 @@ static void do_error(int code, va_list ap) {
 		" than body width %d", i, j);
 	flags = FILEPOS;
 	break;
+      case err_htmlver:
+	fpos = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = utoa_locale_dup(wsp);
+	sprintf(error, "unrecognised HTML version keyword `%.200s'", sp);
+	sfree(sp);
+	flags = FILEPOS;
+	break;
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
