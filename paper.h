@@ -153,6 +153,10 @@ struct para_data_Tag {
      */
     int outline_level;		       /* 0=title 1=C 2=H 3=S 4=S2... */
     wchar_t *outline_title;
+    /*
+     * For adding the page number of a contents entry afterwards.
+     */
+    paragraph *contents_entry;
 };
 
 struct line_data_Tag {
@@ -249,6 +253,10 @@ struct page_data_Tag {
      */
     rect *first_rect;
     rect *last_rect;
+    /*
+     * The page number, as a string.
+     */
+    wchar_t *number;
     /*
      * This spare pointer field is for use by the client backends.
      */

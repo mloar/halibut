@@ -62,6 +62,9 @@ struct paper_conf_Tag {
     int chapter_underline_thickness;
     int rule_thickness;
     int base_font_size;
+    int contents_indent_step;
+    int contents_margin;
+    int leader_separation;
     /* These are derived from the above */
     int base_width;
     int page_height;
@@ -74,26 +77,32 @@ static void wrap_paragraph(para_data *pdata, word *words,
 			   int w, int i1, int i2);
 static page_data *page_breaks(line_data *first, line_data *last,
 			      int page_height);
-static void render_line(line_data *ldata, int left_x, int top_y,
-			xref_dest *dest, keywordlist *keywords);
+static int render_string(page_data *page, font_data *font, int fontsize,
+			 int x, int y, wchar_t *str);
+static int render_line(line_data *ldata, int left_x, int top_y,
+		       xref_dest *dest, keywordlist *keywords);
 static int paper_width_simple(para_data *pdata, word *text);
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf);
 static para_data *rule_paragraph(int indent, paper_conf *conf);
 static void add_rect_to_page(page_data *page, int x, int y, int w, int h);
-static para_data *make_para_data(int ptype, int paux, int indent,
+static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 				 word *pkwtext, word *pkwtext2, word *pwords,
 				 paper_conf *conf);
 static void standard_line_spacing(para_data *pdata, paper_conf *conf);
 static wchar_t *prepare_outline_title(word *first, wchar_t *separator,
 				      word *second);
+static word *fake_word(wchar_t *text);
+static word *prepare_contents_title(word *first, wchar_t *separator,
+				    word *second);
 
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			indexdata *idx) {
     paragraph *p;
     document *doc;
-    int indent;
+    int indent, used_contents;
     para_data *pdata, *firstpara = NULL, *lastpara = NULL;
-    line_data *ldata, *firstline, *lastline;
+    para_data *firstcont, *lastcont;
+    line_data *ldata, *firstline, *lastline, *firstcontline, *lastcontline;
     page_data *pages;
     font_list *fontlist;
     paper_conf *conf;
@@ -119,6 +128,9 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     conf->chapter_underline_thickness = 3 * 4096;
     conf->rule_thickness = 1 * 4096;
     conf->base_font_size = 12;
+    conf->contents_indent_step = 24 * 4096;
+    conf->contents_margin = 84 * 4096;
+    conf->leader_separation = 12 * 4096;
 
     conf->base_width =
 	conf->paper_width - conf->left_margin - conf->right_margin;
@@ -141,9 +153,78 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     conf->cb = make_std_font(fontlist, "Courier-Bold");
 
     /*
-     * Go through and break up each paragraph into lines.
+     * Format the contents entry for each heading.
+     */
+    {
+	word *contents_title;
+	contents_title = fake_word(L"Contents");
+
+	firstcont = make_para_data(para_UnnumberedChapter, 0, 0, 0,
+				   NULL, NULL, contents_title, conf);
+	lastcont = firstcont;
+	lastcont->next = NULL;
+	firstcontline = firstcont->first;
+	lastcontline = lastcont->last;
+	for (p = sourceform; p; p = p->next) {
+	    word *words;
+	    int indent;
+
+	    switch (p->type) {
+	      case para_Chapter:
+	      case para_Appendix:
+	      case para_UnnumberedChapter:
+	      case para_Heading:
+	      case para_Subsect:
+		switch (p->type) {
+		  case para_Chapter:
+		  case para_Appendix:
+		    words = prepare_contents_title(p->kwtext, L": ", p->words);
+		    indent = 0;
+		    break;
+		  case para_UnnumberedChapter:
+		    words = prepare_contents_title(NULL, NULL, p->words);
+		    indent = 0;
+		    break;
+		  case para_Heading:
+		  case para_Subsect:
+		    words = prepare_contents_title(p->kwtext2, L" ", p->words);
+		    indent = (p->aux + 1) * conf->contents_indent_step;
+		    break;
+		}
+		pdata = make_para_data(para_Normal, p->aux, indent,
+				       conf->contents_margin,
+				       NULL, NULL, words, conf);
+		pdata->next = NULL;
+		pdata->contents_entry = p;
+		lastcont->next = pdata;
+		lastcont = pdata;
+
+		/*
+		 * Link all contents line structures together into
+		 * a big list.
+		 */
+		if (pdata->first) {
+		    if (lastcontline) {
+			lastcontline->next = pdata->first;
+			pdata->first->prev = lastcontline;
+		    } else {
+			firstcontline = pdata->first;
+			pdata->first->prev = NULL;
+		    }
+		    lastcontline = pdata->last;
+		    lastcontline->next = NULL;
+		}
+
+		break;
+	    }
+	}
+    }
+
+    /*
+     * Do the main paragraph formatting.
      */
     indent = 0;
+    used_contents = FALSE;
     firstline = lastline = NULL;
     for (p = sourceform; p; p = p->next) {
 	p->private_data = NULL;
@@ -217,7 +298,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	  case para_Description:
 	  case para_Copyright:
 	  case para_Title:
-	    pdata = make_para_data(p->type, p->aux, indent,
+	    pdata = make_para_data(p->type, p->aux, indent, 0,
 				   p->kwtext, p->kwtext2, p->words, conf);
 
 	    p->private_data = pdata;
@@ -227,6 +308,31 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 
 	if (p->private_data) {
 	    pdata = (para_data *)p->private_data;
+
+	    /*
+	     * If this is the first non-title heading, we link the
+	     * contents section in before it.
+	     */
+	    if (!used_contents && pdata->outline_level > 0) {
+		used_contents = TRUE;
+		if (lastpara)
+		    lastpara->next = firstcont;
+		else
+		    firstpara = firstcont;
+		lastpara = lastcont;
+		assert(lastpara->next == NULL);
+
+		if (lastline) {
+		    lastline->next = firstcontline;
+		    firstcontline->prev = lastline;
+		} else {
+		    firstline = firstcontline;
+		    firstcontline->prev = NULL;
+		}
+		assert(lastcontline != NULL);
+		lastline = lastcontline;
+		lastline->next = NULL;
+	    }
 
 	    /*
 	     * Link all line structures together into a big list.
@@ -240,6 +346,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 		    pdata->first->prev = NULL;
 		}
 		lastline = pdata->last;
+		lastline->next = NULL;
 	    }
 
 	    /*
@@ -261,19 +368,70 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     pages = page_breaks(firstline, lastline, conf->page_height);
 
     /*
+     * Number the pages.
+     */
+    {
+	page_data *page;
+	int num = 0;
+	for (page = pages; page; page = page->next) {
+	    char buf[40];
+	    sprintf(buf, "%d", ++num);
+	    page->number = ufroma_dup(buf);
+	}
+    }
+
+    /*
      * Now we're ready to actually lay out the pages. We do this by
      * looping over _paragraphs_, since we may need to track cross-
      * references between lines and even across pages.
      */
     for (pdata = firstpara; pdata; pdata = pdata->next) {
+	int last_x;
 	xref_dest dest;
 	dest.type = NONE;
 	for (ldata = pdata->first; ldata; ldata = ldata->next) {
-	    render_line(ldata, conf->left_margin,
-			conf->paper_height - conf->top_margin,
-			&dest, keywords);
+	    last_x = render_line(ldata, conf->left_margin,
+				 conf->paper_height - conf->top_margin,
+				 &dest, keywords);
 	    if (ldata == pdata->last)
 		break;
+	}
+
+	/*
+	 * If this is a contents entry, add leaders and a page
+	 * number.
+	 */
+	if (pdata->contents_entry) {
+	    word *w;
+	    para_data *target;
+	    wchar_t *num;
+	    int wid;
+	    int x;
+
+	    assert(pdata->contents_entry->private_data);
+	    target = (para_data *)pdata->contents_entry->private_data;
+	    num = target->first->page->number;
+
+	    w = fake_word(num);
+	    wid = paper_width_simple(pdata, w);
+	    sfree(w);
+
+	    render_string(pdata->last->page,
+			  pdata->fonts[FONT_NORMAL],
+			  pdata->sizes[FONT_NORMAL],
+			  conf->paper_width - conf->right_margin - wid,
+			  (conf->paper_height - conf->top_margin -
+			   pdata->last->ypos), num);
+
+	    for (x = 0; x < conf->base_width; x += conf->leader_separation)
+		if (x - conf->leader_separation > last_x - conf->left_margin &&
+		    x + conf->leader_separation < conf->base_width - wid)
+		    render_string(pdata->last->page,
+				  pdata->fonts[FONT_NORMAL],
+				  pdata->sizes[FONT_NORMAL],
+				  conf->left_margin + x,
+				  (conf->paper_height - conf->top_margin -
+				   pdata->last->ypos), L".");
 	}
 
 	/*
@@ -358,7 +516,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     return doc;
 }
 
-static para_data *make_para_data(int ptype, int paux, int indent,
+static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 				 word *pkwtext, word *pkwtext2, word *pwords,
 				 paper_conf *conf)
 {
@@ -371,6 +529,7 @@ static para_data *make_para_data(int ptype, int paux, int indent,
     pdata->outline_level = -1;
     pdata->outline_title = NULL;
     pdata->rect_type = RECT_NONE;
+    pdata->contents_entry = NULL;
 
     /*
      * Choose fonts for this paragraph.
@@ -479,13 +638,7 @@ static para_data *make_para_data(int ptype, int paux, int indent,
 		prepare_outline_title(pkwtext2, L" ", pwords);
 	} else {
 	    aux = pkwtext;
-	    aux2 = mknew(word);
-	    aux2->next = NULL;
-	    aux2->alt = NULL;
-	    aux2->type = word_Normal;
-	    aux2->text = ustrdup(L": ");
-	    aux2->breaks = FALSE;
-	    aux2->aux = 0;
+	    aux2 = fake_word(L": ");
 	    aux_indent = 0;
 
 	    firstline_indent += paper_width_simple(pdata, aux);
@@ -501,13 +654,7 @@ static para_data *make_para_data(int ptype, int paux, int indent,
 	 * Auxiliary text consisting of a bullet. (FIXME:
 	 * configurable bullet.)
 	 */
-	aux = mknew(word);
-	aux->next = NULL;
-	aux->alt = NULL;
-	aux->type = word_Normal;
-	aux->text = ustrdup(L"\x2022");
-	aux->breaks = FALSE;
-	aux->aux = 0;
+	aux = fake_word(L"\x2022");
 	aux_indent = indent + conf->indent_list_bullet;
 	break;
 
@@ -517,13 +664,7 @@ static para_data *make_para_data(int ptype, int paux, int indent,
 	 * by a (FIXME: configurable) full stop.
 	 */
 	aux = pkwtext;
-	aux2 = mknew(word);
-	aux2->next = NULL;
-	aux2->alt = NULL;
-	aux2->type = word_Normal;
-	aux2->text = ustrdup(L".");
-	aux2->breaks = FALSE;
-	aux2->aux = 0;
+	aux2 = fake_word(L".");
 	aux_indent = indent + conf->indent_list_bullet;
 	break;
 
@@ -533,13 +674,7 @@ static para_data *make_para_data(int ptype, int paux, int indent,
 	 * reference text, and a trailing space.
 	 */
 	aux = pkwtext;
-	aux2 = mknew(word);
-	aux2->next = NULL;
-	aux2->alt = NULL;
-	aux2->type = word_Normal;
-	aux2->text = ustrdup(L" ");
-	aux2->breaks = FALSE;
-	aux2->aux = 0;
+	aux2 = fake_word(L" ");
 	aux_indent = indent;
 	firstline_indent += paper_width_simple(pdata, aux);
 	firstline_indent += paper_width_simple(pdata, aux2);
@@ -551,7 +686,7 @@ static para_data *make_para_data(int ptype, int paux, int indent,
 	    prepare_outline_title(NULL, NULL, pwords);
     }
 
-    wrap_paragraph(pdata, pwords, conf->base_width,
+    wrap_paragraph(pdata, pwords, conf->base_width - rmargin,
 		   indent + firstline_indent,
 		   indent + extra_indent);
 
@@ -1308,11 +1443,15 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
     return x;
 }
 
-static void render_line(line_data *ldata, int left_x, int top_y,
-			xref_dest *dest, keywordlist *keywords)
+/*
+ * Returns the last x position used on the line.
+ */
+static int render_line(line_data *ldata, int left_x, int top_y,
+		       xref_dest *dest, keywordlist *keywords)
 {
     int nspace;
     xref *xr;
+    int ret = 0;
     
     if (ldata->aux_text) {
 	int x;
@@ -1349,9 +1488,11 @@ static void render_line(line_data *ldata, int left_x, int top_y,
 	} else
 	    xr = NULL;
 
-	render_text(ldata->page, ldata->pdata, ldata, left_x + ldata->xpos,
-		    top_y - ldata->ypos, ldata->first, ldata->end, &xr,
-		    ldata->hshortfall, ldata->nspaces, &nspace, keywords);
+	ret = render_text(ldata->page, ldata->pdata, ldata,
+			  left_x + ldata->xpos,
+			  top_y - ldata->ypos, ldata->first, ldata->end, &xr,
+			  ldata->hshortfall, ldata->nspaces, &nspace,
+			  keywords);
 
 	if (xr) {
 	    /*
@@ -1361,6 +1502,8 @@ static void render_line(line_data *ldata, int left_x, int top_y,
 	} else
 	    dest->type = NONE;
     }
+
+    return ret;
 }
 
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
@@ -1382,6 +1525,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
     pdata->first = pdata->last = NULL;
     pdata->outline_level = -1;
     pdata->rect_type = RECT_NONE;
+    pdata->contents_entry = NULL;
 
     for (; words; words = words->next) {
 	wchar_t *t, *e, *start;
@@ -1510,6 +1654,7 @@ static para_data *rule_paragraph(int indent, paper_conf *conf)
     pdata->first = pdata->last = ldata;
     pdata->outline_level = -1;
     pdata->rect_type = RECT_RULE;
+    pdata->contents_entry = NULL;
 
     standard_line_spacing(pdata, conf);
 
@@ -1583,4 +1728,45 @@ static wchar_t *prepare_outline_title(word *first, wchar_t *separator,
 	paper_rdaddw(&rs, second);
 
     return rs.text;
+}
+
+static word *fake_word(wchar_t *text)
+{
+    word *ret = mknew(word);
+    ret->next = NULL;
+    ret->alt = NULL;
+    ret->type = word_Normal;
+    ret->text = ustrdup(text);
+    ret->breaks = FALSE;
+    ret->aux = 0;
+    return ret;
+}
+
+static word *prepare_contents_title(word *first, wchar_t *separator,
+				    word *second)
+{
+    word *ret;
+    word **wptr, *w;
+
+    wptr = &ret;
+
+    if (first) {
+	w = dup_word_list(first);
+	*wptr = w;
+	while (w->next)
+	    w = w->next;
+	wptr = &w->next;
+    }
+
+    if (separator) {
+	w = fake_word(separator);
+	*wptr = w;
+	wptr = &w->next;
+    }
+
+    if (second) {
+	*wptr = dup_word_list(second);
+    }
+
+    return ret;
 }
