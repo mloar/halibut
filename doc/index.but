@@ -533,6 +533,7 @@ directive
 \IM{--whlp} \c{--whlp} command-line option
 \IM{--hlp} \c{--hlp} command-line option
 \IM{--man} \c{--man} command-line option
+\IM{--input-charset} \c{--input-charset} command-line option
 \IM{-C} \c{-C} command-line option
 \IM{--help} \c{--help} command-line option
 \IM{--version} \c{--version} command-line option

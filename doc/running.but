@@ -186,7 +186,7 @@ In addition to these, there are also a few other options:
 
 \dt \i\cw{--input-charset}\cw{=}\e{charset}
 
-\dd Changes the default assumed character set for all input files from
+\dd Changes the default assumed \i{character set} for all input files from
 ASCII to something else. (\cw{-Cinput-charset} cannot be used for
 this, as \cw{-C} directives are processed after all other input, so
 wouldn't affect any files.)
