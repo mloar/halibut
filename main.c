@@ -182,9 +182,10 @@ int main(int argc, char **argv) {
 	sfree(infiles);
 
 	keywords = get_keywords(sourceform);
-	dbg_prtkws(keywords);
-
+	gen_citations(sourceform, keywords);
 	subst_keywords(sourceform, keywords);
+
+	dbg_prtkws(keywords);
 	dbg_prtsource(sourceform);
 
 	free_para_list(sourceform);

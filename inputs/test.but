@@ -6,7 +6,7 @@ feature that Buttress's input format supports. Creation date
 
 \copyright Copyright 1999 Simon Tatham. All rights reserved.
 
-\versionid $Id: test.but,v 1.4 1999/08/09 10:02:07 simon Exp $
+\versionid $Id: test.but,v 1.5 1999/08/15 18:35:20 simon Exp $
 
 \C{chap} First chapter title
 
@@ -83,7 +83,7 @@ the document even though there is no \cw{\\k} citing it.
 
 \BR{book} [SillyCitation]
 
-\nocite{bookwithoutcitation}{foo}
+\nocite{nocite}
 
 \B{uncited} If this text appears, there's an actual error.
 

@@ -66,6 +66,7 @@ struct paragraph_Tag {
     word *words;		       /* list of words in paragraph */
     int aux;			       /* number, in a numbered paragraph */
     word *kwtext;		       /* chapter/section indication */
+    filepos fpos;
 };
 enum {
     para_IM,			       /* index merge */
@@ -76,7 +77,8 @@ enum {
     para_Heading,
     para_Subsect,
     para_Normal,
-    para_Biblio,
+    para_Biblio,		       /* causes no output unless turned ... */
+    para_BiblioCited,		       /*  ... into this paragraph type */
     para_Bullet,
     para_NumberedList,
     para_Code,
@@ -136,7 +138,8 @@ enum {
     err_missingrbrace,		       /* unclosed braces at end of para */
     err_nestedstyles,		       /* unable to nest text styles */
     err_nestedindex,		       /* unable to nest `\i' thingys */
-    err_nosuchkw		       /* unresolved cross-reference */
+    err_nosuchkw,		       /* unresolved cross-reference */
+    err_multiBR			       /* multiple \BRs on same keyword */
 };
 
 /*
@@ -212,7 +215,9 @@ struct keyword_Tag {
     wchar_t *key;		       /* the keyword itself */
     word *text;			       /* "Chapter 2", "Appendix Q"... */
     				       /* (NB: filepos are not set) */
+    paragraph *para;		       /* the paragraph referenced */
 };
+keyword *kw_lookup(keywordlist *, wchar_t *);
 keywordlist *get_keywords(paragraph *);
 void free_keywords(keywordlist *);
 void subst_keywords(paragraph *, keywordlist *);
@@ -227,6 +232,11 @@ void subst_keywords(paragraph *, keywordlist *);
 numberstate *number_init(void);
 word *number_mktext(numberstate *, int, int, int);
 void number_free(numberstate *);
+
+/*
+ * biblio.c
+ */
+void gen_citations(paragraph *, keywordlist *);
 
 /*
  * style.c

@@ -485,6 +485,7 @@ static void read_file(paragraph ***ret, input *in) {
 	 */
 	if (t.type == tok_cmd && t.cmd == c_c && !isbrace(in)) {
 	    par.type = para_Code;
+	    par.fpos = t.pos;
 	    while (1) {
 		dtor(t), t = get_codepar_token(in);
 		wd.type = word_WeakCode;
@@ -524,6 +525,7 @@ static void read_file(paragraph ***ret, input *in) {
 	if (t.type == tok_cmd) {
 	    int needkw;
 
+	    par.fpos = t.pos;
 	    switch (t.cmd) {
 	      default:
 		needkw = -1;

@@ -123,6 +123,13 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "unable to resolve cross-reference to `%.200s'", sp);
 	flags = FILEPOS;
 	break;
+      case err_multiBR:
+	fpos = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sprintf(error, "multiple `\\BR' entries given for `%.200s'", sp);
+	flags = FILEPOS;
+	break;
     }
 
     if (flags & PREFIX)

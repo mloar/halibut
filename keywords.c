@@ -61,7 +61,7 @@ static void heap_sort(keywordlist *kl) {
     /* FIXME: check for duplicate keys; do what about them? */
 }
 
-static keyword *kw_lookup(keywordlist *kl, wchar_t *str) {
+keyword *kw_lookup(keywordlist *kl, wchar_t *str) {
     int i, j, k, cmp;
 
     i = -1;
@@ -102,12 +102,13 @@ keywordlist *get_keywords(paragraph *source) {
 	prevpara = source->type;
 
 	if (source->keyword && *source->keyword) {
-	    if (source->kwtext) {
+	    if (source->kwtext || source->type == para_Biblio) {
 		wchar_t *p = source->keyword;
 		while (*p) {
 		    keyword *kw = smalloc(sizeof(*kw));
 		    kw->key = p;
 		    kw->text = source->kwtext;
+		    kw->para = source;
 		    heap_add(kl, kw);
 		    p += ustrlen(p) + 1;
 		}

@@ -44,7 +44,7 @@ endif
 SRC := ../
 
 MODULES := main malloc ustring error help licence version misc
-MODULES += input keywords contents index style
+MODULES += input keywords contents index style biblio
 
 OBJECTS := $(addsuffix .o,$(MODULES))
 DEPS := $(addsuffix .d,$(MODULES))
