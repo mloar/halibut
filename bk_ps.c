@@ -109,7 +109,8 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	sprintf(fname, "f%d", font_index++);
 	fe->name = dupstr(fname);
 
-	fprintf(fp, "/%s findfont dup length dict begin\n", fe->font->name);
+	fprintf(fp, "/%s findfont dup length 1 add dict begin\n",
+	    fe->font->name);
 	fprintf(fp, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
 	fprintf(fp, "/Encoding [\n");
 	for (i = 0; i < 256; i++)
