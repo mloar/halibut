@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     {
 	input in;
 	paragraph *sourceform, *p;
-	index *idx;
+	indexdata *idx;
 	keywordlist *keywords;
 
 	in.filenames = infiles;

@@ -9,8 +9,8 @@
 static int compare_tags(void *av, void *bv);
 static int compare_entries(void *av, void *bv);
 
-index *make_index(void) {
-    index *ret = mknew(index);
+indexdata *make_index(void) {
+    indexdata *ret = mknew(indexdata);
     ret->tags = newtree234(compare_tags);
     ret->entries = newtree234(compare_entries);
     return ret;
@@ -44,7 +44,7 @@ static int compare_entries(void *av, void *bv) {
  * Guarantee on calling sequence: all implicit merges are given
  * before the explicit ones.
  */
-void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
+void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text) {
     indextag *t, *existing;
 
     /*
@@ -113,7 +113,7 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
  * entries in the original 2-3 tree with pointers to the RHS
  * entries.
  */
-void build_index(index *i) {
+void build_index(indexdata *i) {
     indextag *t;
     word **ta;
     int ti;
@@ -140,7 +140,7 @@ void build_index(index *i) {
     }
 }
 
-void cleanup_index(index *i) {
+void cleanup_index(indexdata *i) {
     indextag *t;
     indexentry *ent;
     int ti;
@@ -163,7 +163,7 @@ void cleanup_index(index *i) {
 static void dbg_prtwordlist(int level, word *w);
 static void dbg_prtmerge(int is_explicit, wchar_t *tag, word *text);
 
-void index_debug(index *i) {
+void index_debug(indexdata *i) {
     indextag *t;
     indexentry *y;
     int ti;

@@ -114,10 +114,10 @@ keywordlist *get_keywords(paragraph *source) {
 	
 	/*
 	 * Number the chapter / section / list-item / whatever.
+	 * This also sets up the `parent', `child' and `sibling'
+	 * links.
 	 */
-	source->kwtext = number_mktext(n, source->type, source->aux, q,
-				       prevpara, &source->kwtext2,
-				       source->fpos, &errors);
+	source->kwtext = number_mktext(n, source, q, prevpara, &errors);
 	prevpara = source->type;
 
 	if (p && *p) {

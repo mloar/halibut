@@ -98,7 +98,7 @@ static void xhtml_heading(FILE *, paragraph *);
  */
 static xhtmlconfig conf;
 static keywordlist *keywords;
-static index *idx;
+static indexdata *idx;
 static xhtmlfile *topfile;
 static xhtmlsection *topsection;
 static paragraph *sourceparas;
@@ -563,7 +563,8 @@ static void xhtml_free_file(xhtmlfile* xfile)
 /*
  * Main function.
  */
-void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_idx)
+void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords,
+		   indexdata *in_idx)
 {
 /*  int i;*/
   indexentry *ientry;

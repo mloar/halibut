@@ -154,7 +154,8 @@ static textconfig text_configure(paragraph *source) {
     return ret;
 }
 
-void text_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
+void text_backend(paragraph *sourceform, keywordlist *keywords,
+		  indexdata *idx) {
     paragraph *p;
     textconfig conf;
     word *prefix, *body, *wp;

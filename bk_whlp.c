@@ -4,10 +4,6 @@
  * TODO:
  * 
  *  - rules
- *  - work out whether we can make an xref to a biblio entry jump
- *    to the topic containing the citation itself?
- *  - section macros are broken (can't do Up)
- *  - need menus at the bottom of every non-leaf section.
  *  - indexing
  *  - allow user to specify section contexts.
  */
@@ -29,11 +25,13 @@ static void whlp_rdaddwc(rdstringc *rs, word *text);
 static int whlp_convert(wchar_t *s, char **result, int hard_spaces);
 static void whlp_mkparagraph(struct bk_whlp_state *state,
 			     int font, word *text);
-
-void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
+static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p);
+    
+void whlp_backend(paragraph *sourceform, keywordlist *keywords,
+		  indexdata *idx) {
     WHLP h;
     char *filename;
-    paragraph *p;
+    paragraph *p, *lastsect;
     struct bk_whlp_state state;
     WHLP_TOPIC contents_topic, curr_topic;
 
@@ -47,8 +45,10 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
     whlp_start_macro(h, "BrowseButtons()");
 
     /*
-     * Register topics for everything.
+     * Loop over the source form registering WHLP_TOPICs for
+     * everything.
      */
+
     contents_topic = whlp_register_topic(h, "Top", NULL);
     whlp_primary_topic(h, contents_topic);
     for (p = sourceform; p; p = p->next) {
@@ -124,7 +124,18 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
 	}
     }
 
+    /*
+     * Now do the primary navigation menu.
+     */
+    for (p = sourceform; p; p = p->next) {
+	if (p->type == para_Chapter ||
+	    p->type == para_Appendix ||
+	    p->type == para_UnnumberedChapter)
+	    whlp_navmenu(&state, p);
+    }
+
     curr_topic = contents_topic;
+    lastsect = NULL;
 
     /* ------------------------------------------------------------------
      * Now we've done the contents page, we're ready to go through
@@ -153,9 +164,19 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
       case para_UnnumberedChapter:
       case para_Heading:
       case para_Subsect:
+	if (lastsect && lastsect->child) {
+	    paragraph *q;
+	    /*
+	     * Do a navigation menu for the previous section we
+	     * were in.
+	     */
+	    for (q = lastsect->child; q; q = q->sibling)
+		whlp_navmenu(&state, q);
+	}
 	{
 	    rdstringc rs = {0, 0, NULL};
-	    WHLP_TOPIC new_topic;
+	    WHLP_TOPIC new_topic, parent_topic;
+	    char *macro, *topicid;
 
 	    new_topic = p->private_data;
 	    whlp_browse_link(h, curr_topic, new_topic);
@@ -166,9 +187,19 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
 		rdaddsc(&rs, ": ");    /* FIXME: configurability */
 	    }
 	    whlp_rdaddwc(&rs, p->words);
-	    /* FIXME: change the macro to point at the parent topic. */
-	    /* FIXME: check if rs.text is NULL */
-	    whlp_begin_topic(h, new_topic, rs.text, "DB(\"btn_up\")", NULL);
+	    if (p->parent == NULL)
+		parent_topic = contents_topic;
+	    else
+		parent_topic = (WHLP_TOPIC)p->parent->private_data;
+	    topicid = whlp_topic_id(parent_topic);
+	    macro = smalloc(100+strlen(topicid));
+	    sprintf(macro,
+		    "CBB(\"btn_up\",\"JI(`',`%s')\");EB(\"btn_up\")",
+		    topicid);
+	    whlp_begin_topic(h, new_topic,
+			     rs.text ? rs.text : "",
+			     macro, NULL);
+	    sfree(macro);
 	    sfree(rs.text);
 
 	    whlp_begin_para(h, WHLP_PARA_NONSCROLL);
@@ -179,6 +210,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
 	    }
 	    whlp_mkparagraph(&state, WHLP_FONT_TITLE, p->words);
 	    whlp_end_para(h);
+
+	    lastsect = p;
 	}
 	break;
 
@@ -243,6 +276,21 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
     whlp_close(h, filename);
 }
 
+static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p) {
+    whlp_begin_para(state->h, WHLP_PARA_NONSCROLL);
+    /* FIXME: mkparagraph will need a way to disable all hyperlinks */
+    whlp_start_hyperlink(state->h, (WHLP_TOPIC)p->private_data);
+    if (p->kwtext) {
+	whlp_mkparagraph(state, WHLP_FONT_NORMAL, p->kwtext);
+	whlp_set_font(state->h, WHLP_FONT_NORMAL);
+	whlp_text(state->h, ": ");    /* FIXME: configurability */
+    }
+    whlp_mkparagraph(state, WHLP_FONT_NORMAL, p->words);
+    whlp_end_hyperlink(state->h);
+    whlp_end_para(state->h);
+
+}
+
 static void whlp_mkparagraph(struct bk_whlp_state *state,
 			     int font, word *text) {
     keyword *kwl;
@@ -265,10 +313,14 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
 	if (kwl->para->type == para_NumberedList) {
 	    break;		       /* don't xref to numbered list items */
 	} else if (kwl->para->type == para_BiblioCited) {
-	    /* Bibliography items: perhaps we should xref them to the
-	     * Bibliography section they're in? Can we even do
-	     * this? FIXME: for the moment we leave them out. */
-	    break;
+	    /*
+	     * An xref to a bibliography item jumps to the section
+	     * containing it.
+	     */
+	    if (kwl->para->parent)
+		xref_target = kwl->para->parent;
+	    else
+		break;
 	} else {
 	    xref_target = kwl->para;
 	}

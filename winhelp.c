@@ -76,22 +76,11 @@
 #include <time.h>
 #include <stdarg.h>
 
+#include "buttress.h"
 #include "winhelp.h"
 #include "tree234.h"
 
-/* ----------------------------------------------------------------------
- * FIXME: remove this whole section when we integrate to Buttress.
- */
-#define smalloc malloc
-#define srealloc realloc
-#define sfree free
-#define mknew(type) ( (type *) smalloc (sizeof (type)) )
-#define mknewa(type, number) ( (type *) smalloc ((number) * sizeof (type)) )
-#define resize(array, len) ( srealloc ((array), (len) * sizeof (*(array))) )
-#define lenof(array) ( sizeof(array) / sizeof(*(array)) )
-char *dupstr(char *s) { char *r = mknewa(char, 1+strlen(s)); strcpy(r,s); return r; }
 #define UNUSEDARG(x) ( (x) = (x) )
-/* ------------------------------------------------------------------- */
 
 #define GET_32BIT_LSB_FIRST(cp) \
   (((unsigned long)(unsigned char)(cp)[0]) | \

@@ -13,6 +13,8 @@ struct numberstate_Tag {
     int appendixnum;
     int ischapter;
     int *sectionlevels;
+    paragraph **currentsects;
+    paragraph *lastsect;
     int oklevel;
     int maxsectlevel;
     int listitem;
@@ -29,12 +31,16 @@ numberstate *number_init(void) {
     ret->oklevel = -1;		       /* not even in a chapter yet */
     ret->maxsectlevel = 32;
     ret->sectionlevels = mknewa(int, ret->maxsectlevel);
+    ret->currentsects = mknewa(paragraph *, ret->maxsectlevel+1);
+    memset(ret->currentsects, 0, (ret->maxsectlevel+1)*sizeof(paragraph *));
+    ret->lastsect = NULL;
     ret->listitem = -1;
     return ret;
 }
 
 void number_free(numberstate *state) {
     sfree(state->sectionlevels);
+    sfree(state->currentsects);
     sfree(state);
 }
 
@@ -115,14 +121,15 @@ void number_cfg(numberstate *state, paragraph *source) {
     }
 }
 
-word *number_mktext(numberstate *state, int para, int aux, wchar_t *category,
-		    int prev, word **auxret, filepos fpos, int *errflag) {
+word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
+		    int prev, int *errflag) {
     word *ret = NULL;
     word **ret2 = &ret;
     word **pret = &ret;
     int i, level;
 
-    switch (para) {
+    level = -2;			       /* default for non-section-heading */
+    switch (p->type) {
       case para_Chapter:
 	state->chapternum++;
 	for (i = 0; i < state->maxsectlevel; i++)
@@ -133,14 +140,16 @@ word *number_mktext(numberstate *state, int para, int aux, wchar_t *category,
 	donumber(&pret, state->chapternum);
 	state->ischapter = 1;
 	state->oklevel = 0;
+	level = -1;
 	break;
       case para_Heading:
       case para_Subsect:
-	level = (para == para_Heading ? 0 : aux);
+	level = (p->type == para_Heading ? 0 : p->aux);
 	if (level > state->oklevel) {
-	    error(err_sectjump, &fpos);
+	    error(err_sectjump, &p->fpos);
 	    *errflag = TRUE;
-	    return NULL;
+	    ret = NULL;
+	    break;
 	}
 	state->oklevel = level+1;
 	if (state->maxsectlevel <= level) {
@@ -175,6 +184,10 @@ word *number_mktext(numberstate *state, int para, int aux, wchar_t *category,
 	doanumber(&pret, state->appendixnum);
 	state->ischapter = 0;
 	state->oklevel = 0;
+	level = -1;
+	break;
+      case para_UnnumberedChapter:
+	level = -1;
 	break;
       case para_NumberedList:
 	ret2 = pret;
@@ -185,7 +198,25 @@ word *number_mktext(numberstate *state, int para, int aux, wchar_t *category,
 	break;
     }
 
-    if (auxret)
-	*auxret = *ret2;
+    /*
+     * Now set up parent, child and sibling links.
+     */
+    p->parent = p->child = p->sibling = NULL;
+    if (level != -2) {
+	if (state->currentsects[level+1])
+	    state->currentsects[level+1]->sibling = p;
+	if (level >= 0 && state->currentsects[level]) {
+	    p->parent = state->currentsects[level];
+	    if (!state->currentsects[level]->child)
+		state->currentsects[level]->child = p;
+	}
+	state->currentsects[level+1] = state->lastsect = p;
+	for (i = level+2; i < state->maxsectlevel+1; i++)
+	    state->currentsects[i] = NULL;
+    } else {
+	p->parent = state->lastsect;
+    }
+
+    p->kwtext2 = *ret2;
     return ret;
 }

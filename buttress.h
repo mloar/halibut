@@ -34,7 +34,7 @@ typedef struct keywordlist_Tag keywordlist;
 typedef struct keyword_Tag keyword;
 typedef struct userstyle_Tag userstyle;
 typedef struct numberstate_Tag numberstate;
-typedef struct index_Tag index;
+typedef struct indexdata_Tag indexdata;
 typedef struct indextag_Tag indextag;
 typedef struct indexentry_Tag indexentry;
 typedef struct macrostack_Tag macrostack;
@@ -82,6 +82,8 @@ struct paragraph_Tag {
     word *kwtext;		       /* chapter/section indication */
     word *kwtext2;		       /* numeric-only form of kwtext */
     filepos fpos;
+
+    paragraph *parent, *child, *sibling;   /* for hierarchy navigation */
 
     void *private_data; 	       /* for temp use in backends */
 };
@@ -224,6 +226,7 @@ void sfree(void *p);
 void free_word_list(word *w);
 void free_para_list(paragraph *p);
 word *dup_word_list(word *w);
+char *dupstr(char *s);
 
 #define mknew(type) ( (type *) smalloc (sizeof (type)) )
 #define mknewa(type, number) ( (type *) smalloc ((number) * sizeof (type)) )
@@ -309,7 +312,7 @@ void wrap_free(wrappedline *);
 /*
  * input.c
  */
-paragraph *read_input(input *in, index *idx);
+paragraph *read_input(input *in, indexdata *idx);
 
 /*
  * keywords.c
@@ -340,7 +343,7 @@ void subst_keywords(paragraph *, keywordlist *);
 /*
  * Data structure to hold both sides of the index.
  */
-struct index_Tag {
+struct indexdata_Tag {
     tree234 *tags;		       /* holds type `indextag' */
     tree234 *entries;		       /* holds type `indexentry' */
 };
@@ -365,21 +368,20 @@ struct indexentry_Tag {
     void *backend_data;		       /* private to back end */
 };
 
-index *make_index(void);
-void cleanup_index(index *);
+indexdata *make_index(void);
+void cleanup_index(indexdata *);
 /* index_merge takes responsibility for freeing arg 3 iff implicit; never
  * takes responsibility for arg 2 */
-void index_merge(index *, int is_explicit, wchar_t *, word *);
-void build_index(index *);
-void index_debug(index *);
+void index_merge(indexdata *, int is_explicit, wchar_t *, word *);
+void build_index(indexdata *);
+void index_debug(indexdata *);
 
 /*
  * contents.c
  */
 numberstate *number_init(void);
 void number_cfg(numberstate *, paragraph *);
-word *number_mktext(numberstate *, int, int, wchar_t *,
-		    int, word **, filepos, int *);
+word *number_mktext(numberstate *, paragraph *, wchar_t *, int , int *);
 void number_free(numberstate *);
 
 /*
@@ -396,11 +398,16 @@ struct userstyle_Tag {
 /*
  * bk_text.c
  */
-void text_backend(paragraph *, keywordlist *, index *);
+void text_backend(paragraph *, keywordlist *, indexdata *);
 
 /*
  * bk_xhtml.c
  */
-void xhtml_backend(paragraph *, keywordlist *, index *);
+void xhtml_backend(paragraph *, keywordlist *, indexdata *);
+
+/*
+ * bk_whlp.c
+ */
+void whlp_backend(paragraph *, keywordlist *, indexdata *);
 
 #endif

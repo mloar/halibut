@@ -493,7 +493,7 @@ static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
 /*
  * Reads a single file (ie until get() returns EOF)
  */
-static void read_file(paragraph ***ret, input *in, index *idx) {
+static void read_file(paragraph ***ret, input *in, indexdata *idx) {
     token t;
     paragraph par;
     word wd, **whptr, **idximplicit;
@@ -1144,7 +1144,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
     macrocleanup(macros);
 }
 
-paragraph *read_input(input *in, index *idx) {
+paragraph *read_input(input *in, indexdata *idx) {
     paragraph *head = NULL;
     paragraph **hptr = &head;
 
