@@ -749,6 +749,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		wd.text = NULL;
 		wd.type = spcstyle;
 		wd.alt = NULL;
+		wd.aux = 0;
 		wd.fpos = t.pos;
 		wd.breaks = FALSE;
 		if (indexing)
@@ -764,6 +765,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    rdadds(&indexstr, t.text);
 		wd.type = style;
 		wd.alt = NULL;
+		wd.aux = 0;
 		wd.fpos = t.pos;
 		wd.breaks = t.aux;
 		if (!indexing || index_visible) {
@@ -808,6 +810,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			wd.text = NULL;
 			wd.type = word_HyperEnd;
 			wd.alt = NULL;
+			wd.aux = 0;
 			wd.fpos = t.pos;
 			wd.breaks = FALSE;
 			if (!indexing || index_visible)
@@ -944,6 +947,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			}
 		    }
 		    wd.alt = NULL;
+		    wd.aux = 0;
 		    if (!indexing || index_visible) {
 			wd.text = ustrdup(wdtext);
 			addword(wd, &whptr);
@@ -1050,6 +1054,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			wd.type = word_IndexRef;
 			wd.text = NULL;
 			wd.alt = NULL;
+			wd.aux = 0;
 			wd.breaks = FALSE;
 			indexword = addword(wd, &whptr);
 			/* Set up a rdstring to read the index text */
@@ -1070,6 +1075,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    wd.type = style;
 		    wd.breaks = FALSE;
 		    wd.alt = NULL;
+		    wd.aux = 0;
 		    wd.fpos = t.pos;
 		    if (!indexing || index_visible) {
 			wd.text = ustrdup(utext);
