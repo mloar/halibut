@@ -1625,8 +1625,12 @@ static void html_words(htmloutput *ho, word *words, int flags,
       case word_LowerXref:
 	if (flags & LINKS) {
 	    keyword *kwl = kw_lookup(keywords, w->text);
-	    paragraph *p = kwl->para;
-	    htmlsect *s = (htmlsect *)p->private_data;
+	    paragraph *p;
+	    htmlsect *s;
+
+	    assert(kwl);
+	    p = kwl->para;
+	    s = (htmlsect *)p->private_data;
 
 	    assert(s);
 
