@@ -62,6 +62,7 @@ static void make_pages_node(object *node, object *parent, page_data *first,
 			    page_data *last, object *resources);
 static int make_outline(object *parent, outline_element *start, int n,
 			int open);
+static int pdf_versionid(FILE *fp, word *words);
 
 void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		 indexdata *idx, void *vdoc) {
@@ -372,9 +373,13 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     /*
-     * Header
+     * Header. I'm going to put the version IDs in the header as
+     * well, simply in PDF comments.
      */
     fileoff = fprintf(fp, "%%PDF-1.3\n");
+    for (p = sourceform; p; p = p->next)
+	if (p->type == para_VersionID)
+	    fileoff += pdf_versionid(fp, p->words);
 
     /*
      * Body
@@ -659,4 +664,48 @@ static int make_outline(object *parent, outline_element *items, int n,
     objtext(parent, "\n");
 
     return totalcount;
+}
+
+static int pdf_versionid(FILE *fp, word *words)
+{
+    int ret;
+
+    ret = fprintf(fp, "%% ");
+
+    for (; words; words = words->next) {
+	char *text;
+	int type;
+
+	switch (words->type) {
+	  case word_HyperLink:
+	  case word_HyperEnd:
+	  case word_UpperXref:
+	  case word_LowerXref:
+	  case word_XrefEnd:
+	  case word_IndexRef:
+	    continue;
+	}
+
+	type = removeattr(words->type);
+
+	switch (type) {
+	  case word_Normal:
+	    text = utoa_dup(words->text);
+	    break;
+	  case word_WhiteSpace:
+	    text = dupstr(" ");
+	    break;
+	  case word_Quote:
+	    text = dupstr("'");
+	    break;
+	}
+
+	fputs(text, fp);
+	ret += strlen(text);
+	sfree(text);
+    }
+
+    ret += fprintf(fp, "\n");
+
+    return ret;
 }

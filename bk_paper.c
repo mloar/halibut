@@ -12,8 +12,6 @@
 /*
  * TODO in future work:
  * 
- *  - include the version IDs.
- * 
  *  - linearised PDF, perhaps?
  * 
  *  - compression of output files. For the actual text display,
@@ -72,6 +70,7 @@
  *     * a hyphen in a word by itself might prefer to be an en-dash
  *     * (Americans might even want a convenient way to use an
  * 	 em-dash)
+ *     * DON'T DO ANY OF THE ABOVE WITHIN \c OR \cw!
  *     * substituting `minus' for `hyphen' in the standard encoding
  * 	 is probably preferable in Courier, though certainly not in
  * 	 the main text font

@@ -6,6 +6,8 @@
 #include "halibut.h"
 #include "paper.h"
 
+static void ps_versionid(FILE *fp, word *words);
+
 paragraph *ps_config_filename(char *filename)
 {
     paragraph *p;
@@ -74,6 +76,14 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndProlog\n");
 
     fprintf(fp, "%%%%BeginSetup\n");
+
+    /*
+     * This is as good a place as any to put version IDs.
+     */
+    for (p = sourceform; p; p = p->next)
+	if (p->type == para_VersionID)
+	    ps_versionid(fp, p->words);
+
     /*
      * Re-encode and re-metric the fonts.
      */
@@ -168,4 +178,43 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fclose(fp);
 
     sfree(filename);
+}
+
+static void ps_versionid(FILE *fp, word *words)
+{
+    fprintf(fp, "%% ");
+
+    for (; words; words = words->next) {
+	char *text;
+	int type;
+
+	switch (words->type) {
+	  case word_HyperLink:
+	  case word_HyperEnd:
+	  case word_UpperXref:
+	  case word_LowerXref:
+	  case word_XrefEnd:
+	  case word_IndexRef:
+	    continue;
+	}
+
+	type = removeattr(words->type);
+
+	switch (type) {
+	  case word_Normal:
+	    text = utoa_dup(words->text);
+	    break;
+	  case word_WhiteSpace:
+	    text = dupstr(" ");
+	    break;
+	  case word_Quote:
+	    text = dupstr("'");
+	    break;
+	}
+
+	fputs(text, fp);
+	sfree(text);
+    }
+
+    fprintf(fp, "\n");
 }
