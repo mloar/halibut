@@ -445,6 +445,7 @@ static void read_file(paragraph ***ret, input *in) {
     word wd, **whptr;
     int style;
     int already;
+    int iswhite, seenwhite;
     int type;
     struct stack_item {
 	enum {
@@ -531,6 +532,8 @@ static void read_file(paragraph ***ret, input *in) {
 		needkw = -1;
 		break;
 	      case c__comment:
+		if (isbrace(in))
+		    break;	       /* `\#{': isn't a comment para */
 		do {
 		    dtor(t), t = get_token(in);
 		} while (t.type != tok_eop && t.type != tok_eof);
@@ -637,7 +640,9 @@ static void read_file(paragraph ***ret, input *in) {
 	parsestk = stk_new();
 	style = word_Normal;
 	indexing = FALSE;
+	seenwhite = TRUE;
 	while (t.type != tok_eop && t.type != tok_eof) {
+	    iswhite = FALSE;
 	    already = FALSE;
 	    if (t.type == tok_cmd && t.cmd == c__escaped)
 		t.type = tok_word;     /* nice and simple */
@@ -653,6 +658,7 @@ static void read_file(paragraph ***ret, input *in) {
 		    rdadd(&indexstr, ' ');
 		if (!indexing || index_visible)
 		    addword(wd, &whptr);
+		iswhite = TRUE;
 		break;
 	      case tok_word:
 		if (indexing)
@@ -701,6 +707,40 @@ static void read_file(paragraph ***ret, input *in) {
 		break;
 	      case tok_cmd:
 		switch (t.cmd) {
+		  case c__comment:
+		    /*
+		     * In-paragraph comment: \#{ balanced braces }
+		     *
+		     * Anything goes here; even tok_eop. We should
+		     * eat whitespace after the close brace _if_
+		     * there was whitespace before the \#.
+		     */
+		    dtor(t), t = get_token(in);
+		    if (t.type != tok_lbrace) {
+			error(err_explbr, &t.pos);
+		    } else {
+			int braces = 1;
+			while (braces > 0) {
+			    dtor(t), t = get_token(in);
+			    if (t.type == tok_lbrace)
+				braces++;
+			    else if (t.type == tok_rbrace)
+				braces--;
+			    else if (t.type == tok_eof) {
+				error(err_commenteof, &t.pos);
+				break;
+			    }
+			}
+		    }
+		    if (seenwhite) {
+			already = TRUE;
+			dtor(t), t = get_token(in);
+			if (t.type == tok_white) {
+			    iswhite = TRUE;
+			    already = FALSE;
+			}
+		    }
+		    break;
 		  case c_K:
 		  case c_k:
 		  case c_W:
@@ -899,6 +939,7 @@ static void read_file(paragraph ***ret, input *in) {
 	    }
 	    if (!already)
 		dtor(t), t = get_token(in);
+	    seenwhite = iswhite;
 	}
 	/* Check the stack is empty */
 	if (NULL != (sitem = stk_pop(parsestk))) {

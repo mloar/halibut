@@ -132,6 +132,7 @@ enum {
     err_badmidcmd,		       /* invalid command in mid-para */
     err_unexbrace,		       /* unexpected brace */
     err_explbr,			       /* expected `{' after command */
+    err_commenteof,		       /* EOF inside braced comment */
     err_kwexprbr,		       /* expected `}' after cross-ref */
     err_missingrbrace,		       /* unclosed braces at end of para */
     err_nestedstyles,		       /* unable to nest text styles */

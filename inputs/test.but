@@ -1,17 +1,18 @@
 \title Buttress: A Test Document
 
 \preamble This manual is a small joke effort, designed to use every
-feature that Buttress's input format supports. Creation date
-\date{%Y.%m.%d} (default format is \date).
+feature \#{ comment } that Buttress's input format supports. Creation
+date \date{%Y.%m.%d} (default format is \date).
 
-\copyright Copyright 1999 Simon Tatham. All rights reserved.
+\copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
+reserved.
 
-\versionid $Id: test.but,v 1.5 1999/08/15 18:35:20 simon Exp $
+\versionid $Id: test.but,v 1.6 1999/09/12 15:38:06 simon Exp $
 
 \C{chap} First chapter title
 
-This is a paragraph of text. It
-has line breaks in   between words, multiple   
+This is a para\#{another{} comment}graph of text. It
+has line\#{yet another one} breaks in   between words, multiple
   spaces (ignored), and \e{emphasised text} as well as \c{code
 fragments}.
 

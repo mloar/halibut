@@ -96,6 +96,11 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "expected `{' after command");
 	flags = FILEPOS;
 	break;
+      case err_commenteof:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "end of file unexpected inside `\\#{...}' comment");
+	flags = FILEPOS;
+	break;
       case err_kwexprbr:
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "expected `}' after cross-reference");
