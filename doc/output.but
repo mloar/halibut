@@ -8,7 +8,7 @@ that format.
 \H{output-text} Plain text
 
 This output format generates the document as a single \i{plain text}
-file. No index is generated.
+file. No table of contents or index is generated.
 
 The precise formatting of the text file can be controlled by a
 variety of configuration directives. They are listed in the
@@ -319,6 +319,9 @@ The \i{default settings} for Halibut's plain text output format are:
 \c \cfg{text-versionid}{true}
 
 \H{output-html} HTML
+
+\# FIXME: this probably needs major revision due to the new HTML
+backend
 
 This output format generates an \i{HTML} version of the document. By
 default, this will be in multiple files, starting with
@@ -1137,7 +1140,7 @@ The \i{default settings} for the \c{info} output format are:
 \c \cfg{info-index-width}{40}
 \c \cfg{info-list-indent}{1}
 \c \cfg{info-listitem-indent}{3}
-zc
+\c
 \c \cfg{info-section-suffix}{: }
 \c \cfg{info-underline}{\u203e}{-}
 \c
@@ -1151,12 +1154,16 @@ zc
 
 and no \cw{\\cfg\{info-dir-entry\}} directives.
 
-\H{output-ps} \i{PostScript}
+\H{output-paper} Paper formats
+
+These output formats (currently PostScript and PDF) generate printable
+manuals. As such, they share a number of configuration directives.
+
+\S{output-ps} \i{PostScript}
 
 This output format generates a printable manual in PostScript format.
 
-This format is currently very new and is not yet configurable. There
-is only one available configuration option:
+There is one configuration option specific to PostScript:
 
 \dt \I{\cw{\\cfg\{ps-filename\}}}\cw{\\cfg\{ps-filename\}\{}\e{filename}\cw{\}}
 
@@ -1169,7 +1176,7 @@ The \i{default settings} for the PostScript output format are:
 
 \c \cfg{ps-filename}{output.ps}
 
-\H{output-pdf} \i{PDF}
+\S{output-pdf} \i{PDF}
 
 This output format generates a printable manual in PDF format. This
 should look exactly identical to the PostScript output (see
@@ -1177,8 +1184,7 @@ should look exactly identical to the PostScript output (see
 provide an outline of all the document's sections and clickable
 cross-references between sections.
 
-This format is currently very new and is not yet configurable. There
-is only one available configuration option:
+There is one configuration option specific to PDF:
 
 \dt \I{\cw{\\cfg\{pdf-filename\}}}\cw{\\cfg\{pdf-filename\}\{}\e{filename}\cw{\}}
 
@@ -1190,3 +1196,215 @@ parameter after the command-line option \i\c{--pdf} (see
 The \i{default settings} for the PDF output format are:
 
 \c \cfg{pdf-filename}{output.pdf}
+
+\S{output-paper-dimensions} Configuring layout and \i{measurements}
+
+All measurements are in PostScript \i{points} (72 points to the inch).
+
+\S2{output-paper-pagesize} Page properties
+
+\dt \I{\cw{\\cfg\{paper-page-width\}}}\cw{\\cfg\{paper-page-width\}\{}\e{points}\cw{\}}
+
+\dt \I{\cw{\\cfg\{paper-page-height\}}}\cw{\\cfg\{paper-page-height\}\{}\e{points}\cw{\}}
+
+\dd Specify the absolute limits of the paper.
+
+\dt \I{\cw{\\cfg\{paper-left-margin\}}}\cw{\\cfg\{paper-left-margin\}\{}\e{points}\cw{\}}
+
+\dt \I{\cw{\\cfg\{paper-top-margin\}}}\cw{\\cfg\{paper-top-margin\}\{}\e{points}\cw{\}}
+
+\dt \I{\cw{\\cfg\{paper-right-margin\}}}\cw{\\cfg\{paper-right-margin\}\{}\e{points}\cw{\}}
+
+\dt \I{\cw{\\cfg\{paper-bottom-margin\}}}\cw{\\cfg\{paper-bottom-margin\}\{}\e{points}\cw{\}}
+
+\dd Specify the margins. Most text appears within these margins,
+except:
+
+\lcont{
+
+\b Section numbers, which appear in the left margin.
+
+\b The footer (containing page numbers), which appears in the bottom
+margin.
+
+}
+
+\S2{output-paper-line} Vertical spacing
+
+\dt \I{\cw{\\cfg\{paper-base-leading\}}}\cw{\\cfg\{paper-base-leading\}\{}\e{points}\cw{\}}
+
+\dd Specifies the amount of space between lines of text within a
+paragraph. (So, if the font size is 12pt and there is 2pt of leading,
+there will be 14pt between successive baselines.)
+
+\dt \I{\cw{\\cfg\{paper-base-para-spacing\}}}\cw{\\cfg\{paper-base-para-spacing\}\{}\e{points}\cw{\}}
+
+\dd Specifies the amount of vertical space between paragraphs. (The
+vertical space between paragraphs does \e{not} include
+\c{paper-base-leading}.)
+
+\S2{output-paper-indentation} Indentation
+
+\dt \I{\cw{\\cfg\{paper-list-indent\}}}\cw{\\cfg\{paper-list-indent\}\{}\e{points}\cw{\}}
+
+\dd Specifies the indentation of the bullet or number in a
+\I{bulletted list, indentation}bulletted or \I{numbered list,
+indentation}numbers \I{list, indentation}list, similarly to
+\cw{\\cfg\{text-list-indent\}} (see \k{output-text-dimensions}).
+
+\dt \I{\cw{\\cfg\{paper-listitem-indent\}}}\cw{\\cfg\{paper-listitem-indent\}\{}\e{points}\cw{\}}
+
+\dd Specifies the \e{extra} indentation for the body of a list item,
+over and above the amount configured in \cw{\\cfg\{paper-list-indent\}}.
+
+\# FIXME: doesn't actually work, AFAICT.
+
+\dt \I{\cw{\\cfg\{paper-quote-indent\}}}\cw{\\cfg\{paper-quote-indent\}\{}\e{points}\cw{\}}
+
+\dd Specifies the amount of indentation for a level of quoting. Used
+for \cw{\\quote} (see \k{input-quote}) and code quotes with \cw{\\c}
+(see \k{input-code}).
+
+\S2{output-paper-headings} Headings
+
+\dt \I{\cw{\\cfg\{paper-chapter-top-space\}}}\cw{\\cfg\{paper-chapter-top-space\}\{}\e{points}\cw{\}}
+
+\dd Specifies the space between the top margin \#{XXX check} and the
+top of the chapter heading. (Each chapter begins on a new page.)
+
+\# FIXME: the first page of the Index gets mangled if this is
+set to zero.
+
+\# FIXME: exact relationship to top-margin?
+
+\dt \I{\cw{\\cfg\{paper-chapter-underline-thickness\}}}\cw{\\cfg\{paper-chapter-underline-thickness\}\{}\e{points}\cw{\}}
+
+\dd Specifies the vertical thickness of the black rule under chapter
+headings.
+
+\dt \I{\cw{\\cfg\{paper-chapter-underline-depth\}}}\cw{\\cfg\{paper-chapter-underline-depth\}\{}\e{points}\cw{\}}
+
+\dd Specifies the distance between the base of the chapter heading and
+the \e{base} of the underlying rule.
+
+\dt \I{\cw{\\cfg\{paper-sect-num-left-space\}}}\cw{\\cfg\{paper-sect-num-left-space\}\{}\e{points}\cw{\}}
+
+\dd Specifies the distance between the left margin and the \e{right}
+of section numbers (which are in the left margin).
+
+\S2{output-paper-index} Contents and index
+
+\dt \I{\cw{\\cfg\{paper-contents-index-step\}}}\cw{\\cfg\{paper-contents-index-step\}\{}\e{points}\cw{\}}
+
+\dt \I{\cw{\\cfg\{paper-contents-margin\}}}\cw{\\cfg\{paper-contents-margin\}\{}\e{points}\cw{\}}
+
+\# FIXME: I do not know what dees one does. (I couldn't get either of
+them to do anything obvious, although the source indicates they should
+do something.)
+
+\dt \I{\cw{\\cfg\{paper-leader-separation\}}}\cw{\\cfg\{paper-leader-separation\}\{}\e{points}\cw{\}}
+
+\dd Specifies the horizontal spacing between dots in \i\e{leaders}
+(the dotted lines that appear between section headings and page
+numbers in the table of contents).
+
+\dt \I{\cw{\\cfg\{paper-footer-distance\}}}\cw{\\cfg\{paper-footer-distance\}\{}\e{points}\cw{\}}
+
+\dd Specifies the distance between the bottom margin and the \e{base}
+of the footer (which contains page numbers).
+
+\dt \I{\cw{\\cfg\{paper-index-columns\}}}\cw{\\cfg\{paper-index-columns\}\{}\e{columns}\cw{\}}
+
+\dd Specifies the number of columns the index should be divided into.
+
+\# FIXME: with this set to 1, the right-alignment of some index entry
+page numbers in the Halibut manual is decidedly wonky.
+
+\dt \I{\cw{\\cfg\{paper-index-gutter\}}}\cw{\\cfg\{paper-index-gutter\}\{}\e{points}\cw{\}}
+
+\dd Specifies the amount of \I{gutter} horizontal space between index
+columns.
+
+\dt \I{\cw{\\cfg\{paper-index-minsep\}}}\cw{\\cfg\{paper-index-minsep\}\{}\e{points}\cw{\}}
+
+\dd Specifies the minimum allowable horizontal space between an index
+entry and its page number. If the gap is smaller, the page number is
+moved to the next line.
+
+\S2{output-paper-fonts} Fonts
+
+\dt \I{\cw{\\cfg\{paper-base-font-size\}}}\cw{\\cfg\{paper-base-font-size\}\{}\e{points}\cw{\}}
+
+\dd Specifies the font size of body text.
+
+\# FIXME: actually, this doesn't appear to do anything at all - most
+font sizes are still hardcoded.
+
+\dt \I{\cw{\\cfg\{paper-pagenum-font-size\}}}\cw{\\cfg\{paper-pagenum-font-size\}\{}\e{points}\cw{\}}
+
+\dd Specifies the font size to use for page numbers.
+
+\S2{output-paper-misc} Miscellaneous
+
+\dt \I{\cw{\\cfg\{paper-rule-thickness\}}}\cw{\\cfg\{paper-rule-thickness\}\{}\e{points}\cw{\}}
+
+\dd Specifies the vertical thickness of the rule produced by the
+\cw{\\rule} command (see \k{input-rule}). (Note that no extra space is
+reserved for thicker rules.)
+
+\S{output-paper-characters} Configuring the characters used
+
+\dt \I{\cw{\\cfg\{paper-bullet\}}}\cw{\\cfg\{paper-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text to use as the \i{bullet} in bulletted lists.
+You can specify multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-bullet\}} directive (see
+\k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{paper-quotes\}}}\cw{\\cfg\{paper-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd Specifies the quotation marks to use, overriding any
+\cw{\\cfg\{quotes\}} directive. You can specify multiple
+fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
+directive (see \k{output-text-characters}).
+
+\S{output-paper-defaults} Default settings for paper formats
+
+The default page size corresponds to 210\_\u00D7{x}\_297\_mm, i.e.,
+\i{A4 paper}.
+
+\c \cfg{paper-page-width}{595} 
+\c \cfg{paper-page-height}{841} 
+\c
+\c \cfg{paper-left-margin}{72} 
+\c \cfg{paper-top-margin}{72} 
+\c \cfg{paper-right-margin}{72} 
+\c \cfg{paper-bottom-margin}{108} 
+\c
+\c \cfg{paper-base-leading}{1} 
+\c \cfg{paper-base-para-spacing}{10} 
+\c
+\c \cfg{paper-list-indent}{6} 
+\c \cfg{paper-listitem-indent}{18} 
+\c \cfg{paper-quote-indent}{18} 
+\c
+\c \cfg{paper-chapter-top-space}{72} 
+\c \cfg{paper-chapter-underline-thickness}{3} 
+\c \cfg{paper-chapter-underline-depth}{14} 
+\c \cfg{paper-sect-num-left-space}{12} 
+\c
+\c \cfg{paper-contents-index-step}{24} 
+\c \cfg{paper-contents-margin}{84} 
+\c \cfg{paper-leader-separation}{12} 
+\c \cfg{paper-footer-distance}{32} 
+\c \cfg{paper-index-columns}{2} 
+\c \cfg{paper-index-gutter}{36} 
+\c \cfg{paper-index-minsep}{18} 
+\c
+\c \cfg{paper-base-font-size}{12} 
+\c \cfg{paper-pagenum-font-size}{12} 
+\c
+\c \cfg{paper-rule-thickness}{1} 
+\c
+\c \cfg{paper-bullet}{\u2022}{-}
+\c \cfg{paper-quotes}{\u2018}{\u2019}{'}{'}

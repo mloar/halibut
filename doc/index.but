@@ -305,6 +305,87 @@ directive
 \IM{\\cfg\{pdf-filename\}} \c{pdf-filename} configuration directive
 \IM{\\cfg\{pdf-filename\}} \cw{\\cfg\{pdf-filename\}}
 
+\IM{\\cfg\{paper-page-width\}} \c{paper-page-width} configuration directive
+\IM{\\cfg\{paper-page-width\}} \cw{\\cfg\{paper-page-width\}}
+
+\IM{\\cfg\{paper-page-height\}} \c{paper-page-height} configuration directive
+\IM{\\cfg\{paper-page-height\}} \cw{\\cfg\{paper-page-height\}}
+
+\IM{\\cfg\{paper-left-margin\}} \c{paper-left-margin} configuration directive
+\IM{\\cfg\{paper-left-margin\}} \cw{\\cfg\{paper-left-margin\}}
+
+\IM{\\cfg\{paper-top-margin\}} \c{paper-top-margin} configuration directive
+\IM{\\cfg\{paper-top-margin\}} \cw{\\cfg\{paper-top-margin\}}
+
+\IM{\\cfg\{paper-right-margin\}} \c{paper-right-margin} configuration directive
+\IM{\\cfg\{paper-right-margin\}} \cw{\\cfg\{paper-right-margin\}}
+
+\IM{\\cfg\{paper-bottom-margin\}} \c{paper-bottom-margin} configuration directive
+\IM{\\cfg\{paper-bottom-margin\}} \cw{\\cfg\{paper-bottom-margin\}}
+
+\IM{\\cfg\{paper-list-indent\}} \c{paper-list-indent} configuration directive
+\IM{\\cfg\{paper-list-indent\}} \cw{\\cfg\{paper-list-indent\}}
+
+\IM{\\cfg\{paper-listitem-indent\}} \c{paper-listitem-indent} configuration directive
+\IM{\\cfg\{paper-listitem-indent\}} \cw{\\cfg\{paper-listitem-indent\}}
+
+\IM{\\cfg\{paper-quote-indent\}} \c{paper-quote-indent} configuration directive
+\IM{\\cfg\{paper-quote-indent\}} \cw{\\cfg\{paper-quote-indent\}}
+
+\IM{\\cfg\{paper-base-leading\}} \c{paper-base-leading} configuration directive
+\IM{\\cfg\{paper-base-leading\}} \cw{\\cfg\{paper-base-leading\}}
+
+\IM{\\cfg\{paper-base-para-spacing\}} \c{paper-base-para-spacing} configuration directive
+\IM{\\cfg\{paper-base-para-spacing\}} \cw{\\cfg\{paper-base-para-spacing\}}
+
+\IM{\\cfg\{paper-chapter-top-space\}} \c{paper-chapter-top-space} configuration directive
+\IM{\\cfg\{paper-chapter-top-space\}} \cw{\\cfg\{paper-chapter-top-space\}}
+
+\IM{\\cfg\{paper-sect-num-left-space\}} \c{paper-sect-num-left-space} configuration directive
+\IM{\\cfg\{paper-sect-num-left-space\}} \cw{\\cfg\{paper-sect-num-left-space\}}
+
+\IM{\\cfg\{paper-chapter-underline-depth\}} \c{paper-chapter-underline-depth} configuration directive
+\IM{\\cfg\{paper-chapter-underline-depth\}} \cw{\\cfg\{paper-chapter-underline-depth\}}
+
+\IM{\\cfg\{paper-chapter-underline-thickness\}} \c{paper-chapter-underline-thickness} configuration directive
+\IM{\\cfg\{paper-chapter-underline-thickness\}} \cw{\\cfg\{paper-chapter-underline-thickness\}}
+
+\IM{\\cfg\{paper-rule-thickness\}} \c{paper-rule-thickness} configuration directive
+\IM{\\cfg\{paper-rule-thickness\}} \cw{\\cfg\{paper-rule-thickness\}}
+
+\IM{\\cfg\{paper-contents-index-step\}} \c{paper-contents-index-step} configuration directive
+\IM{\\cfg\{paper-contents-index-step\}} \cw{\\cfg\{paper-contents-index-step\}}
+
+\IM{\\cfg\{paper-contents-margin\}} \c{paper-contents-margin} configuration directive
+\IM{\\cfg\{paper-contents-margin\}} \cw{\\cfg\{paper-contents-margin\}}
+
+\IM{\\cfg\{paper-leader-separation\}} \c{paper-leader-separation} configuration directive
+\IM{\\cfg\{paper-leader-separation\}} \cw{\\cfg\{paper-leader-separation\}}
+
+\IM{\\cfg\{paper-index-gutter\}} \c{paper-index-gutter} configuration directive
+\IM{\\cfg\{paper-index-gutter\}} \cw{\\cfg\{paper-index-gutter\}}
+
+\IM{\\cfg\{paper-index-minsep\}} \c{paper-index-minsep} configuration directive
+\IM{\\cfg\{paper-index-minsep\}} \cw{\\cfg\{paper-index-minsep\}}
+
+\IM{\\cfg\{paper-footer-distance\}} \c{paper-footer-distance} configuration directive
+\IM{\\cfg\{paper-footer-distance\}} \cw{\\cfg\{paper-footer-distance\}}
+
+\IM{\\cfg\{paper-base-font-size\}} \c{paper-base-font-size} configuration directive
+\IM{\\cfg\{paper-base-font-size\}} \cw{\\cfg\{paper-base-font-size\}}
+
+\IM{\\cfg\{paper-index-columns\}} \c{paper-index-columns} configuration directive
+\IM{\\cfg\{paper-index-columns\}} \cw{\\cfg\{paper-index-columns\}}
+
+\IM{\\cfg\{paper-pagenum-font-size\}} \c{paper-pagenum-font-size} configuration directive
+\IM{\\cfg\{paper-pagenum-font-size\}} \cw{\\cfg\{paper-pagenum-font-size\}}
+
+\IM{\\cfg\{paper-bullet\}} \c{paper-bullet} configuration directive
+\IM{\\cfg\{paper-bullet\}} \cw{\\cfg\{paper-bullet\}}
+
+\IM{\\cfg\{paper-quotes\}} \c{paper-quotes} configuration directive
+\IM{\\cfg\{paper-quotes\}} \cw{\\cfg\{paper-quotes\}}
+
 \IM{\\cfg\{chapter\}} \c{chapter} configuration directive
 \IM{\\cfg\{chapter\}} \cw{\\cfg\{chapter\}}
 
@@ -474,3 +555,6 @@ directive
 \IM{INFO-DIR-ENTRY} \cw{END-INFO-DIR-ENTRY}
 
 \IM{%N-upper} \c{%N}
+
+\IM{PDF} PDF
+\IM{PDF} Portable Document Format
