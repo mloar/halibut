@@ -509,7 +509,7 @@ static void whlp_contents_write(struct bk_whlp_state *state,
 }
 
 static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p) {
-    whlp_begin_para(state->h, WHLP_PARA_NONSCROLL);
+    whlp_begin_para(state->h, WHLP_PARA_SCROLL);
     whlp_start_hyperlink(state->h, (WHLP_TOPIC)p->private_data);
     if (p->kwtext) {
 	whlp_mkparagraph(state, FONT_NORMAL, p->kwtext, TRUE);
