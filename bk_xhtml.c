@@ -5,7 +5,12 @@
  * Still to do:
  *
  *  +++ doesn't handle non-breaking hyphens. Not sure how to yet.
+ *  +++ HTML 4 and Netscape don't like hex numeric entity refs, according
+ *      to SGT. Am I wrong, or him, or them?
  *  +++ entity names (from a file -- ideally supply normal SGML files)
+ *  +++ configuration directive to file split where the current layout
+ *      code wouldn't. Needs changes to _ponder_layout() and _do_paras(),
+ *      perhaps others.
  *
  * Limitations:
  *
