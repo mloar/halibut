@@ -1,3 +1,6 @@
+mandir=$(prefix)/man
+man1dir=$(mandir)/man1
+
 CHAPTERS := $(SITE) blurb intro running input output licence manpage index
 
 INPUTS = $(patsubst %,%.but,$(CHAPTERS))
@@ -12,6 +15,9 @@ index.html: $(INPUTS) $(HALIBUT)
 
 halibut.1: manpage.but
 	$(HALIBUT) --man=halibut.1 manpage.but
+
+install:
+	$(INSTALL) -m 644 halibut.1 $(man1dir)/halibut.1
 
 clean:
 	rm -f *.html *.txt *.hlp *.cnt *.1 *.info* *.ps *.pdf

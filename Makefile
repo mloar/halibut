@@ -10,6 +10,11 @@
 #  - the Makefile uses GNU ifdef / ifndef commands and GNU make `%'
 #    pattern rules
 
+prefix=/usr/local
+exec_prefix=$(prefix)
+bindir=$(exec_prefix)/bin
+INSTALL=install -c
+
 ifdef RELEASE
 ifndef VERSION
 VERSION := $(RELEASE)
@@ -35,9 +40,9 @@ BUILDDIR := build
 endif
 endif
 
-all:
+all install:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
-	@make -C $(BUILDDIR) -f ../Makefile REALBUILD=yes
+	@make -C $(BUILDDIR) -f ../Makefile $@ REALBUILD=yes
 
 spotless: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
@@ -96,7 +101,7 @@ else
 VDEF = `(cd $(SRC); md5sum -c manifest && cat version)`
 endif
 
-halibut:
+all: halibut
 
 SRC := ../
 
@@ -130,6 +135,10 @@ spotless:: clean
 
 clean::
 	rm -f *.o halibut core
+
+install:
+	$(INSTALL) -m 755 halibut $(bindir)/halibut
+	$(MAKE) -C ../doc install prefix="$(prefix)" INSTALL="$(INSTALL)"
 
 FORCE: # phony target to force version.o to be rebuilt every time
 
