@@ -12,12 +12,30 @@
 /*
  * To be done:
  * 
+ *  - tune the page breaking algorithm to impose penalties on
+ *    various things
+ *     * breaking in the middle of a code paragraph
+ *     * breaking one line from the start or end of a paragraph
+ *     * breaking immediately after a heading of any kind (or
+ * 	 indeed within one)
+ *     * we may also need to impose a limit on the amount by which
+ * 	 we can _stretch_ a page; after a certain point we may
+ * 	 prefer just to unapologetically leave space at the bottom.
+ * 
+ *  - implement some simple graphics
+ *     * I had an underline below chapter headings in the original
+ * 	 Perl version, and I thought it looked rather nice
+ *     * also we need para_Rule.
+ * 
  *  - set up contents section now we know what sections begin on
  *    which pages
  * 
  *  - do PDF outline
  * 
  *  - index
+ * 
+ *  - header/footer? Page numbers at least would be handy. Fully
+ *    configurable footer can wait, though.
  * 
  * That should bring us to the same level of functionality that
  * original-Halibut had, and the same in PDF plus the obvious
@@ -85,7 +103,6 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     int base_width = paper_width - left_margin - right_margin;
     int page_height = paper_height - top_margin - bottom_margin;
 
-    IGNORE(keywords);		       /* FIXME */
     IGNORE(idx);		       /* FIXME */
 
     /*
@@ -1027,10 +1044,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 	  case word_IndexRef:
 	    goto nextword;
 	    /*
-	     * FIXME: we should do something with all of these!
-	     * Hyperlinks and xrefs have meaning in PDF, and this
-	     * is probably the right place to nail down the index
-	     * references too.
+	     * FIXME: we should do something with this.
 	     */
 	}
 
