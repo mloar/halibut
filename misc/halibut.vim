@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          FIXME
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.2 2004/04/01 01:12:21 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.3 2004/04/01 22:21:23 jtn Exp $
 
 " I'm not proud of this. Every time I tangle with vim's syntax highlighting
 " I come away unsatisfied. Nevertheless, it seems to work.
@@ -113,7 +113,7 @@ syn region butHyperArg matchgroup=butDelimiter start="{" skip="\\}" end="}" cont
 " Specific hack for \I{}
 syn region butIndexArg matchgroup=butDelimiter start="{" skip="\\}" end="}" contained contains=@butText
 " Specific hack for \IM{}{}...
-syn region butIMArg    matchgroup=butDelimited start="{" skip="\\}" end="}" contained nextgroup=butIMArg contains=@butText
+syn region butIMArg    matchgroup=butDelimiter start="{" skip="\\}" end="}" contained nextgroup=butIMArg contains=@butText
 " Default argument (due to being last).
 syn region butTextArg  matchgroup=butDelimiter start="{" skip="\\}" end="}" nextgroup=@butArgument contained contains=@butText
 
