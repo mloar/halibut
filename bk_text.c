@@ -65,17 +65,17 @@ static textconfig text_configure(paragraph *source) {
     ret.atitle.underline = L'=';
     ret.achapter.align = LEFT;
     ret.achapter.just_numbers = FALSE;
-    ret.achapter.number_suffix = ustrdup(L": ");
+    ret.achapter.number_suffix = L": ";
     ret.achapter.underline = L'-';
     ret.nasect = 1;
     ret.asect = mknewa(alignstruct, ret.nasect);
     ret.asect[0].align = LEFTPLUS;
     ret.asect[0].just_numbers = TRUE;
-    ret.asect[0].number_suffix = ustrdup(L" ");
+    ret.asect[0].number_suffix = L" ";
     ret.asect[0].underline = L'\0';
     ret.include_version_id = TRUE;
     ret.indent_preambles = FALSE;
-    ret.bullet.text = ustrdup(L"-");
+    ret.bullet.text = L"-";
 
     for (; source; source = source->next) {
 	if (source->type == para_Config) {
@@ -96,7 +96,7 @@ static textconfig text_configure(paragraph *source) {
 	    } else if (!ustricmp(source->keyword, L"text-chapter-numeric")) {
 		ret.achapter.just_numbers = utob(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-chapter-suffix")) {
-		ret.achapter.number_suffix = ustrdup(uadv(source->keyword));
+		ret.achapter.number_suffix = uadv(source->keyword);
 	    } else if (!ustricmp(source->keyword, L"text-section-align")) {
 		wchar_t *p = uadv(source->keyword);
 		int n = 0;
@@ -152,11 +152,12 @@ static textconfig text_configure(paragraph *source) {
 		if (n >= ret.nasect) {
 		    int i;
 		    ret.asect = resize(ret.asect, n+1);
-		    for (i = ret.nasect; i <= n; i++)
+		    for (i = ret.nasect; i <= n; i++) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
+		    }
 		    ret.nasect = n+1;
 		}
-		ret.asect[n].number_suffix = ustrdup(p);
+		ret.asect[n].number_suffix = p;
 	    } else if (!ustricmp(source->keyword, L"text-title-align")) {
 		ret.atitle.align = utoalign(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-title-underline")) {
@@ -330,14 +331,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
      * Tidy up
      */
     fclose(fp);
-    {
-	int i;
-	sfree(conf.achapter.number_suffix);
-	for (i = 0; i < conf.nasect; i++)
-	    sfree(conf.asect[i].number_suffix);
-	sfree(conf.asect);
-	sfree(conf.bullet.text);
-    }
+    sfree(conf.asect);
 }
 
 /*

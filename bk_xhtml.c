@@ -144,13 +144,13 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   ret.suppress_address = FALSE;
 
   ret.fchapter.just_numbers = FALSE;
-  ret.fchapter.number_suffix = ustrdup(L": ");
+  ret.fchapter.number_suffix = L": ";
   ret.nfsect = 2;
   ret.fsect = mknewa(xhtmlheadfmt, ret.nfsect);
   ret.fsect[0].just_numbers = FALSE;
-  ret.fsect[0].number_suffix = ustrdup(L": ");
+  ret.fsect[0].number_suffix = L": ";
   ret.fsect[1].just_numbers = TRUE;
-  ret.fsect[1].number_suffix = ustrdup(L" ");
+  ret.fsect[1].number_suffix = L" ";
 
   for (; source; source = source->next)
   {
@@ -199,7 +199,7 @@ static xhtmlconfig xhtml_configure(paragraph *source)
       } else if (!ustricmp(source->keyword, L"xhtml-chapter-numeric")) {
 	ret.fchapter.just_numbers = utob(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-chapter-suffix")) {
-	ret.fchapter.number_suffix = ustrdup(uadv(source->keyword));
+	ret.fchapter.number_suffix = uadv(source->keyword);
       } else if (!ustricmp(source->keyword, L"xhtml-section-numeric")) {
 	wchar_t *p = uadv(source->keyword);
 	int n = 0;
@@ -229,7 +229,7 @@ static xhtmlconfig xhtml_configure(paragraph *source)
 	    ret.fsect[i] = ret.fsect[ret.nfsect-1];
 	  ret.nfsect = n+1;
 	}
-	ret.fsect[n].number_suffix = ustrdup(p);
+	ret.fsect[n].number_suffix = p;
       }
     }
   }
@@ -676,13 +676,7 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords,
     }
     ientry->backend_data = NULL;
   }
-  {
-    int i;
-    sfree(conf.fchapter.number_suffix);
-    for (i = 0; i < conf.nfsect; i++)
-      sfree(conf.fsect[i].number_suffix);
-    sfree(conf.fsect);
-  }
+  sfree(conf.fsect);
 }
 
 static int xhtml_para_level(paragraph *p)
