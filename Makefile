@@ -42,15 +42,15 @@ endif
 
 all install:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
-	@make -C $(BUILDDIR) -f ../Makefile $@ REALBUILD=yes
+	@$(MAKE) -C $(BUILDDIR) -f ../Makefile $@ REALBUILD=yes
 
 spotless: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
-	@make -C $(BUILDDIR) -f ../Makefile spotless REALBUILD=yes
+	@$(MAKE) -C $(BUILDDIR) -f ../Makefile spotless REALBUILD=yes
 
 clean: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
-	@make -C $(BUILDDIR) -f ../Makefile clean REALBUILD=yes
+	@$(MAKE) -C $(BUILDDIR) -f ../Makefile clean REALBUILD=yes
 
 # Remove Halibut output files in the source directory (may
 # have been created by running, for example, `build/halibut
