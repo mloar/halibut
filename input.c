@@ -612,6 +612,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	word **whptr;		       /* to restore from \u alternatives */
 	word **idximplicit;	       /* to restore from \u alternatives */
 	filepos fpos;
+	int in_code;
     } *sitem;
     stack parsestk;
     struct crossparaitem {
@@ -1201,21 +1202,39 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		    if (t.type != tok_lbrace) {
 			error(err_explbr, &t.pos);
 		    } else {
-			wd.text = NULL;
-			wd.type = toquotestyle(style);
-			wd.alt = NULL;
-			wd.aux = quote_Open;
-			wd.fpos = t.pos;
-			wd.breaks = FALSE;
-			if (!indexing || index_visible)
-			    addword(wd, &whptr);
-			if (indexing) {
-			    rdadd(&indexstr, L'"');
-			    addword(wd, &idximplicit);
+			/*
+			 * Enforce that \q may not be used anywhere
+			 * within \c. (It shouldn't be necessary
+			 * since the whole point of \c should be
+			 * that the user wants to exercise exact
+			 * control over the glyphs used, and
+			 * forbidding it has the useful effect of
+			 * relieving some backends of having to
+			 * make difficult decisions.)
+			 */
+			int stype;
+
+			if (style != word_Code && style != word_WeakCode) {
+			    wd.text = NULL;
+			    wd.type = toquotestyle(style);
+			    wd.alt = NULL;
+			    wd.aux = quote_Open;
+			    wd.fpos = t.pos;
+			    wd.breaks = FALSE;
+			    if (!indexing || index_visible)
+				addword(wd, &whptr);
+			    if (indexing) {
+				rdadd(&indexstr, L'"');
+				addword(wd, &idximplicit);
+			    }
+			    stype = stack_quote;
+			} else {
+			    error(err_codequote, &t.pos);
+			    stype = stack_nop;
 			}
 			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
-			sitem->type = stack_quote;
+			sitem->type = stype;
 			stk_push(parsestk, sitem);
 		    }
 		    break;

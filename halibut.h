@@ -221,6 +221,7 @@ enum {
     err_explbr,			       /* expected `{' after command */
     err_commenteof,		       /* EOF inside braced comment */
     err_kwexprbr,		       /* expected `}' after cross-ref */
+    err_codequote,                     /* \q within \c is not supported */
     err_missingrbrace,		       /* unclosed braces at end of para */
     err_missingrbrace2,		       /* unclosed braces at end of file */
     err_nestedstyles,		       /* unable to nest text styles */

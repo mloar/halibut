@@ -117,6 +117,11 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "expected `}' after cross-reference");
 	flags = FILEPOS;
 	break;
+      case err_codequote:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "unable to nest \\q{...} within \\c{...} or \\cw{...}");
+	flags = FILEPOS;
+	break;	
       case err_missingrbrace:
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "unclosed braces at end of paragraph");
