@@ -113,13 +113,14 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	fprintf(fp, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
 	fprintf(fp, "/Encoding [\n");
 	for (i = 0; i < 256; i++)
-	    fprintf(fp, "/%s\n", fe->vector[i] ? fe->vector[i] : ".notdef");
+	    fprintf(fp, "/%s%c", fe->vector[i] ? fe->vector[i] : ".notdef",
+		    i % 4 == 3 ? '\n' : ' ');
 	fprintf(fp, "] def /Metrics 256 dict dup begin\n");
 	for (i = 0; i < 256; i++) {
 	    if (fe->indices[i] >= 0) {
 		double width = fe->font->widths[fe->indices[i]];
 		fprintf(fp, "/%s %g def\n", fe->vector[i],
-			1000.0 * width / 4096.0);
+			1000.0 * width / FUNITS_PER_PT);
 	    }
 	}
 	fprintf(fp, "end def currentdict end\n");
@@ -150,12 +151,12 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	     */
 	    for (xr = page->first_xref; xr; xr = xr->next) {
 		fprintf(fp, "gsave 0.7 setgray %g %g moveto",
-			xr->lx/4096.0, xr->ty/4096.0);
+			xr->lx/FUNITS_PER_PT, xr->ty/FUNITS_PER_PT);
 		fprintf(fp, " %g %g lineto %g %g lineto",
-			xr->lx/4096.0, xr->by/4096.0,
-			xr->rx/4096.0, xr->by/4096.0);
+			xr->lx/FUNITS_PER_PT, xr->by/FUNITS_PER_PT,
+			xr->rx/FUNITS_PER_PT, xr->by/FUNITS_PER_PT);
 		fprintf(fp, " %g %g lineto closepath fill grestore\n",
-			xr->rx/4096.0, xr->ty/4096.0);
+			xr->rx/FUNITS_PER_PT, xr->ty/FUNITS_PER_PT);
 	    }
 	}
 #endif
@@ -163,8 +164,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	for (r = page->first_rect; r; r = r->next) {
 	    fprintf(fp, "%g %g moveto %g 0 rlineto 0 %g rlineto "
 		    "-%g 0 rlineto closepath fill\n",
-		    r->x / 4096.0, r->y / 4096.0, r->w / 4096.0,
-		    r->h / 4096.0, r->w / 4096.0);
+		    r->x / FUNITS_PER_PT, r->y / FUNITS_PER_PT,
+		    r->w / FUNITS_PER_PT, r->h / FUNITS_PER_PT,
+		    r->w / FUNITS_PER_PT);
 	}
 
 	frag = page->first_text;
@@ -181,7 +183,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		 frag_end && frag_end->y == frag->y;
 		 frag_end = frag_end->next);
 
-	    fprintf(fp, "%g[", frag->y / 4096.0);
+	    fprintf(fp, "%g[", frag->y / FUNITS_PER_PT);
 
 	    fe = NULL;
 	    fs = -1;
@@ -193,7 +195,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		fe = frag->fe;
 		fs = frag->fontsize;
 
-		fprintf(fp, "%g(", frag->x/4096.0);
+		fprintf(fp, "%g(", frag->x/FUNITS_PER_PT);
 		for (c = frag->text; *c; c++) {
 		    if (*c == '(' || *c == ')' || *c == '\\')
 			fputc('\\', fp);

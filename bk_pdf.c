@@ -150,7 +150,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		    width = 0.0;
 		else
 		    width = fe->font->widths[fe->indices[i]];
-		sprintf(buf, "%g\n", 1000.0 * width / 4096.0);
+		sprintf(buf, "%g\n", 1000.0 * width / FUNITS_PER_PT);
 		objtext(widths, buf);
 	    }
 	    objtext(widths, "]\n");
@@ -203,7 +203,8 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	 * So we don't need a /Resources entry here.
 	 */
 	sprintf(buf, "/MediaBox [0 0 %g %g]\n",
-		doc->paper_width / 4096.0, doc->paper_height / 4096.0);
+		doc->paper_width / FUNITS_PER_PT,
+		doc->paper_height / FUNITS_PER_PT);
 	objtext(opage, buf);
 
 	/*
@@ -220,8 +221,9 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	 */
 	for (r = page->first_rect; r; r = r->next) {
 	    char buf[512];
-	    sprintf(buf, "%g %g %g %g re f\n", r->x / 4096.0,
-		    r->y / 4096.0, r->w / 4096.0, r->h / 4096.0);
+	    sprintf(buf, "%g %g %g %g re f\n",
+		    r->x / FUNITS_PER_PT, r->y / FUNITS_PER_PT,
+		    r->w / FUNITS_PER_PT, r->h / FUNITS_PER_PT);
 	    objstream(cstr, buf);
 	}
 
@@ -265,10 +267,11 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		 */
 		if (lx < 0) {
 		    sprintf(buf, "1 0 0 1 %g %g Tm ",
-			    frag->x/4096.0, frag->y/4096.0);
+			    frag->x/FUNITS_PER_PT, frag->y/FUNITS_PER_PT);
 		} else {
 		    sprintf(buf, "%g %g Td ",
-			    (frag->x - lx)/4096.0, (frag->y - ly)/4096.0);
+			    (frag->x - lx)/FUNITS_PER_PT,
+			    (frag->y - ly)/FUNITS_PER_PT);
 		}
 		objstream(cstr, buf);
 		lx = x = frag->x;
@@ -291,7 +294,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 			if (frag->x != x) {
 			    sprintf(buf, "%g",
 				    (x - frag->x) * 1000.0 /
-				    (4096.0 * frag->fontsize));
+				    (FUNITS_PER_PT * frag->fontsize));
 			    objstream(cstr, buf);
 			}
 			pdf_string(objstream, cstr, frag->text);
@@ -330,8 +333,8 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
 		objtext(annot, "<<\n/Type /Annot\n/Subtype /Link\n/Rect [");
 		sprintf(buf, "%g %g %g %g",
-			xr->lx / 4096.0, xr->by / 4096.0,
-			xr->rx / 4096.0, xr->ty / 4096.0);
+			xr->lx / FUNITS_PER_PT, xr->by / FUNITS_PER_PT,
+			xr->rx / FUNITS_PER_PT, xr->ty / FUNITS_PER_PT);
 		objtext(annot, buf);
 		objtext(annot, "]\n/Border [0 0 0]\n");
 

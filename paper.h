@@ -8,6 +8,10 @@
 #ifndef HALIBUT_PAPER_H
 #define HALIBUT_PAPER_H
 
+/* Number of internal units per PostScript point. */
+#define UNITS_PER_PT 4096
+#define FUNITS_PER_PT 4096.0
+
 typedef struct document_Tag document;
 typedef struct font_data_Tag font_data;
 typedef struct font_encoding_Tag font_encoding;

@@ -199,31 +199,31 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     /*
      * Defaults.
      */
-    ret.paper_width = 595 * 4096;
-    ret.paper_height = 841 * 4096;
-    ret.left_margin = 72 * 4096;
-    ret.top_margin = 72 * 4096;
-    ret.right_margin = 72 * 4096;
-    ret.bottom_margin = 108 * 4096;
-    ret.indent_list_bullet = 6 * 4096;
-    ret.indent_list_after = 18 * 4096;
-    ret.indent_quote = 18 * 4096;
-    ret.base_leading = 4096;
-    ret.base_para_spacing = 10 * 4096;
-    ret.chapter_top_space = 72 * 4096;
-    ret.sect_num_left_space = 12 * 4096;
-    ret.chapter_underline_depth = 14 * 4096;
-    ret.chapter_underline_thickness = 3 * 4096;
-    ret.rule_thickness = 1 * 4096;
+    ret.paper_width = 595 * UNITS_PER_PT;
+    ret.paper_height = 841 * UNITS_PER_PT;
+    ret.left_margin = 72 * UNITS_PER_PT;
+    ret.top_margin = 72 * UNITS_PER_PT;
+    ret.right_margin = 72 * UNITS_PER_PT;
+    ret.bottom_margin = 108 * UNITS_PER_PT;
+    ret.indent_list_bullet = 6 * UNITS_PER_PT;
+    ret.indent_list_after = 18 * UNITS_PER_PT;
+    ret.indent_quote = 18 * UNITS_PER_PT;
+    ret.base_leading = UNITS_PER_PT;
+    ret.base_para_spacing = 10 * UNITS_PER_PT;
+    ret.chapter_top_space = 72 * UNITS_PER_PT;
+    ret.sect_num_left_space = 12 * UNITS_PER_PT;
+    ret.chapter_underline_depth = 14 * UNITS_PER_PT;
+    ret.chapter_underline_thickness = 3 * UNITS_PER_PT;
+    ret.rule_thickness = 1 * UNITS_PER_PT;
     ret.base_font_size = 12;
-    ret.contents_indent_step = 24 * 4096;
-    ret.contents_margin = 84 * 4096;
-    ret.leader_separation = 12 * 4096;
-    ret.index_gutter = 36 * 4096;
+    ret.contents_indent_step = 24 * UNITS_PER_PT;
+    ret.contents_margin = 84 * UNITS_PER_PT;
+    ret.leader_separation = 12 * UNITS_PER_PT;
+    ret.index_gutter = 36 * UNITS_PER_PT;
     ret.index_cols = 2;
-    ret.index_minsep = 18 * 4096;
+    ret.index_minsep = 18 * UNITS_PER_PT;
     ret.pagenum_fontsize = 12;
-    ret.footer_distance = 32 * 4096;
+    ret.footer_distance = 32 * UNITS_PER_PT;
     ret.lquote = L"\x2018\0\x2019\0'\0'\0\0";
     ret.rquote = uadv(ret.lquote);
     ret.bullet = L"\x2022\0-\0\0";
@@ -257,70 +257,70 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 		ret.bullet = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"paper-page-width")) {
 		ret.paper_width =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-page-height")) {
 		ret.paper_height =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-left-margin")) {
 		ret.left_margin =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-top-margin")) {
 		ret.top_margin =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-right-margin")) {
 		ret.right_margin =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-bottom-margin")) {
 		ret.bottom_margin =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-list-indent")) {
 		ret.indent_list_bullet =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-listitem-indent")) {
 		ret.indent_list =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-quote-indent")) {
 		ret.indent_quote =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-base-leading")) {
 		ret.base_leading =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-base-para-spacing")) {
 		ret.base_para_spacing =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-chapter-top-space")) {
 		ret.chapter_top_space =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-sect-num-left-space")) {
 		ret.sect_num_left_space =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-chapter-underline-depth")) {
 		ret.chapter_underline_depth =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-chapter-underline-thickness")) {
 		ret.chapter_underline_thickness =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-rule-thickness")) {
 		ret.rule_thickness =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-contents-indent-step")) {
 		ret.contents_indent_step =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-contents-margin")) {
 		ret.contents_margin =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-leader-separation")) {
 		ret.leader_separation =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-index-gutter")) {
 		ret.index_gutter =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-index-minsep")) {
 		ret.index_minsep =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-footer-distance")) {
 		ret.footer_distance =
-		    (int) 0.5 + 4096.0 * utof(uadv(p->keyword));
+		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-base-font-size")) {
 		ret.base_font_size =
 		    utoi(uadv(p->keyword));
@@ -1433,7 +1433,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	for (i = 0; i < NFONTS; i++)
 	    if (line_height < pdata->sizes[i])
 		line_height = pdata->sizes[i];
-	line_height *= 4096;
+	line_height *= UNITS_PER_PT;
     }
 
     spacewidth = (pdata->sizes[FONT_NORMAL] *
@@ -1444,7 +1444,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	 * comes up, but I'll make a random guess anyway and set my
 	 * space width to half the point size.
 	 */
-	spacewidth = pdata->sizes[FONT_NORMAL] * 4096 / 2;
+	spacewidth = pdata->sizes[FONT_NORMAL] * UNITS_PER_PT / 2;
     }
 
     /*
@@ -2314,7 +2314,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
 	ldata->pdata = pdata;
 	ldata->first = lhead;
 	ldata->end = NULL;
-	ldata->line_height = conf->base_font_size * 4096;
+	ldata->line_height = conf->base_font_size * UNITS_PER_PT;
 
 	ldata->xpos = indent;
 
