@@ -450,7 +450,7 @@ static void text_rdaddwc(rdstringc *rs, word *text, word *end) {
 		  attraux(text->aux) == attr_Only))
 	    rdaddc(rs, '`');	       /* FIXME: configurability */
 	if (removeattr(text->type) == word_Normal) {
-	    if (text_convert(text->text, &c))
+	    if (text_convert(text->text, &c) || !text->alt)
 		rdaddsc(rs, c);
 	    else
 		text_rdaddwc(rs, text->alt, NULL);
@@ -505,7 +505,7 @@ static int text_width(void *ctx, word *text) {
 		 ? (attraux(text->aux) == attr_Only ? 2 :
 		    attraux(text->aux) == attr_Always ? 0 : 1)
 		 : 0) +
-		(text_convert(text->text, NULL) ?
+		(text_convert(text->text, NULL) || !text->alt ?
 		 ustrlen(text->text) :
 		 text_width_list(ctx, text->alt)));
 

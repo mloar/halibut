@@ -1651,7 +1651,8 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end, int indexable) {
 	    rdaddsc(rs, "<code>");
 
 	if (removeattr(text->type) == word_Normal) {
-	  if (xhtml_convert(text->text, 0, &c, TRUE)) /* spaces in the word are hard */
+	  if (xhtml_convert(text->text, 0, &c, TRUE) || !text->alt)
+		/* spaces in the word are hard */
 	    rdaddsc(rs, c);
 	  else
 	    xhtml_rdaddwc(rs, text->alt, NULL, indexable);

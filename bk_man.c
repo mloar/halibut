@@ -372,7 +372,7 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	if (removeattr(text->type) == word_Normal) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    if (man_convert(text->text, 0, &c, quote_props))
+	    if (man_convert(text->text, 0, &c, quote_props) || !text->alt)
 		rdaddsc(rs, c);
 	    else
 		man_rdaddwc(rs, text->alt, NULL, quote_props);

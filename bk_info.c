@@ -747,7 +747,7 @@ static void info_rdaddwc(rdstringc *rs, word *words, word *end, int xrefs) {
 		  attraux(words->aux) == attr_Only))
 	    rdaddc(rs, '`');	       /* FIXME: configurability */
 	if (removeattr(words->type) == word_Normal) {
-	    if (info_convert(words->text, &c))
+	    if (info_convert(words->text, &c) || !words->alt)
 		rdaddsc(rs, c);
 	    else
 		info_rdaddwc(rs, words->alt, NULL, FALSE);
@@ -807,7 +807,7 @@ static int info_width_internal(word *words, int xrefs) {
 		 ? (attraux(words->aux) == attr_Only ? 2 :
 		    attraux(words->aux) == attr_Always ? 0 : 1)
 		 : 0) +
-		(info_convert(words->text, NULL) ?
+		(info_convert(words->text, NULL) || !words->alt ?
 		 ustrlen(words->text) :
 		 info_width_internal_list(words->alt, xrefs)));
 

@@ -628,7 +628,7 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
 	    whlp_set_font(state->h, newfont);
 	}
 	if (removeattr(text->type) == word_Normal) {
-	    if (whlp_convert(text->text, 0, &c, TRUE))
+	    if (whlp_convert(text->text, 0, &c, TRUE) || !text->alt)
 		whlp_text(state->h, c);
 	    else
 		whlp_mkparagraph(state, deffont, text->alt, FALSE);
