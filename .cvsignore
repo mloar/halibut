@@ -1,0 +1,7 @@
+build
+*.html *.txt
+*.cnt *.hlp
+*.gid *.GID
+*.log
+*.1
+*.info *.info-*
