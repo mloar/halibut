@@ -12,8 +12,6 @@
 /*
  * To be done:
  * 
- *  - index
- * 
  *  - header/footer? Page numbers at least would be handy. Fully
  *    configurable footer can wait, though.
  * 
@@ -89,6 +87,10 @@ struct paper_idx_Tag {
     page_data *lastpage;
 };
 
+enum {
+    word_PageXref = word_NotWordType + 1
+};
+
 static font_data *make_std_font(font_list *fontlist, char const *name);
 static void wrap_paragraph(para_data *pdata, word *words,
 			   int w, int i1, int i2);
@@ -113,6 +115,8 @@ static wchar_t *prepare_outline_title(word *first, wchar_t *separator,
 				      word *second);
 static word *fake_word(wchar_t *text);
 static word *fake_space_word(void);
+static word *fake_page_ref(page_data *page);
+static word *fake_end_ref(void);
 static word *prepare_contents_title(word *first, wchar_t *separator,
 				    word *second);
 static void fold_into_page(page_data *dest, page_data *src, int right_shift);
@@ -1113,6 +1117,7 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces)
       case word_HyperEnd:
       case word_UpperXref:
       case word_LowerXref:
+      case word_PageXref:
       case word_XrefEnd:
       case word_IndexRef:
 	return 0;
@@ -1593,11 +1598,16 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 	  case word_HyperLink:
 	  case word_UpperXref:
 	  case word_LowerXref:
+	  case word_PageXref:
 
 	    if (text->type == word_HyperLink) {
 		dest.type = URL;
 		dest.url = utoa_dup(text->text);
 		dest.page = NULL;
+	    } else if (text->type == word_PageXref) {
+		dest.type = PAGE;
+		dest.url = NULL;
+		dest.page = (page_data *)text->private_data;
 	    } else {
 		keyword *kwl = kw_lookup(keywords, text->text);
 		para_data *pdata;
@@ -1671,17 +1681,23 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		     * mention it once in the index.
 		     */
 		    if (pi->lastpage != page) {
+			word **wp;
+
 			if (pi->lastword) {
 			    pi->lastword = pi->lastword->next =
 				fake_word(L",");
 			    pi->lastword = pi->lastword->next =
 				fake_space_word();
-			    pi->lastword = pi->lastword->next =
-				fake_word(page->number);
-			} else {
-			    pi->lastword = pi->words =
-				fake_word(page->number);
-			}
+			    wp = &pi->lastword->next;
+			} else
+			    wp = &pi->words;
+
+			pi->lastword = *wp =
+			    fake_page_ref(page);
+			pi->lastword = pi->lastword->next =
+			    fake_word(page->number);
+			pi->lastword = pi->lastword->next =
+			    fake_end_ref();
 		    }
 
 		    pi->lastpage = page;
@@ -2197,6 +2213,31 @@ static word *fake_space_word(void)
     ret->type = word_WhiteSpace;
     ret->text = NULL;
     ret->breaks = TRUE;
+    ret->aux = 0;
+    return ret;
+}
+
+static word *fake_page_ref(page_data *page)
+{
+    word *ret = mknew(word);
+    ret->next = NULL;
+    ret->alt = NULL;
+    ret->type = word_PageXref;
+    ret->text = NULL;
+    ret->breaks = FALSE;
+    ret->aux = 0;
+    ret->private_data = page;
+    return ret;
+}
+
+static word *fake_end_ref(void)
+{
+    word *ret = mknew(word);
+    ret->next = NULL;
+    ret->alt = NULL;
+    ret->type = word_XrefEnd;
+    ret->text = NULL;
+    ret->breaks = FALSE;
     ret->aux = 0;
     return ret;
 }

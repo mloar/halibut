@@ -114,6 +114,10 @@ enum {
     para_LcontPop,		       /* end continuation of list item */
     para_QuotePush,		       /* begin block quote */
     para_QuotePop,		       /* end block quote */
+    /*
+     * Back ends may define their own paragraph types beyond here,
+     * in case they need to use them internally.
+     */
     para_NotParaType		       /* placeholder value */
 };
 
@@ -153,7 +157,12 @@ enum {
     word_XrefEnd,		       /* (invisible; no text) */
     word_IndexRef,		       /* (always an invisible one) */
     word_HyperLink,		       /* (invisible) */
-    word_HyperEnd		       /* (also invisible; no text) */
+    word_HyperEnd,		       /* (also invisible; no text) */
+    /*
+     * Back ends may define their own word types beyond here, in
+     * case they need to use them internally.
+     */
+    word_NotWordType		       /* placeholder value */
 };
 /* aux values for attributed words */
 enum {
