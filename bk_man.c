@@ -205,7 +205,10 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	    else
 		depth = 0;
 	    if (depth >= conf.mindepth) {
-		fprintf(fp, ".SH \"");
+		if (depth > conf.mindepth)
+		    fprintf(fp, ".SS \"");
+		else
+		    fprintf(fp, ".SH \"");
 		if (conf.headnumbers && p->kwtext) {
 		    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, &conf);
 		    fprintf(fp, " ");
