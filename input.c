@@ -978,6 +978,8 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			/*
 			 * Special cases: \W{}\c, \W{}\e, \W{}\cw
 			 */
+			sitem = mknew(struct stack_item);
+			sitem->type = stack_hyper;
 			if (t.type == tok_cmd &&
 			    (t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
 			    if (style != word_Normal)
@@ -993,9 +995,8 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			}
 			if (t.type != tok_lbrace) {
 			    error(err_explbr, &t.pos);
+			    sfree(sitem);
 			} else {
-			    sitem = mknew(struct stack_item);
-			    sitem->type = stack_hyper;
 			    stk_push(parsestk, sitem);
 			}
 		    }
