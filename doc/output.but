@@ -119,7 +119,7 @@ the ASCII minus sign otherwise.
 \dd Specifies the alignment of the overall document title: \c{left},
 \c{leftplus} or \c{centre}.
 
-\dt \I{\cw{\\cfg\{text-title-underline\}}}\cw{\\cfg\{text-title-underline\}\{}\e{underline-character}\cw{\}}
+\dt \I{\cw{\\cfg\{text-title-underline\}}}\cw{\\cfg\{text-title-underline\}\{}\e{underline-text}\cw{\}}
 
 \dd Specifies how the overall document title should be underlined.
 
@@ -127,7 +127,7 @@ the ASCII minus sign otherwise.
 
 \dd Specifies the alignment of chapter and appendix headings.
 
-\dt \I{\cw{\\cfg\{text-chapter-underline\}}}\cw{\\cfg\{text-chapter-underline\}\{}\e{underline-character}\cw{\}}
+\dt \I{\cw{\\cfg\{text-chapter-underline\}}}\cw{\\cfg\{text-chapter-underline\}\{}\e{underline-text}\cw{\}}
 
 \dd Specifies how chapter and appendix headings should be underlined.
 
@@ -156,7 +156,7 @@ headings you want to affect: 0 means first-level headings (\c{\\H}),
 that (\c{\\S2}), and so on. The \e{alignment} parameter is treated
 just like the other alignment directives listed above.
 
-\dt \I{\cw{\\cfg\{text-section-underline\}}}\cw{\\cfg\{text-section-underline\}\{}\e{level}\cw{\}\{}\e{underline-character}\cw{\}}
+\dt \I{\cw{\\cfg\{text-section-underline\}}}\cw{\\cfg\{text-section-underline\}\{}\e{level}\cw{\}\{}\e{underline-text}\cw{\}}
 
 \dd Specifies how to underline section headings at a particular level.
 
