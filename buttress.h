@@ -16,8 +16,6 @@
 #define FALSE 0
 #endif
 
-#define lenof(x) ( sizeof((x)) / sizeof(*(x)) )
-
 /*
  * Structure tags
  */
@@ -160,6 +158,11 @@ void sfree(void *p);
 void free_word_list(word *w);
 void free_para_list(paragraph *p);
 word *dup_word_list(word *w);
+
+#define mknew(type) ( (type *) smalloc (sizeof (type)) )
+#define mknewa(type, number) ( (type *) smalloc ((number) * sizeof (type)) )
+#define resize(array, len) ( srealloc ((array), (len) * sizeof (*(array))) )
+#define lenof(array) ( sizeof(array) / sizeof(*(array)) )
 
 /*
  * ustring.c

@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
     /*
      * Set up initial (default) parameters.
      */
-    infiles = smalloc(argc*sizeof(char *));
+    infiles = mknewa(char *, argc);
     outfile = NULL;
     nfiles = 0;
     nogo = errs = FALSE;

@@ -13,7 +13,7 @@ struct stackTag {
 stack stk_new(void) {
     stack s;
 
-    s = smalloc(sizeof(*s));
+    s = mknew(stack);
     s->sp = 0;
     s->size = 0;
     s->data = NULL;
@@ -29,7 +29,7 @@ void stk_free(stack s) {
 void stk_push(stack s, void *item) {
     if (s->size <= s->sp) {
 	s->size = s->sp + 32;
-	s->data = srealloc(s->data, s->size * sizeof(*s->data));
+	s->data = resize(s->data, s->size);
     }
     s->data[s->sp++] = item;
 }

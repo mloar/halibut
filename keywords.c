@@ -20,7 +20,7 @@ static void heap_add(keywordlist *kl, keyword *key) {
     int p;
     if (kl->nkeywords >= kl->size) {
 	kl->size = kl->nkeywords + 128;
-	kl->keys = srealloc(kl->keys, sizeof(*kl->keys) * kl->size);
+	kl->keys = resize(kl->keys, kl->size);
     }
     p = kl->nkeywords++;
     kl->keys[p] = key;
@@ -34,7 +34,7 @@ static void heap_sort(keywordlist *kl) {
     int i, j;
 
     kl->size = kl->nkeywords;
-    kl->keys = srealloc(kl->keys, sizeof(*kl->keys) * kl->size);
+    kl->keys = resize(kl->keys, kl->size);
 
     i = kl->nkeywords;
     while (i > 1) {
@@ -86,7 +86,7 @@ keyword *kw_lookup(keywordlist *kl, wchar_t *str) {
  * finish).
  */
 keywordlist *get_keywords(paragraph *source) {
-    keywordlist *kl = smalloc(sizeof(*kl));
+    keywordlist *kl = mknew(keywordlist);
     numberstate *n = number_init();
     int prevpara = para_NotParaType;
 
@@ -105,7 +105,7 @@ keywordlist *get_keywords(paragraph *source) {
 	    if (source->kwtext || source->type == para_Biblio) {
 		wchar_t *p = source->keyword;
 		while (*p) {
-		    keyword *kw = smalloc(sizeof(*kw));
+		    keyword *kw = mknew(keyword);
 		    kw->key = p;
 		    kw->text = source->kwtext;
 		    kw->para = source;
@@ -149,7 +149,7 @@ void subst_keywords(paragraph *source, keywordlist *kl) {
 		if (subst && ptr->type == word_LowerXref)
 		    ustrlow(subst->text);
 
-		close = smalloc(sizeof(word));
+		close = mknew(word);
 		close->text = NULL;
 		close->alt = NULL;
 		close->type = word_XrefEnd;

@@ -82,7 +82,7 @@ word *dup_word_list(word *w) {
     word *head, **eptr = &head;
 
     while (w) {
-	word *newwd = smalloc(sizeof(word));
+	word *newwd = mknew(word);
 	*newwd = *w;		       /* structure copy */
 	newwd->text = ustrdup(w->text);
 	if (w->alt)

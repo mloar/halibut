@@ -9,10 +9,10 @@
 wchar_t *ustrdup(wchar_t *s) {
     wchar_t *r;
     if (s) {
-	r = smalloc((1+ustrlen(s)) * sizeof(wchar_t));
+	r = mknewa(wchar_t, 1+ustrlen(s));
 	ustrcpy(r, s);
     } else {
-	r = smalloc(1);
+	r = mknew(wchar_t);
 	*r = 0;
     }
     return r;
@@ -85,7 +85,7 @@ wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
      */
     if (wfmt) {
 	len = ustrlen(wfmt);
-	fmt = smalloc(2+len);
+	fmt = mknewa(char, 2+len);
 	ustrtoa(wfmt, fmt+1, len+1);
 	fmt[0] = ' ';
     } else
@@ -93,15 +93,15 @@ wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
 
     while (1) {
 	size += USTRFTIME_DELTA;
-	blk = srealloc(blk, size);
+	blk = resize((char *)blk, size);
 	len = strftime((char *)blk, size-1, fmt, timespec);
 	if (len > 0)
 	    break;
     }
 
     /* Note: +1 for the terminating 0, -1 for the initial space in fmt */
-    wblk = srealloc(blk, len * sizeof(wchar_t));
-    text = smalloc(len);
+    wblk = resize((wchar_t *)blk, len);
+    text = mknewa(char, len);
     strftime(text, len, fmt+1, timespec);
     /*
      * We operate in the C locale, so this all ought to be kosher

@@ -86,7 +86,7 @@ struct tagRdstring {
 static void rdadd(rdstring *rs, wchar_t c) {
     if (rs->pos >= rs->size-1) {
 	rs->size = rs->pos + 128;
-	rs->text = srealloc(rs->text, rs->size * sizeof(wchar_t));
+	rs->text = resize(rs->text, rs->size);
     }
     rs->text[rs->pos++] = c;
     rs->text[rs->pos] = 0;
@@ -95,13 +95,13 @@ static void rdadds(rdstring *rs, wchar_t *p) {
     int len = ustrlen(p);
     if (rs->pos >= rs->size - len) {
 	rs->size = rs->pos + len + 128;
-	rs->text = srealloc(rs->text, rs->size * sizeof(wchar_t));
+	rs->text = resize(rs->text, rs->size);
     }
     ustrcpy(rs->text + rs->pos, p);
     rs->pos += len;
 }
 static wchar_t *rdtrim(rdstring *rs) {
-    rs->text = srealloc(rs->text, (rs->pos + 1) * sizeof(wchar_t));
+    rs->text = resize(rs->text, rs->pos + 1);
     return rs->text;
 }
 
@@ -410,7 +410,7 @@ token get_codepar_token(input *in) {
  * Adds a new word to a linked list
  */
 static word *addword(word newword, word ***hptrptr) {
-    word *mnewword = smalloc(sizeof(word));
+    word *mnewword = mknew(word);
     *mnewword = newword;	       /* structure copy */
     mnewword->next = NULL;
     **hptrptr = mnewword;
@@ -422,7 +422,7 @@ static word *addword(word newword, word ***hptrptr) {
  * Adds a new paragraph to a linked list
  */
 static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
-    paragraph *mnewpara = smalloc(sizeof(paragraph));
+    paragraph *mnewpara = mknew(paragraph);
     *mnewpara = newpara;	       /* structure copy */
     mnewpara->next = NULL;
     **hptrptr = mnewpara;
@@ -668,7 +668,7 @@ static void read_file(paragraph ***ret, input *in) {
 	      case tok_lbrace:
 		error(err_unexbrace, &t.pos);
 		/* Error recovery: push nop */
-		sitem = smalloc(sizeof(*sitem));
+		sitem = mknew(struct stack_item);
 		sitem->type = stack_nop;
 		stk_push(parsestk, sitem);
 		break;
@@ -781,7 +781,7 @@ static void read_file(paragraph ***ret, input *in) {
 			if (t.type != tok_lbrace) {
 			    error(err_explbr, &t.pos);
 			} else {
-			    sitem = smalloc(sizeof(*sitem));
+			    sitem = mknew(struct stack_item);
 			    sitem->type = stack_hyper;
 			    stk_push(parsestk, sitem);
 			}
@@ -795,7 +795,7 @@ static void read_file(paragraph ***ret, input *in) {
 			error(err_nestedstyles, &t.pos);
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
-			sitem = smalloc(sizeof(*sitem));
+			sitem = mknew(struct stack_item);
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
@@ -806,7 +806,7 @@ static void read_file(paragraph ***ret, input *in) {
 			style = (type == c_c ? word_Code :
 				 type == c_cw ? word_WeakCode :
 				 word_Emph);
-			sitem = smalloc(sizeof(*sitem));
+			sitem = mknew(struct stack_item);
 			sitem->type = stack_style;
 			stk_push(parsestk, sitem);
 		    }
@@ -819,11 +819,11 @@ static void read_file(paragraph ***ret, input *in) {
 			error(err_nestedindex, &t.pos);
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
-			sitem = smalloc(sizeof(*sitem));
+			sitem = mknew(struct stack_item);
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
-		    sitem = smalloc(sizeof(*sitem));
+		    sitem = mknew(struct stack_item);
 		    sitem->type = stack_idx;
 		    dtor(t), t = get_token(in);
 		    /*
@@ -881,7 +881,7 @@ static void read_file(paragraph ***ret, input *in) {
 			 * sidetrack from the main thread of the
 			 * paragraph.
 			 */
-			sitem = smalloc(sizeof(*sitem));
+			sitem = mknew(struct stack_item);
 			sitem->type = stack_ualt;
 			sitem->whptr = whptr;
 			stk_push(parsestk, sitem);

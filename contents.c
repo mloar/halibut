@@ -18,13 +18,12 @@ struct numberstate_Tag {
 };
 
 numberstate *number_init(void) {
-    numberstate *ret = smalloc(sizeof(numberstate));
+    numberstate *ret = mknew(numberstate);
     ret->chapternum = 0;
     ret->appendixnum = -1;
     ret->ischapter = 1;
     ret->maxsectlevel = 32;
-    ret->sectionlevels = smalloc(ret->maxsectlevel *
-				 sizeof(*ret->sectionlevels));
+    ret->sectionlevels = mknewa(int, ret->maxsectlevel);
     ret->listitem = -1;
     return ret;
 }
@@ -34,7 +33,7 @@ void number_free(numberstate *state) {
 }
 
 static void dotext(word ***wret, wchar_t *text) {
-    word *mnewword = smalloc(sizeof(word));
+    word *mnewword = mknew(word);
     mnewword->text = ustrdup(text);
     mnewword->type = word_Normal;
     mnewword->alt = NULL;
@@ -44,7 +43,7 @@ static void dotext(word ***wret, wchar_t *text) {
 }
 
 static void dospace(word ***wret) {
-    word *mnewword = smalloc(sizeof(word));
+    word *mnewword = mknew(word);
     mnewword->text = NULL;
     mnewword->type = word_WhiteSpace;
     mnewword->alt = NULL;
@@ -109,9 +108,8 @@ word *number_mktext(numberstate *state, int para, int aux, int prev) {
 	level = (para == para_Heading ? 0 : aux);
 	if (state->maxsectlevel <= level) {
 	    state->maxsectlevel = level + 32;
-	    state->sectionlevels = srealloc(state->sectionlevels,
-					    state->maxsectlevel *
-					    sizeof(*state->sectionlevels));
+	    state->sectionlevels = resize(state->sectionlevels,
+					  state->maxsectlevel);
 	}
 	state->sectionlevels[level]++;
 	for (i = level+1; i < state->maxsectlevel; i++)
