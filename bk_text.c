@@ -581,6 +581,6 @@ static void text_versionid(FILE *fp, word *text) {
     text_rdaddwc(&t, text, NULL);
     rdaddc(&t, ']');		       /* FIXME: configurability */
 
-    fprintf(fp, "%s\n\n", t.text);
+    fprintf(fp, "%s\n", t.text);
     sfree(t.text);
 }

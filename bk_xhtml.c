@@ -70,7 +70,6 @@ typedef struct {
   wchar_t *author, *description;
   wchar_t *head_end, *body, *body_start, *body_end, *address_start, *address_end;
   int suppress_address;
-  word *version_id;
 } xhtmlconfig;
 
 /*static void xhtml_level(paragraph *, int);
@@ -81,7 +80,7 @@ static void xhtml_dobody(FILE *, paragraph *, int);*/
 
 static void xhtml_doheader(FILE *, word *);
 static void xhtml_dofooter(FILE *);
-static void xhtml_versionid(FILE *, word *);
+static void xhtml_versionid(FILE *, word *, int);
 
 static void xhtml_utostr(wchar_t *, char **);
 static int xhtml_para_level(paragraph *);
@@ -125,7 +124,6 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   ret.leaf_smallest_contents = 4;
   ret.leaf_contains_contents = FALSE;
   ret.include_version_id = TRUE;
-  ret.version_id = NULL;
   ret.author = NULL;
   ret.description = NULL;
   ret.head_end = NULL;
@@ -182,10 +180,6 @@ static xhtmlconfig xhtml_configure(paragraph *source)
       } else if (!ustricmp(source->keyword, L"xhtml-address-end")) {
         ret.address_end = uadv(source->keyword);
       }
-    }
-    else if (source->type == para_VersionID)
-    {
-      ret.version_id = source->words;
     }
   }
 
@@ -1120,8 +1114,15 @@ static void xhtml_dofooter(FILE *fp)
     if (conf.address_start)
       fprintf(fp, "%ls\n", conf.address_start);
     /* Do the version ID */
-    if (conf.include_version_id && conf.version_id)
-      xhtml_versionid(fp, conf.version_id);
+    if (conf.include_version_id) {
+      paragraph *p;
+      int started = 0;
+      for (p = sourceparas; p; p = p->next)
+	if (p->type == para_VersionID) {
+	  xhtml_versionid(fp, p->words, started);
+	  started = 1;
+	}
+    }
     if (conf.address_end)
       fprintf(fp, "%ls\n", conf.address_end);
     fprintf(fp, "</address>\n");
@@ -1133,7 +1134,7 @@ static void xhtml_dofooter(FILE *fp)
  * Output the versionid paragraph. Typically this is a version control
  * ID string (such as $Id...$ in RCS).
  */
-static void xhtml_versionid(FILE *fp, word *text)
+static void xhtml_versionid(FILE *fp, word *text, int started)
 {
   rdstringc t = { 0, 0, NULL };
 
@@ -1141,7 +1142,9 @@ static void xhtml_versionid(FILE *fp, word *text)
   xhtml_rdaddwc(&t, text, NULL);
   rdaddc(&t, ']');		       /* FIXME: configurability */
 
-  fprintf(fp, "%s\n\n", t.text);
+  if (started)
+    fprintf(fp, "<br>\n");
+  fprintf(fp, "%s\n", t.text);
   sfree(t.text);
 }
 
