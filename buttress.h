@@ -31,6 +31,7 @@ typedef struct keyword_Tag keyword;
 typedef struct userstyle_Tag userstyle;
 typedef struct numberstate_Tag numberstate;
 typedef struct index_Tag index;
+typedef struct macrostack_Tag macrostack;
 
 /*
  * Data structure to hold a file name and index, a line and a
@@ -44,17 +45,20 @@ struct filepos_Tag {
 /*
  * Data structure to hold all the file names etc for input
  */
-#define INPUT_PUSHBACK_MAX 1
+typedef struct pushback_Tag {
+    int chr;
+    filepos pos;
+} pushback;
 struct input_Tag {
     char **filenames;		       /* complete list of input files */
     int nfiles;			       /* how many in the list */
     FILE *currfp;		       /* the currently open one */
     int currindex;		       /* which one is that in the list */
-    int pushback[INPUT_PUSHBACK_MAX];  /* pushed-back input characters */
-    int npushback;
+    pushback *pushback;		       /* pushed-back input characters */
+    int npushback, pushbacksize;
+    filepos pos;
     int reportcols;		       /* report column numbers in errors */
-    filepos pos[1+INPUT_PUSHBACK_MAX];
-    int posptr;
+    macrostack *stack;		       /* macro expansions in force */
 };
 
 /*
@@ -101,6 +105,7 @@ struct word_Tag {
     word *next, *alt;
     int type;
     int aux;
+    int breaks;			       /* can a line break after it? */
     wchar_t *text;
     filepos fpos;
 };
@@ -166,7 +171,8 @@ enum {
     err_nosuchkw,		       /* unresolved cross-reference */
     err_multiBR,		       /* multiple \BRs on same keyword */
     err_nosuchidxtag,		       /* \IM on unknown index tag (warning) */
-    err_cantopenw		       /* can't open output file for write */
+    err_cantopenw,		       /* can't open output file for write */
+    err_macroexists		       /* this macro already exists */
 };
 
 /*

@@ -10,64 +10,127 @@
 #define TAB_STOP 8		       /* for column number tracking */
 
 static void setpos(input *in, char *fname) {
-    in->pos[0].filename = fname;
-    in->pos[0].line = 1;
-    in->pos[0].col = (in->reportcols ? 1 : -1);
-    in->pos[1] = in->pos[0];
-    in->posptr = 1;
+    in->pos.filename = fname;
+    in->pos.line = 1;
+    in->pos.col = (in->reportcols ? 1 : -1);
 }
 
-static filepos getpos(input *in) {
-    return in->pos[in->posptr];
+static void unget(input *in, int c, filepos *pos) {
+    if (in->npushback >= in->pushbacksize) {
+	in->pushbacksize = in->npushback + 16;
+	in->pushback = resize(in->pushback, in->pushbacksize);
+    }
+    in->pushback[in->npushback].chr = c;
+    in->pushback[in->npushback].pos = *pos;   /* structure copy */
+    in->npushback++;
 }
 
-static void unget(input *in, int c) {
-    assert(in->npushback < INPUT_PUSHBACK_MAX);
-    in->pushback[in->npushback++] = c;
-    in->posptr += lenof(in->pos)-1;
-    in->posptr %= lenof(in->pos);
+/* ---------------------------------------------------------------------- */
+/*
+ * Macro subsystem
+ */
+typedef struct macro_Tag macro;
+struct macro_Tag {
+    wchar_t *name, *text;
+};
+struct macrostack_Tag {
+    macrostack *next;
+    wchar_t *text;
+    int ptr, npushback;
+    filepos pos;
+};
+static int macrocmp(void *av, void *bv) {
+    macro *a = (macro *)av, *b = (macro *)bv;
+    return ustrcmp(a->name, b->name);
+}
+static void macrodef(tree23 *macros, wchar_t *name, wchar_t *text,
+		     filepos fpos) {
+    macro *m = mknew(macro);
+    m->name = name;
+    m->text = text;
+    if (add23(macros, m, macrocmp) != m) {
+	error(err_macroexists, &fpos, name);
+	sfree(name);
+	sfree(text);
+    }
+}
+static int macrolookup(tree23 *macros, input *in, wchar_t *name,
+		       filepos *pos) {
+    macro m, *gotit;
+    m.name = name;
+    gotit = find23(macros, &m, macrocmp);
+    if (gotit) {
+	macrostack *expansion = mknew(macrostack);
+	expansion->next = in->stack;
+	expansion->text = gotit->text;
+	expansion->pos = *pos;	       /* structure copy */
+	expansion->ptr = 0;
+	expansion->npushback = in->npushback;
+	in->stack = expansion;
+	return TRUE;
+    } else
+	return FALSE;
+}
+static void macrocleanup(tree23 *macros) {
+    enum23 e;
+    macro *m;
+    for (m = (macro *)first23(macros, &e); m;
+	 m = (macro *)next23(&e)) {
+	sfree(m->name);
+	sfree(m->text);
+	sfree(m);
+    }
+    freetree23(macros);
 }
 
 /*
  * Can return EOF
  */
-static int get(input *in) {
-    if (in->npushback) {
-	in->posptr++;
-	in->posptr %= lenof(in->pos);
-	return in->pushback[--in->npushback];
+static int get(input *in, filepos *pos) {
+    int pushbackpt = in->stack ? in->stack->npushback : 0;
+    if (in->npushback > pushbackpt) {
+	--in->npushback;
+	if (pos)
+	    *pos = in->pushback[in->npushback].pos;   /* structure copy */
+	return in->pushback[in->npushback].chr;
+    }
+    else if (in->stack) {
+	wchar_t c = in->stack->text[in->stack->ptr];
+	if (in->stack->text[++in->stack->ptr] == L'\0') {
+	    macrostack *tmp = in->stack;
+	    in->stack = tmp->next;
+	    sfree(tmp);
+	}
+	return c;
     }
     else if (in->currfp) {
 	int c = getc(in->currfp);
-	filepos fp;
 
 	if (c == EOF) {
 	    fclose(in->currfp);
 	    in->currfp = NULL;
 	}
 	/* Track line numbers, for error reporting */
-	fp = in->pos[in->posptr];
-	in->posptr++;
-	in->posptr %= lenof(in->pos);
+	if (pos)
+	    *pos = in->pos;
 	if (in->reportcols) {
 	    switch (c) {
 	      case '\t':
-		fp.col = 1 + (fp.col + TAB_STOP-1) % TAB_STOP;
+		in->pos.col = 1 + (in->pos.col + TAB_STOP-1) % TAB_STOP;
 		break;
 	      case '\n':
-		fp.col = 1;
-		fp.line++;
+		in->pos.col = 1;
+		in->pos.line++;
 		break;
 	      default:
-		fp.col++;
+		in->pos.col++;
 		break;
 	    }
 	} else {
-	    fp.col = -1;
+	    in->pos.col = -1;
 	    if (c == '\n')
-		fp.line++;
+		in->pos.line++;
 	}
-	in->pos[in->posptr] = fp;
 	/* FIXME: do input charmap translation. We should be returning
 	 * Unicode here. */
 	return c;
@@ -116,6 +179,7 @@ enum {
     c_copyright,		       /* copyright statement */
     c_cw,			       /* weak code */
     c_date,			       /* document processing date */
+    c_define,			       /* macro definition */
     c_e,			       /* emphasis */
     c_i,			       /* visible index mark */
     c_ii,			       /* uncapitalised visible index mark */
@@ -160,6 +224,7 @@ static void match_kw(token *tok) {
      */
     static const struct { char const *name; int id; } keywords[] = {
 	{"#", c__comment},	       /* comment command (\#) */
+	{"-", c__escaped},	       /* nonbreaking hyphen */
 	{"A", c_A},		       /* appendix heading */
 	{"B", c_B},		       /* bibliography entry */
 	{"BR", c_BR},		       /* bibliography rewrite */
@@ -176,6 +241,7 @@ static void match_kw(token *tok) {
 	{"copyright", c_copyright},    /* copyright statement */
 	{"cw", c_cw},		       /* weak code */
 	{"date", c_date},	       /* document processing date */
+	{"define", c_define},	       /* macro definition */
 	{"e", c_e},		       /* emphasis */
 	{"i", c_i},		       /* visible index mark */
 	{"ii", c_ii},		       /* uncapitalised visible index mark */
@@ -257,29 +323,30 @@ token get_token(input *in) {
     int nls;
     token ret;
     rdstring rs = { 0, 0, NULL };
+    filepos cpos;
 
     ret.text = NULL;		       /* default */
-    ret.pos = getpos(in);
-    c = get(in);
+    c = get(in, &cpos);
+    ret.pos = cpos;
     if (iswhite(c)) {		       /* tok_white or tok_eop */
 	nls = 0;
 	do {
 	    if (isnl(c))
 		nls++;
-	} while ((c = get(in)) != EOF && iswhite(c));
+	} while ((c = get(in, &cpos)) != EOF && iswhite(c));
 	if (c == EOF) {
 	    ret.type = tok_eof;
 	    return ret;
 	}
-	unget(in, c);
+	unget(in, c, &cpos);
 	ret.type = (nls > 1 ? tok_eop : tok_white);
 	return ret;
     } else if (c == EOF) {	       /* tok_eof */
 	ret.type = tok_eof;
 	return ret;
     } else if (c == '\\') {	       /* tok_cmd */
-	c = get(in);
-	if (c == '\\' || c == '#' || c == '{' || c == '}') {
+	c = get(in, &cpos);
+	if (c == '-' || c == '\\' || c == '#' || c == '{' || c == '}') {
 	    /* single-char command */
 	    rdadd(&rs, c);
 	} else if (c == 'u') {
@@ -287,15 +354,15 @@ token get_token(input *in) {
 	    do {
 		rdadd(&rs, c);
 		len++;
-		c = get(in);
+		c = get(in, &cpos);
 	    } while (ishex(c) && len < 5);
-	    unget(in, c);
+	    unget(in, c, &cpos);
 	} else if (iscmd(c)) {
 	    do {
 		rdadd(&rs, c);
-		c = get(in);
+		c = get(in, &cpos);
 	    } while (iscmd(c));
-	    unget(in, c);
+	    unget(in, c, &cpos);
 	}
 	/*
 	 * Now match the command against the list of available
@@ -318,19 +385,23 @@ token get_token(input *in) {
 	 * things other than whitespace, backslash, braces and
 	 * hyphen. A hyphen terminates the word but is returned as
 	 * part of it; everything else is pushed back for the next
-	 * token.
+	 * token. The `aux' field contains TRUE if the word ends in
+	 * a hyphen.
 	 */
+	ret.aux = FALSE;	       /* assumed for now */
 	while (1) {
 	    if (iswhite(c) || c=='{' || c=='}' || c=='\\' || c==EOF) {
 		/* Put back the character that caused termination */
-		unget(in, c);
+		unget(in, c, &cpos);
 		break;
 	    } else {
 		rdadd(&rs, c);
-		if (c == '-')
+		if (c == '-') {
+		    ret.aux = TRUE;
 		    break;	       /* hyphen terminates word */
+		}
 	    }
-	    c = get(in);
+	    c = get(in, &cpos);
 	}
 	ret.type = tok_word;
 	ret.text = ustrdup(rs.text);
@@ -346,9 +417,10 @@ token get_token(input *in) {
  */
 int isbrace(input *in) {
     int c;
+    filepos cpos;
 
-    c = get(in);
-    unget(in, c);
+    c = get(in, &cpos);
+    unget(in, c, &cpos);
     return (c == '{');
 }
 
@@ -360,19 +432,20 @@ token get_codepar_token(input *in) {
     int c;
     token ret;
     rdstring rs = { 0, 0, NULL };
+    filepos cpos;
 
-    ret.pos = getpos(in);
     ret.type = tok_word;
-    c = get(in);		       /* expect (and discard) one space */
+    c = get(in, &cpos);		       /* expect (and discard) one space */
+    ret.pos = cpos;
     if (c == ' ') {
-	ret.pos = getpos(in);
-	c = get(in);
+	c = get(in, &cpos);
+	ret.pos = cpos;
     }
     while (!isnl(c) && c != EOF) {
 	rdadd(&rs, c);
-	c = get(in);
+	c = get(in, &cpos);
     }
-    unget(in, c);
+    unget(in, c, &cpos);
     ret.text = ustrdup(rs.text);
     sfree(rs.text);
     return ret;
@@ -418,6 +491,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
     token t;
     paragraph par;
     word wd, **whptr, **idximplicit;
+    tree23 *macros;
     wchar_t utext[2], *wdtext;
     int style, spcstyle;
     int already;
@@ -443,6 +517,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
     wchar_t uchr;
 
     t.text = NULL;
+    macros = newtree23();
 
     /*
      * Loop on each paragraph.
@@ -468,6 +543,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	    while (1) {
 		dtor(t), t = get_codepar_token(in);
 		wd.type = word_WeakCode;
+		wd.breaks = FALSE;     /* shouldn't need this... */
 		wd.text = ustrdup(t.text);
 		wd.alt = NULL;
 		wd.fpos = t.pos;
@@ -504,6 +580,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	par.type = para_Normal;
 	if (t.type == tok_cmd) {
 	    int needkw;
+	    int is_macro = FALSE;
 
 	    par.fpos = t.pos;
 	    switch (t.cmd) {
@@ -544,6 +621,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	      case c_b: needkw = 4; par.type = para_Bullet; break;
 	      case c_n: needkw = 4; par.type = para_NumberedList; break;
 	      case c_copyright: needkw = 32; par.type = para_Copyright; break;
+	      case c_define: is_macro = TRUE; needkw = 1; break;
 		/* For \nocite the keyword is _everything_ */
 	      case c_nocite: needkw = 8; par.type = para_NoCite; break;
 	      case c_preamble: needkw = 32; par.type = para_Preamble; break;
@@ -592,6 +670,26 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		if ((needkw & 5) && nkeys > 1)
 		    error(err_kwtoomany, &fp);
 
+		if (is_macro) {
+		    /*
+		     * Macro definition. Get the rest of the line
+		     * as a code-paragraph token, repeatedly until
+		     * there's nothing more left of it. Separate
+		     * with newlines.
+		     */
+		    rdstring macrotext = { 0, 0, NULL };
+		    while (1) {
+			dtor(t), t = get_codepar_token(in);
+			if (macrotext.pos > 0)
+			    rdadd(&macrotext, L'\n');
+			rdadds(&macrotext, t.text);
+			dtor(t), t = get_token(in);
+			if (t.type == tok_eop) break;
+		    }
+		    macrodef(macros, rs.text, macrotext.text, fp);
+		    continue;	       /* next paragraph */
+		}
+
 		par.keyword = rdtrim(&rs);
 
 		/* Move to EOP in case of needkw==8 or 16 (no body) */
@@ -606,7 +704,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    continue;	       /* next paragraph */
 		}
 	    }
-	}
+	}		  
 
 	/*
 	 * Now read the actual paragraph, word by word, adding to
@@ -632,8 +730,10 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	while (t.type != tok_eop && t.type != tok_eof) {
 	    iswhite = FALSE;
 	    already = FALSE;
-	    if (t.type == tok_cmd && t.cmd == c__escaped)
+	    if (t.type == tok_cmd && t.cmd == c__escaped) {
 		t.type = tok_word;     /* nice and simple */
+		t.aux = 0;	       /* even if `\-' - nonbreaking! */
+	    }
 	    switch (t.type) {
 	      case tok_white:
 		if (whptr == &par.words)
@@ -642,6 +742,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		wd.type = spcstyle;
 		wd.alt = NULL;
 		wd.fpos = t.pos;
+		wd.breaks = FALSE;
 		if (indexing)
 		    rdadd(&indexstr, ' ');
 		if (!indexing || index_visible)
@@ -653,11 +754,12 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	      case tok_word:
 		if (indexing)
 		    rdadds(&indexstr, t.text);
+		wd.type = style;
+		wd.alt = NULL;
+		wd.fpos = t.pos;
+		wd.breaks = t.aux;
 		if (!indexing || index_visible) {
 		    wd.text = ustrdup(t.text);
-		    wd.type = style;
-		    wd.alt = NULL;
-		    wd.fpos = t.pos;
 		    addword(wd, &whptr);
 		}
 		if (indexing) {
@@ -699,6 +801,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			wd.type = word_HyperEnd;
 			wd.alt = NULL;
 			wd.fpos = t.pos;
+			wd.breaks = FALSE;
 			if (!indexing || index_visible)
 			    addword(wd, &whptr);
 			if (indexing)
@@ -753,6 +856,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		     * brace. No nesting; no arguments.
 		     */
 		    wd.fpos = t.pos;
+		    wd.breaks = FALSE;
 		    if (t.cmd == c_K)
 			wd.type = word_UpperXref;
 		    else if (t.cmd == c_k)
@@ -902,6 +1006,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			wd.type = word_IndexRef;
 			wd.text = NULL;
 			wd.alt = NULL;
+			wd.breaks = FALSE;
 			indexword = addword(wd, &whptr);
 			/* Set up a rdstring to read the index text */
 			indexstr = nullrs;
@@ -918,11 +1023,12 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		  case c_u:
 		    uchr = t.aux;
 		    utext[0] = uchr; utext[1] = 0;
+		    wd.type = style;
+		    wd.breaks = FALSE;
+		    wd.alt = NULL;
+		    wd.fpos = t.pos;
 		    if (!indexing || index_visible) {
 			wd.text = ustrdup(utext);
-			wd.type = style;
-			wd.alt = NULL;
-			wd.fpos = t.pos;
 			uword = addword(wd, &whptr);
 		    } else
 			uword = NULL;
@@ -953,7 +1059,8 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    }
 		    break;
 		  default:
-		    error(err_badmidcmd, t.text, &t.pos);
+		    if (!macrolookup(macros, in, t.text, &t.pos))
+			error(err_badmidcmd, t.text, &t.pos);
 		    break;
 		}
 	    }
@@ -973,6 +1080,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	addpara(par, ret);
     }
     dtor(t);
+    macrocleanup(macros);
 }
 
 paragraph *read_input(input *in, index *idx) {

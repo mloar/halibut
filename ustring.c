@@ -48,6 +48,9 @@ wchar_t *ustrcpy(wchar_t *dest, wchar_t *source) {
 }
 
 int ustrcmp(wchar_t *lhs, wchar_t *rhs) {
+    if (!lhs && !rhs) return 0;
+    if (!lhs) return -1;
+    if (!rhs) return +1;
     while (*lhs && *rhs && *lhs==*rhs)
 	lhs++, rhs++;
     if (*lhs < *rhs)

@@ -155,6 +155,13 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "unable to open output file `%.200s'", sp);
 	flags = PREFIX;
 	break;
+      case err_macroexists:
+	fpos = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sprintf(error, "macro `%.200s' already defined", sp);
+	flags = FILEPOS;
+	break;
     }
 
     if (flags & PREFIX)

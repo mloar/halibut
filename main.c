@@ -179,14 +179,18 @@ int main(int argc, char **argv) {
 	in.nfiles = nfiles;
 	in.currfp = NULL;
 	in.currindex = 0;
-	in.npushback = 0;
+	in.npushback = in.pushbacksize = 0;
+	in.pushback = NULL;
 	in.reportcols = reportcols;
+	in.stack = NULL;
 
 	idx = make_index();
 
 	sourceform = read_input(&in, idx);
 	if (!sourceform)
 	    exit(EXIT_FAILURE);
+
+	sfree(in.pushback);
 
 	mark_attr_ends(sourceform);
 

@@ -172,7 +172,8 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	while (text) {
 	    thiswidth += widthfn(text);
 	    if (text->next && (text->next->type == word_WhiteSpace ||
-			       text->next->type == word_EmphSpace)) {
+			       text->next->type == word_EmphSpace ||
+			       text->breaks)) {
 		if (thiswidth > width)
 		    break;
 		spc = text->next;
@@ -192,8 +193,7 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	 * anyway as the best we can do.
 	 */
 	if (spc && thiswidth > width) {
-	    w->end = spc;
-	    text = spc->next;
+	    w->end = text = spc;
 	    w->nspaces = nspc-1;
 	    w->shortfall = width - lastgood;
 	} else if (!text) {
@@ -202,10 +202,15 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	    w->shortfall = width - thiswidth;
 	} else {
 	    w->end = text;
-	    text = text->next;
 	    w->nspaces = 0;
 	    w->shortfall = width - thiswidth;
 	}
+	/*
+	 * Skip the space if we're on one.
+	 */
+	if (text && (text->type == word_WhiteSpace ||
+		     text->type == word_EmphSpace))
+	    text = text->next;
 	width = subsequentwidth;
     }
 

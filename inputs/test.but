@@ -7,7 +7,13 @@ date \date{%Y.%m.%d} (default format is \date).
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
 reserved.
 
-\versionid $Id: test.but,v 1.8 1999/10/22 16:04:02 simon Exp $
+\define{coopt} co\u00F6{-o}pt
+
+\define{metacoopt} [this is a nested,
+multi-line macro, talking about \coopt
+a bit]
+
+\versionid $Id: test.but,v 1.9 1999/10/24 17:14:16 simon Exp $
 
 \C{ch\\ap} First chapter title
 
@@ -51,6 +57,14 @@ This is a numbered list:
 \n{keyword} Aah.
 
 \n Eek. `Aah' is point \k{keyword}.
+
+A-paragraph-full-of-hyphens-to-test-the-idea-that-word-wrapping-can-happen-somewhere-in-all-this-hyphenatory-nonsense.
+
+A\-paragraph\-full\-of\-nonbreaking\-hyphens
+to\-test\-the\-idea\-that\-word\-wrapping\-misses\-them.
+
+Use of macros: let's talk about \coopt. And about \coopt some more.
+And a nested macro: \metacoopt.
 
 Oh, while I'm here: some special characters. The \\, \{ and \}
 characters, to be precise. And their code equivalents, \c{\\},
