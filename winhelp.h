@@ -70,6 +70,11 @@ void whlp_browse_link(WHLP h, WHLP_TOPIC before, WHLP_TOPIC after);
 void whlp_prepare(WHLP h);
 
 /*
+ * Create a link from an index term to a topic.
+ */
+void whlp_index_term(WHLP h, char *index, WHLP_TOPIC topic);
+
+/*
  * Call this if you need the id of a topic and you don't already
  * know it (for example, if whlp_prepare has allocated it
  * anonymously for you). You might need this, for example, in

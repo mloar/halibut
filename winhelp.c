@@ -10,8 +10,11 @@
 /*
  * Still to do:
  * 
- *  - Go back and look at the KW* sections, which should allow us
- *    to add indexing support.
+ *  - Code cleanups: prototype whlp_{start,end}_hyperlink in the
+ *    header file. Also decide whether context_hash is going to be
+ *    externally visible or not; if it is, rename it to
+ *    whlp_something and put it in the header file, and if not,
+ *    make it static.
  *  - nonbreaking spaces and hyphens will be needed.
  *  - tabs, and tab stop settings in the paragraphinfo.
  * 
@@ -119,6 +122,12 @@ struct file {
     int fileoffset;		       /* offset in the real .HLP file */
 };
 
+struct indexrec {
+    char *term;                        /* index term, will need freeing */
+    context *topic;                    /* topic it links to */
+    int count, offset;                 /* used when building |KWDATA */
+};
+
 struct topiclink {
     int topicoffset, topicpos;	       /* for referencing from elsewhere */
     int recordtype;
@@ -135,6 +144,7 @@ struct WHLP_TOPIC_tag {
     struct topiclink *link;	       /* this provides TOPICOFFSET */
     context *browse_next, *browse_prev;
     char *title;		       /* needs freeing */
+    int index;                         /* arbitrary number */
 };
 
 struct WHLP_tag {
@@ -143,8 +153,7 @@ struct WHLP_tag {
     tree234 *contexts;		       /* also stores `context' */
     tree234 *titles;		       /* _also_ stores `context' */
     tree234 *text;		       /* stores `struct topiclink' */
-    struct file *contextfile;	       /* the |CONTEXT internal file */
-    struct file *titlefile;	       /* the |TTLBTREE internal file */
+    tree234 *index;		       /* stores `struct indexrec' */
     struct file *systemfile;	       /* the |SYSTEM internal file */
     context *ptopic;		       /* primary topic */
     struct topiclink *prevtopic;       /* to link type-2 records together */
@@ -157,6 +166,7 @@ struct WHLP_tag {
     int lasttopicstart;		       /* while building |TOPIC section */
     int para_flags;
     int para_attrs[7];
+    int ncontexts;
 };
 
 /* Functions to return the index and leaf data for B-tree contents. */
@@ -262,6 +272,41 @@ static int ttlleaf(const void *av, unsigned char *outbuf)
     return 4+slen;
 }
 
+/* The |KWBTREE internal file maps index strings to TOPICOFFSETs. */
+
+static int idxcmp(void *av, void *bv)
+{
+    const struct indexrec *a = (const struct indexrec *)av;
+    const struct indexrec *b = (const struct indexrec *)bv;
+    int cmp;
+    if ( (cmp = strcmp(a->term, b->term)) != 0)
+        return cmp;
+    /* Now sort on the index field of the topics. */
+    if (a->topic->index < b->topic->index)
+	return -1;
+    if (a->topic->index > b->topic->index)
+	return +1;
+    return 0;
+}
+
+static int idxindex(const void *av, unsigned char *outbuf)
+{
+    const struct indexrec *a = (const struct indexrec *)av;
+    int len = 1+strlen(a->term);
+    memcpy(outbuf, a->term, len);
+    return len;
+}
+
+static int idxleaf(const void *av, unsigned char *outbuf)
+{
+    const struct indexrec *a = (const struct indexrec *)av;
+    int len = 1+strlen(a->term);
+    memcpy(outbuf, a->term, len);
+    PUT_16BIT_LSB_FIRST(outbuf+len, a->count);
+    PUT_32BIT_LSB_FIRST(outbuf+len+2, a->offset);
+    return len+6;
+}
+
 /* ----------------------------------------------------------------------
  * Manage help contexts and topics.
  */
@@ -321,6 +366,15 @@ WHLP_TOPIC whlp_register_topic(WHLP h, char *context_name, char **clash)
 {
     context *ctx = mknew(context);
     context *otherctx;
+
+    /*
+     * Index contexts in order of creation, just so there's some
+     * sort of non-arbitrary ordering in the index B-tree. Call me
+     * fussy, but I don't like indexing on pointer values because I
+     * prefer the code to be deterministic when run under different
+     * C libraries.
+     */
+    ctx->index = h->ncontexts++;
 
     if (context_name) {
 	/*
@@ -865,6 +919,65 @@ static void whlp_topic_layout(WHLP h)
 }
 
 /* ----------------------------------------------------------------------
+ * Manage the index sections (|KWDATA, |KWMAP, |KWBTREE).
+ */
+
+void whlp_index_term(WHLP h, char *index, WHLP_TOPIC topic)
+{
+    struct indexrec *idx = mknew(struct indexrec);
+
+    idx->term = dupstr(index);
+    idx->topic = topic;
+    /*
+     * If this reference is already in the tree, just silently drop
+     * the duplicate.
+     */
+    if (add234(h->index, idx) != idx) {
+        sfree(idx->term);
+        sfree(idx);
+    }
+}
+
+static void whlp_build_kwdata(WHLP h)
+{
+    struct file *f;
+    int i;
+    struct indexrec *first, *next;
+
+    f = whlp_new_file(h, "|KWDATA");
+
+    /*
+     * Go through the index B-tree, condensing all sequences of
+     * records with the same term into a single one with a valid
+     * (count,offset) pair, and building up the KWDATA section.
+     */
+    i = 0;
+    while ( (first = index234(h->index, i)) != NULL) {
+        first->count = 1;
+        first->offset = whlp_file_offset(f);
+        whlp_file_add_long(f, first->topic->link->topicoffset);
+        i++;
+        while ( (next = index234(h->index, i)) != NULL &&
+               !strcmp(first->term, next->term)) {
+            /*
+             * The next index record has the same term. Fold it
+             * into this one and remove from the tree.
+             */
+            whlp_file_add_long(f, next->topic->link->topicoffset);
+            first->count++;
+            delpos234(h->index, i);
+            sfree(next->term);
+            sfree(next);
+        }
+    }
+
+    /*
+     * Now we should have `index' in a form that's ready to
+     * construct |KWBTREE. So we can return.
+     */
+}
+
+/* ----------------------------------------------------------------------
  * Standard chunks of data for the |SYSTEM and |FONT sections.
  */
 
@@ -1013,11 +1126,13 @@ static void whlp_standard_fontsection(struct file *f)
 
 static void whlp_make_btree(struct file *f, int flags, int pagesize,
 			    char *dataformat, tree234 *tree,
+                            struct file *map,
 			    bt_index_fn indexfn, bt_leaf_fn leaffn)
 {
     void **page_elements = NULL;
     int npages = 0, pagessize = 0;
     int npages_this_level, nentries, nlevels;
+    int total_leaf_entries;
     char btdata[MAX_PAGE_SIZE];
     int btlen;
     int page_start, fixups_offset, unused_bytes;
@@ -1049,12 +1164,21 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
     whlp_file_add_short(f, 0);	       /* number of levels; fix later */
     whlp_file_add_long(f, count234(tree));/* total B-tree entries */
 
+    /*
+     * If we have a map section, leave space at the start for its
+     * element count.
+     */
+    if (map) {
+        whlp_file_add_short(map, 0);
+    }
+
     /* 
      * Now create the leaf pages.
      */
     index = 0;
 
     npages_this_level = 0;
+    total_leaf_entries = 0;
 
     element = index234(tree, index);
     while (element) {
@@ -1109,6 +1233,25 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
 	else
 	    whlp_file_add_short(f, npages);
 	whlp_file_seek(f, 0, 2);
+
+        /*
+         * If we have a map section, add a map entry.
+         */
+        if (map) {
+            whlp_file_add_long(map, total_leaf_entries);
+            whlp_file_add_short(map, npages_this_level-1);
+        }
+        total_leaf_entries += nentries;
+    }
+
+    /*
+     * If we have a map section, write the total number of map
+     * entries into it.
+     */
+    if (map) {
+        whlp_file_seek(map, 0, 0);
+        whlp_file_add_short(map, npages_this_level);
+        whlp_file_seek(map, 0, 2);
     }
 
     /*
@@ -1291,16 +1434,13 @@ WHLP whlp_new(void)
     ret->contexts = newtree234(ctxcmp);
     ret->titles = newtree234(ttlcmp);
     ret->text = newtree234(NULL);
+    ret->index = newtree234(idxcmp);
 
     /*
      * Some standard files.
      */
     f = whlp_new_file(ret, "|CTXOMAP");
     whlp_file_add_short(f, 0);	       /* dummy section */
-    f = whlp_new_file(ret, "|CONTEXT");
-    ret->contextfile = f;
-    f = whlp_new_file(ret, "|TTLBTREE");
-    ret->titlefile = f;
     f = whlp_new_file(ret, "|FONT");
     whlp_standard_fontsection(f);
     f = whlp_new_file(ret, "|SYSTEM");
@@ -1311,6 +1451,7 @@ WHLP whlp_new(void)
      * Other variables.
      */
     ret->prevtopic = NULL;
+    ret->ncontexts = 0;
 
     return ret;
 }
@@ -1319,8 +1460,9 @@ void whlp_close(WHLP h, char *filename)
 {
     FILE *fp;
     int filecount, offset, index, filelen;
-    struct file *file, *md;
+    struct file *file, *map, *md;
     context *ctx;
+    int has_index;
 
     /*
      * Lay out the topic section.
@@ -1333,6 +1475,13 @@ void whlp_close(WHLP h, char *filename)
     whlp_do_primary_topic(h);
 
     /*
+     * Set up the index.
+     */
+    has_index = (count234(h->index) != 0);
+    if (has_index)
+        whlp_build_kwdata(h);
+
+    /*
      * Set up the `titles' B-tree for the |TTLBTREE section.
      */
     for (index = 0; (ctx = index234(h->contexts, index)) != NULL; index++)
@@ -1341,10 +1490,20 @@ void whlp_close(WHLP h, char *filename)
     /*
      * Construct the various B-trees.
      */
-    whlp_make_btree(h->contextfile, 0x0002, 0x0800, "L4",
-		    h->contexts, ctxindex, ctxleaf);
-    whlp_make_btree(h->titlefile, 0x0002, 0x0800, "Lz",
-		    h->titles, ttlindex, ttlleaf);
+    file = whlp_new_file(h, "|CONTEXT");
+    whlp_make_btree(file, 0x0002, 0x0800, "L4",
+                    h->contexts, NULL, ctxindex, ctxleaf);
+
+    file = whlp_new_file(h, "|TTLBTREE");
+    whlp_make_btree(file, 0x0002, 0x0800, "Lz",
+		    h->titles, NULL, ttlindex, ttlleaf);
+
+    if (has_index) {
+        file = whlp_new_file(h, "|KWBTREE");
+        map = whlp_new_file(h, "|KWMAP");
+        whlp_make_btree(file, 0x0002, 0x0800, "F24",
+                        h->index, map, idxindex, idxleaf);
+    }
 
     /*
      * Open the output file.
@@ -1368,7 +1527,8 @@ void whlp_close(WHLP h, char *filename)
     /* Now `offset' holds what will be the offset of the master directory. */
 
     md = whlp_new_file(h, NULL);       /* master directory file */
-    whlp_make_btree(md, 0x0402, 0x0400, "z4", h->files, fileindex, fileleaf);
+    whlp_make_btree(md, 0x0402, 0x0400, "z4",
+                    h->files, NULL, fileindex, fileleaf);
 
     filelen = offset + 9 + md->len;
 
@@ -1721,6 +1881,22 @@ int main(void)
      */
     whlp_browse_link(h, t1, t2);
     whlp_browse_link(h, t2, t3);
+
+    /*
+     * Index terms.
+     */
+    whlp_index_term(h, "foobarbaz", t1);
+    whlp_index_term(h, "foobarbaz", t2);
+    whlp_index_term(h, "foobarbaz", t3);
+    whlp_index_term(h, "foobar", t1);
+    whlp_index_term(h, "foobar", t2);
+    whlp_index_term(h, "foobaz", t1);
+    whlp_index_term(h, "foobaz", t3);
+    whlp_index_term(h, "barbaz", t2);
+    whlp_index_term(h, "barbaz", t3);
+    whlp_index_term(h, "foo", t1);
+    whlp_index_term(h, "bar", t2);
+    whlp_index_term(h, "baz", t3);
 
     whlp_close(h, "test.hlp");
     return 0;
