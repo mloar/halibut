@@ -1189,12 +1189,43 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			 * delimiting the text marked by the link.
 			 */
 			dtor(t), t = get_token(in);
-			/*
-			 * Special cases: \W{}\c, \W{}\e, \W{}\cw
-			 */
 			sitem = mknew(struct stack_item);
 			sitem->fpos = wd.fpos;
 			sitem->type = stack_hyper;
+			/*
+			 * Special cases: \W{}\i, \W{}\ii
+			 */
+			if (t.type == tok_cmd &&
+			    (t.cmd == c_i || t.cmd == c_ii)) {
+			    if (indexing) {
+				error(err_nestedindex, &t.pos);
+			    } else {
+				/* Add an index-reference word with no
+				 * text as yet */
+				wd.type = word_IndexRef;
+				wd.text = NULL;
+				wd.alt = NULL;
+				wd.aux = 0;
+				wd.breaks = FALSE;
+				indexword = addword(wd, &whptr);
+				/* Set up a rdstring to read the
+				 * index text */
+				indexstr = nullrs;
+				/* Flags so that we do the Right
+				 * Things with text */
+				index_visible = (type != c_I);
+				index_downcase = (type == c_ii);
+				indexing = TRUE;
+				idxwordlist = NULL;
+				idximplicit = &idxwordlist;
+
+				sitem->type |= stack_idx;
+			    }
+			    dtor(t), t = get_token(in);
+			}
+			/*
+			 * Special cases: \W{}\c, \W{}\e, \W{}\cw
+			 */
 			if (t.type == tok_cmd &&
 			    (t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
 			    if (style != word_Normal)

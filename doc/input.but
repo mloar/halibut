@@ -316,6 +316,11 @@ and Halibut would produce
 Google is located at \W{http://www.google.com/}\cw{www.google.com}.
 }
 
+If you want the link text to be an index term as well, you can also
+specify \c{\\i} or \c{\\ii}; this has to come before \c{\\c} or
+\c{\\cw} if both are present. (See \k{input-index} for more about
+indexing.)
+
 \S{input-unicode} \c{\\u}: Specifying arbitrary \i{Unicode}
 characters
 
