@@ -32,10 +32,10 @@
 #include "buttress.h"
 
 struct xhtmlsection_Struct {
-    struct xhtmlsection_Struct *next;
-    struct xhtmlsection_Struct *child;
-    struct xhtmlsection_Struct *parent;
-    struct xhtmlsection_Struct *chain; /* all sections are linked in a chain so we can search them independent of structure */
+    struct xhtmlsection_Struct *next; /* next sibling (NULL if split across files) */
+    struct xhtmlsection_Struct *child; /* NULL if split across files */
+    struct xhtmlsection_Struct *parent; /* NULL if split across files */
+    struct xhtmlsection_Struct *chain; /* single structure independent of weird trees */
     paragraph *para;
     struct xhtmlfile_Struct *file; /* which file is this a part of? */
     char *fragment; /* fragment id within the file */
@@ -308,9 +308,77 @@ void xhtml_fixup_layout(xhtmlfile* file)
  * Create the tree structure so we know where everything goes.
  * Method:
  *
- *  Scan through the paragraph set to get the section tree.
- *  At the same time, try to keep the file tree up to date.
- *  Hope I don't panic and leg it part way through.
+ * Ignoring file splitting, we have three choices with each new section:
+ * 
+ * +-----------------+-----------------+
+ * |                 |                 |
+ * X            +----X----+           (1)
+ *              |         |
+ *              Y        (3)
+ *              |
+ *             (3)
+ *
+ * Y is the last section we added (currentsect).
+ * If sect is the section we want to add, then:
+ *
+ * (1) if sect->level < currentsect->level
+ * (2) if sect->level == currentsect->level
+ * (3) if sect->level > currentsect->level
+ *
+ * This requires the constraint that you never skip section numbers
+ * (so you can't have a.b.c.d without all of a, a.b and a.b.c existing).
+ *
+ * Note that you _can_ have 1.1.1.1 followed by 1.2 - you can change
+ * more than one level at a time. Lots of asserts, and probably part of
+ * the algorithm here, rely on this being true. (It currently isn't
+ * enforced by buttress, however.)
+ *
+ * File splitting makes this harder. For instance, say we added at (3)
+ * above and now need to add another section. We are splitting at level
+ * 2, ie the level of Y. Z is the last section we added:
+ *
+ * +-----------------+-----------------+
+ * |                 |                 |
+ * X            +----X----+           (1)
+ *              |         |
+ *         +----Y----+   (1)
+ *         |         |
+ *         Z        (2)
+ *         |
+ *        (3)
+ *
+ * The (1) case is now split; we need to search upwards to find where
+ * to actually link in. The other two cases remain the same (and will
+ * always be like this).
+ *
+ * File splitting makes this harder, however. The decision of whether
+ * to split to a new file is always on the same condition, however (is
+ * the level of this section higher than the leaf_level configuration
+ * value or not).
+ *
+ * Treating the cases backwards:
+ *
+ * (3) same file if sect->level > conf.leaf_level, otherwise new file
+ *
+ *     if in the same file, currentsect->child points to sect
+ *     otherwise the linking is done through the file tree (which works
+ *     in more or less the same way, ie currentfile->child points to
+ *     the new file)
+ *
+ * (2) same file if sect->level > conf.leaf_level, otherwise new file
+ *
+ *     if in the same file, currentsect->next points to sect
+ *     otherwise file linking and currentfile->next points to the new
+ *     file (we know that Z must have caused a new file to be created)
+ *
+ * (1) same file if sect->level > conf.leaf_level, otherwise new file
+ *
+ *     this is actually effectively the same case as (2) here,
+ *     except that we first have to travel up the sections to figure
+ *     out which section this new one will be a sibling of. In doing
+ *     so, we may disappear off the top of a file and have to go up
+ *     to its parent in the file tree.
+ *
  */
 static void xhtml_ponder_layout(paragraph *p)
 {
@@ -357,39 +425,33 @@ static void xhtml_ponder_layout(paragraph *p)
       sect->level = level;
       /*      printf(" ! adding para @ %p as sect %s, level %i\n", sect->para, sect->fragment, level);*/
 
-      if (level>currentsect->level) { /* this can't possibly have any children already */
-        if (level>conf.leaf_level) { /* stick within the same file - link into the currentsect parent */
+      if (level>currentsect->level) { /* case (3) */
+        if (level>conf.leaf_level) { /* same file */
           assert(currentfile->is_leaf);
           currentsect->child = sect;
           sect->parent=currentsect;
           sect->file=currentfile;
 	  /*          printf("connected '%s' to existing file '%s' [I]\n", sect->fragment, currentfile->filename);*/
           currentsect=sect;
-        } else { /* going deeper ... */
+        } else { /* new file */
           xhtmlfile *file = xhtml_new_file(sect);
           assert(!currentfile->is_leaf);
-          currentfile->child=file; /* similarly won't have any children, since structures are mirrored */
+          currentfile->child=file;
           sect->file=file;
           file->parent=currentfile;
 	  /*          printf("connected '%s' to new file '%s' [I]\n", sect->fragment, file->filename);*/
           currentfile=file;
           currentsect=sect;
         }
-      } else if (/*level==currentsect->level ||
-		   (currentsect->parent && level<currentsect->level && level>currentsect->parent->level)*/
-                 level >= currentsect->file->sections->level) {
-	/* NEW TACTIC (better, but probably still wrong):
-	 * It's not further down the tree than we are, but it is further
-	 * down the tree (same file) or at the same level (sibling file) as
-	 * the top section in the current file.
+      } else if (level >= currentsect->file->sections->level) {
+	/* Case (1) or (2) *AND* still under the section that starts
+	 * the current file.
+	 *
+	 * I'm not convinced that this couldn't be rolled in with the
+	 * final else {} leg further down. It seems a lot of effort
+	 * this way.
 	 */
-        /* OLD TACTIC (flawed):
-	 * it's the next sibling (either because it's the same
-         * level, or because its level is between that of the current and its parent, so we've
-         * got a weird document (consider Section 1, Section 1.1.1, Section 1.2 - 1.1.1 and 1.2
-         * are siblings).
-         */
-        if (level>conf.leaf_level) { /* stick within the same file - link into currentsect */
+        if (level>conf.leaf_level) { /* stick within the same file */
           assert(currentfile->is_leaf);
           sect->file = currentfile;
 	  while (currentsect && currentsect->level > level &&
@@ -402,7 +464,7 @@ static void xhtml_ponder_layout(paragraph *p)
 	  sect->parent = currentsect->parent;
           currentsect = sect;
 	  /*          printf("connected '%s' to existing file '%s' [II]\n", sect->fragment, currentfile->filename);*/
-        } else { /* going sideways ... */
+        } else { /* new file */
           xhtmlfile *file = xhtml_new_file(sect);
           sect->file=file;
           currentfile->next=file;
@@ -413,7 +475,9 @@ static void xhtml_ponder_layout(paragraph *p)
           currentfile=file;
           currentsect=sect;
         }
-      } else { /* move up the tree until we can attach it as the next sibling */
+      } else { /* Case (1) or (2) and we must move up the file tree first */
+	/* this loop is now probably irrelevant - we know we can't connect
+	 * to anything in the current file */
         while (currentsect && level<currentsect->level) {
           currentsect=currentsect->parent;
           if (currentsect) {
@@ -422,13 +486,14 @@ static void xhtml_ponder_layout(paragraph *p)
 	    /*            printf(" * up one level (off top of current file)\n");*/
           }
         }
-        if (currentsect) { /* within the leaf */
+        if (currentsect) {
+	  /* I'm pretty sure this can now never fire */
           assert(currentfile->is_leaf);
 	  /*          printf("connected '%s' to existing file '%s' [III]\n", sect->fragment, currentfile->filename);*/
           sect->file = currentfile;
           currentsect->next=sect;
           currentsect=sect;
-        } else { /* move up until the file's right */
+        } else { /* find a file we can attach to */
           while (currentfile && currentfile->sections && level<currentfile->sections->level) {
             currentfile=currentfile->parent;
             if (currentfile) {
@@ -437,7 +502,10 @@ static void xhtml_ponder_layout(paragraph *p)
 	      /*              printf(" * up one file level (off top of tree)\n");*/
             }
           }
-          if (currentfile) { /* going sideways */
+          if (currentfile) { /* new file (we had to skip up a file to
+				get here, so we must be dealing with a
+				level no lower than the configured
+				leaf_level */
             xhtmlfile *file = xhtml_new_file(sect);
             currentfile->next=file;
             sect->file=file;
