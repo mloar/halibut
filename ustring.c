@@ -182,7 +182,7 @@ char *utoa_locale_dup(wchar_t const *s)
     siz = wcstombs(ret, s, len);
 
     if (siz) {
-	assert(siz <= MB_CUR_MAX * len);
+	assert(siz <= (size_t)(MB_CUR_MAX * len));
 	ret[siz] = '\0';
 	ret = sresize(ret, siz+1, char);
 	return ret;
