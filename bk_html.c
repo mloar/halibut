@@ -12,8 +12,10 @@
  *    _there_ even if unused.)
  * 
  *  - new configurability:
- *     * a few new things explicitly labelled as `FIXME:
- * 	 configurable' or similar.
+ *     * index_text, contents_text, preamble_text, title_separator,
+ * 	 nav_prev_text, nav_next_text, nav_separator,
+ * 	 index_main_sep, index_multi_sep, pre_versionid,
+ * 	 post_versionid
  *     * Some means of specifying the distinction between
  * 	 restrict-charset and output-charset. It seems to me that
  * 	 `html-charset' is output-charset, and that
@@ -69,6 +71,10 @@ typedef struct {
     char *head_end, *body_start, *body_end, *addr_start, *addr_end;
     char *body_tag, *nav_attr;
     wchar_t *author, *description;
+    wchar_t *index_text, *contents_text, *preamble_text, *title_separator;
+    wchar_t *nav_prev_text, *nav_next_text, *nav_separator;
+    wchar_t *index_main_sep, *index_multi_sep;
+    wchar_t *pre_versionid, *post_versionid;
     int restrict_charset, output_charset;
     enum {
 	HTML_3_2, HTML_4, ISO_HTML,
@@ -239,6 +245,17 @@ static htmlconfig html_configure(paragraph *source) {
     ret.restrict_charset = CS_ASCII;
     ret.output_charset = CS_ASCII;
     ret.htmlver = HTML_4;
+    ret.index_text = L"Index";
+    ret.contents_text = L"Contents";
+    ret.preamble_text = L"Preamble";
+    ret.title_separator = L" - ";
+    ret.nav_prev_text = L"Previous";
+    ret.nav_next_text = L"Next";
+    ret.nav_separator = L" | ";
+    ret.index_main_sep = L": ";
+    ret.index_multi_sep = L", ";
+    ret.pre_versionid = L"[";
+    ret.post_versionid = L"]";
     /*
      * Default quote characters are Unicode matched single quotes,
      * falling back to ordinary ASCII ".
@@ -478,7 +495,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	htmlsect *topsect, *sect;
 	int d;
 
-	topsect = html_new_sect(&sects, p);
+	topsect = html_new_sect(&sects, NULL);
 	topsect->type = TOP;
 	topsect->title = NULL;
 	topsect->text = sourceform;
@@ -520,7 +537,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	sect->type = INDEX;
 	sect->parent = topsect;
 	html_file_section(&conf, &files, sect, 0);   /* peer of chapters */
-	sect->fragment = dupstr("Index");   /* FIXME: this _can't_ be right */
+	sect->fragment = utoa_dup(conf.index_text, CS_ASCII);
 	sect->fragment = html_sanitise_fragment(&files, sect->file,
 						sect->fragment);
 	files.index = sect->file;
@@ -635,9 +652,9 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	 * Run over the document inventing fragments. Each fragment
 	 * is of the form `i' followed by an integer.
 	 */
-	lastsect = NULL;
+	lastsect = sects.head;	       /* this is always the top section */
 	for (p = sourceform; p; p = p->next) {
-	    if (is_heading_type(p->type))
+	    if (is_heading_type(p->type) && p->type != para_Title)
 		lastsect = (htmlsect *)p->private_data;
 
 	    for (w = p->words; w; w = w->next)
@@ -791,7 +808,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 		assert(f->last);
 		if (f->last != f->first && f->last->title) {
-		    html_text(&ho, L" - ");   /* FIXME: configurable? */
+		    html_text(&ho, conf.title_separator);
 		    html_words(&ho, f->last->title->words, NOTHING,
 			       f, keywords, &conf);
 		}
@@ -805,7 +822,6 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    element_close(&ho, "head");
 	    html_nl(&ho);
 
-	    /* FIXME: need to be able to specify replacement for this */
 	    if (conf.body_tag)
 		html_raw(&ho, conf.body_tag);
 	    else
@@ -828,37 +844,37 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    element_open(&ho, "a");
 		    element_attr(&ho, "href", prevf->filename);
 		}
-		html_text(&ho, L"Previous");/* FIXME: conf? */
+		html_text(&ho, conf.nav_prev_text);
 		if (prevf)
 		    element_close(&ho, "a");
 
-		html_text(&ho, L" | ");     /* FIXME: conf? */
+		html_text(&ho, conf.nav_separator);
 
 		if (f != files.head) {
 		    element_open(&ho, "a");
 		    element_attr(&ho, "href", files.head->filename);
 		}
-		html_text(&ho, L"Contents");/* FIXME: conf? */
+		html_text(&ho, conf.contents_text);
 		if (f != files.head)
 		    element_close(&ho, "a");
 
-		html_text(&ho, L" | ");     /* FIXME: conf? */
+		html_text(&ho, conf.nav_separator);
 
 		if (f != files.index) {
 		    element_open(&ho, "a");
 		    element_attr(&ho, "href", files.index->filename);
 		}
-		html_text(&ho, L"Index");/* FIXME: conf? */
+		html_text(&ho, conf.index_text);
 		if (f != files.index)
 		    element_close(&ho, "a");
 
-		html_text(&ho, L" | ");     /* FIXME: conf? */
+		html_text(&ho, conf.nav_separator);
 
 		if (f->next) {
 		    element_open(&ho, "a");
 		    element_attr(&ho, "href", f->next->filename);
 		}
-		html_text(&ho, L"Next");    /* FIXME: conf? */
+		html_text(&ho, conf.nav_next_text);
 		if (f->next)
 		    element_close(&ho, "a");
 
@@ -1232,7 +1248,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 			    html_words(&ho, entry->text, MARKUP|LINKS,
 				       f, keywords, &conf);
 
-			    html_text(&ho, L": ");/* FIXME: configurable */
+			    html_text(&ho, conf.index_main_sep);
 
 			    for (j = 0; j < hi->nrefs; j++) {
 				htmlindexref *hr =
@@ -1240,7 +1256,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				paragraph *p = hr->section->title;
 
 				if (j > 0)
-				    html_text(&ho, L", "); /* FIXME: conf */
+				    html_text(&ho, conf.index_multi_sep);
 
 				html_href(&ho, f, hr->section->file,
 					  hr->fragment);
@@ -1251,8 +1267,17 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				else if (p && p->words)
 				    html_words(&ho, p->words, MARKUP|LINKS,
 					       f, keywords, &conf);
-				else
-				    html_text(&ho, L"FIXME");
+				else {
+				    /*
+				     * If there is no title at all,
+				     * this must be because our
+				     * target section is the
+				     * preamble section and there
+				     * is no title. So we use the
+				     * preamble_text.
+				     */
+				    html_text(&ho, conf.preamble_text);
+				}
 				element_close(&ho, "a");
 			    }
 			}
@@ -1302,10 +1327,10 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				if (started)
 				    element_empty(&ho, "br");
 				html_nl(&ho);
-				html_text(&ho, L"[");   /* FIXME: conf? */
+				html_text(&ho, conf.pre_versionid);
 				html_words(&ho, p->words, NOTHING,
 					   f, keywords, &conf);
-				html_text(&ho, L"]");   /* FIXME: conf? */
+				html_text(&ho, conf.post_versionid);
 				started = TRUE;
 			    }
 			done_version_ids = TRUE;
@@ -1985,9 +2010,16 @@ static void html_section_title(htmloutput *ho, htmlsect *s, htmlfile *thisfile,
 		   thisfile, keywords, cfg);
     } else {
 	assert(s->type != NORMAL);
-	if (s->type == TOP)
-	    html_text(ho, L"Preamble");/* FIXME: configure */
+	/*
+	 * If we're printing the full document title for _real_ and
+	 * there isn't one, we don't want to print `Preamble' at
+	 * the top of what ought to just be some text. If we need
+	 * it in any other context such as TOCs, we need to print
+	 * `Preamble'.
+	 */
+	if (s->type == TOP && !real)
+	    html_text(ho, cfg->preamble_text);
 	else if (s->type == INDEX)
-	    html_text(ho, L"Index");/* FIXME: configure */
+	    html_text(ho, cfg->index_text);
     }
 }
