@@ -11,12 +11,6 @@
  *    fragment should be used? (Though it should probably still be
  *    _there_ even if unused.)
  * 
- *  - new configurability:
- *     * index_text, contents_text, preamble_text, title_separator,
- * 	 nav_prev_text, nav_next_text, nav_separator,
- * 	 index_main_sep, index_multi_sep, pre_versionid,
- * 	 post_versionid
- * 
  *  - nonbreaking spaces.
  * 
  *  - free up all the data we have allocated while running this
@@ -414,6 +408,28 @@ static htmlconfig html_configure(paragraph *source) {
 		ret.leaf_contains_contents = utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-leaf-smallest-contents")) {
 		ret.leaf_smallest_contents = utoi(uadv(k));
+	    } else if (!ustricmp(k, L"html-index-text")) {
+		ret.index_text = uadv(k);
+	    } else if (!ustricmp(k, L"html-contents-text")) {
+		ret.contents_text = uadv(k);
+	    } else if (!ustricmp(k, L"html-preamble-text")) {
+		ret.preamble_text = uadv(k);
+	    } else if (!ustricmp(k, L"html-title-separator")) {
+		ret.title_separator = uadv(k);
+	    } else if (!ustricmp(k, L"html-nav-prev-text")) {
+		ret.nav_prev_text = uadv(k);
+	    } else if (!ustricmp(k, L"html-nav-next-text")) {
+		ret.nav_next_text = uadv(k);
+	    } else if (!ustricmp(k, L"html-nav-separator")) {
+		ret.nav_separator = uadv(k);
+	    } else if (!ustricmp(k, L"html-index-main-separator")) {
+		ret.index_main_sep = uadv(k);
+	    } else if (!ustricmp(k, L"html-index-multiple-separator")) {
+		ret.index_multi_sep = uadv(k);
+	    } else if (!ustricmp(k, L"html-pre-versionid")) {
+		ret.pre_versionid = uadv(k);
+	    } else if (!ustricmp(k, L"html-post-versionid")) {
+		ret.post_versionid = uadv(k);
 	    }
 	}
     }
