@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.35 2004/08/06 12:17:56 simon Exp $
+\versionid $Id$
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -51,6 +51,10 @@ To test the man page back end:
 .Directive
 
 'Directive
+
+\cw{.Directive}
+
+\cw{'Directive}
 
 \\Sping\\Spong\\Spoing
 

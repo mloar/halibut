@@ -409,9 +409,9 @@ static int man_convert(wchar_t const *s, int maxlen,
     return !err;
 }
 
-static void man_rdaddwc(rdstringc *rs, word *text, word *end,
-			int quote_props, manconfig *conf,
-			charset_state *state) {
+static int man_rdaddwc(rdstringc *rs, word *text, word *end,
+		       int quote_props, manconfig *conf,
+		       charset_state *state) {
     char *c;
 
     for (; text && text != end; text = text->next) switch (text->type) {
@@ -441,10 +441,10 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only)) {
-	    if (rs->pos > 0)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
+	    if (*c)
+		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    sfree(c);
 	    *state = charset_init_state;
 	    rdaddsc(rs, "\\fI");
@@ -452,10 +452,10 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 		    towordstyle(text->type) == word_WeakCode) &&
 		   (attraux(text->aux) == attr_First ||
 		    attraux(text->aux) == attr_Only)) {
-	    if (rs->pos > 0)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
+	    if (*c)
+		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    sfree(c);
 	    *state = charset_init_state;
 	    rdaddsc(rs, "\\fB");
@@ -464,38 +464,39 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	if (removeattr(text->type) == word_Normal) {
 	    charset_state s2 = *state;
 
-	    if (rs->pos > 0)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    if (man_convert(text->text, 0, &c, quote_props, conf->charset, &s2) ||
 		!text->alt) {
 		rdaddsc(rs, c);
+		if (*c)
+		    quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 		*state = s2;
 	    } else {
-		man_rdaddwc(rs, text->alt, NULL, quote_props, conf, state);
+		quote_props = man_rdaddwc(rs, text->alt, NULL,
+					  quote_props, conf, state);
 	    }
 	    sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
-	    if (rs->pos > 0)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    man_convert(L" ", 1, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
+	    if (*c)
+		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    sfree(c);
 	} else if (removeattr(text->type) == word_Quote) {
-	    if (rs->pos > 0)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    man_convert(quoteaux(text->aux) == quote_Open ?
 			conf->lquote : conf->rquote, 0,
 			&c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
+	    if (*c)
+		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    sfree(c);
 	}
 	if (towordstyle(text->type) != word_Normal &&
 	    (attraux(text->aux) == attr_Last ||
 	     attraux(text->aux) == attr_Only)) {
-	    if (rs->pos > 0)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
+	    if (*c)
+		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	    sfree(c);
 	    *state = charset_init_state;
 	    rdaddsc(rs, "\\fP");
@@ -504,7 +505,11 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
     }
     man_convert(NULL, 0, &c, quote_props, conf->charset, state);
     rdaddsc(rs, c);
+    if (*c)
+	quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
     sfree(c);
+
+    return quote_props;
 }
 
 static void man_text(FILE *fp, word *text, int newline,
