@@ -1,0 +1,5 @@
+Module: buttress
+Author: Simon Tatham <anakin@pobox.com>
+Description: Buttress is yet another text formatting system, intended primarily for writing software documentation. It accepts a single source format and outputs a variety of formats, planned to include text, HTML, Texinfo, Windows Help, Windows HTMLHelp, PostScript and PDF. It has comprehensive indexing and cross-referencing support, and generates hyperlinks within output documents wherever possible.
+Homepage: http://www.chiark.greenend.org.uk/~sgtatham/buttress.html
+Release: http://www.chiark.greenend.org.uk/~sgtatham/buttress.html
