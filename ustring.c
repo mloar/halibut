@@ -262,15 +262,21 @@ int ustrcmp(wchar_t *lhs, wchar_t *rhs) {
 wchar_t utolower(wchar_t c) {
     if (c == L'\0')
 	return c;		       /* this property needed by ustricmp */
-    /* FIXME: this doesn't even come close */
+#ifdef HAS_TOWLOWER
+    return towlower(c);
+#else
     if (c >= 'A' && c <= 'Z')
 	c += 'a'-'A';
     return c;
+#endif
 }
 
 int uisalpha(wchar_t c) {
-    /* FIXME: this doesn't even come close */
+#ifdef HAS_ISWALPHA
+    return iswalpha(c);
+#else
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+#endif
 }
 
 int ustricmp(wchar_t *lhs, wchar_t *rhs) {
