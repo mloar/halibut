@@ -77,11 +77,12 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "/t {\n"
 	    "  exch /y exch def {\n"
 	    "    /x exch def\n"
-	    "    x type [] type eq {x aload pop scalefont setfont} if\n"
-	    "    x type dup 1 type eq exch 1.0 type eq or {x y moveto} if\n"
-	    "    x type () type eq {x show} if\n"
+	    "    x type /arraytype eq {x aload pop scalefont setfont} if\n"
+	    "    x type dup /integertype eq exch /realtype eq or "
+							"{x y moveto} if\n"
+	    "    x type /stringtype eq {x show} if\n"
 	    "  } forall\n"
-	    "} def\n");
+	    "} bind def\n");
 
     fprintf(fp, "%%%%EndResource\n");
     fprintf(fp, "%%%%EndProlog\n");
