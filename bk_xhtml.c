@@ -112,7 +112,7 @@ static xhtmlsection *topsection;
 static paragraph *sourceparas;
 static xhtmlfile *lastfile;
 static xhtmlfile *xhtml_last_file = NULL;
-static int last_level=-1;
+static int last_level=-1, start_level;
 static xhtmlsection *currentsection;
 
 static xhtmlconfig xhtml_configure(paragraph *source)
@@ -933,7 +933,7 @@ static void xhtml_utostr(wchar_t *in, char **out)
  */
 static int xhtml_do_contents(FILE *fp, xhtmlfile *file)
 {
-  int level, limit, start_level, count = 0;
+  int level, limit, count = 0;
   if (!file)
     return 0;
 
@@ -947,7 +947,7 @@ static int xhtml_do_contents(FILE *fp, xhtmlfile *file)
   if (fp!=NULL) {
     while (last_level > start_level) {
       last_level--;
-      fprintf(fp, "</ul>\n");
+      fprintf(fp, "</li></ul>\n");
     }
   }
   return count;
@@ -969,7 +969,7 @@ static int xhtml_do_naked_contents(FILE *fp, xhtmlfile *file)
   if (fp!=NULL) {
     while (last_level > start_level) {
       last_level--;
-      fprintf(fp, "</ul>\n");
+      fprintf(fp, "</li></ul>\n");
     }
   }
   return count;
@@ -1037,13 +1037,18 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
     return FALSE;
   if (fp==NULL || section->level < 0)
     return TRUE;
-  while (last_level > section->level) {
-    last_level--;
-    fprintf(fp, "</ul>\n");
-  }
-  while (last_level < section->level) {
+  if (last_level > section->level) {
+    while (last_level > section->level) {
+      last_level--;
+      fprintf(fp, "</li></ul>\n");
+    }
+    fprintf(fp, "</li>\n");
+  } else if (last_level < section->level) {
+    assert(last_level == section->level - 1);
     last_level++;
     fprintf(fp, "<ul>\n");
+  } else {
+    fprintf(fp, "</li>\n");
   }
   fprintf(fp, "<li><a href=\"%s#%s\">", section->file->filename, section->fragment);
   if (section->para->kwtext) {
@@ -1055,7 +1060,7 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
   if (section->para->words) {
     xhtml_para(fp, section->para->words, FALSE);
   }
-  fprintf(fp, "</a></li>\n");
+  fprintf(fp, "</a>\n");
   return TRUE;
 }
 
@@ -1154,7 +1159,9 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
       case para_Description:
       case para_DescribedThing:
       case para_BiblioCited:
-        if (last_type!=p->type) {
+        if (last_type!=p->type &&
+	    !(last_type==para_DescribedThing && p->type==para_Description) &&
+	    !(last_type==para_Description && p->type==para_DescribedThing)) {
           /* start up list if necessary */
           if (p->type == para_Bullet) {
             fprintf(fp, "<ul>\n");
@@ -1187,9 +1194,9 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
 	closeofflist:
         if (ptype == para_BiblioCited) {
           fprintf(fp, "</dd>\n");
-	} else if (p->type == para_DescribedThing) {
+	} else if (ptype == para_DescribedThing) {
           fprintf(fp, "</dt>");
-	} else if (p->type == para_Description) {
+	} else if (ptype == para_Description) {
           fprintf(fp, "</dd>");
         } else if (ptype == para_Bullet || ptype == para_NumberedList) {
           fprintf(fp, "</li>");
@@ -1203,7 +1210,10 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
           int close_off=FALSE;
 /*          if (p2 && (xhtml_para_level(p2)>limit || xhtml_para_level(p2)==-1)) {*/
           if (p2 && xhtml_para_level(p2)==-1) {
-            if (p2->type != ptype && p2->type != para_LcontPush)
+            if (p2->type != ptype &&
+		!(p2->type==para_DescribedThing && ptype==para_Description) &&
+		!(p2->type==para_Description && ptype==para_DescribedThing) &&
+		p2->type != para_LcontPush)
               close_off=TRUE;
           } else {
             close_off=TRUE;
@@ -1303,7 +1313,7 @@ static void xhtml_versionid(FILE *fp, word *text, int started)
   rdaddc(&t, ']');		       /* FIXME: configurability */
 
   if (started)
-    fprintf(fp, "<br>\n");
+    fprintf(fp, "<br />\n");
   fprintf(fp, "%s\n", t.text);
   sfree(t.text);
 }
