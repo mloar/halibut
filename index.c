@@ -142,13 +142,15 @@ void build_index(index *i) {
 	    t->nrefs = t->nexplicit;
 	    ta = t->explicit_texts;
 	}
-	t->refs = mknewa(indexentry *, t->nrefs);
-	for (j = 0; j < t->nrefs; j++) {
-	    indexentry *ent = mknew(indexentry);
-	    ent->text = *ta++;
-	    t->refs[j] = add23(i->entries, ent, compare_entries);
-	    if (t->refs[j] != ent)     /* duplicate */
-		sfree(ent);
+	if (t->nrefs) {
+	    t->refs = mknewa(indexentry *, t->nrefs);
+	    for (j = 0; j < t->nrefs; j++) {
+		indexentry *ent = mknew(indexentry);
+		ent->text = *ta++;
+		t->refs[j] = add23(i->entries, ent, compare_entries);
+		if (t->refs[j] != ent)     /* duplicate */
+		    sfree(ent);
+	    }
 	}
     }
 }
