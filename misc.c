@@ -194,10 +194,25 @@ int compare_wordlists(word *a, word *b) {
 	    }
 	}
 
+#ifdef HAS_WCSCOLL
+	{
+	    wchar_t a[2], b[2];
+	    int ret;
+
+	    a[0] = pos[0].c;
+	    b[0] = pos[1].c;
+	    a[1] = b[1] = L'\0';
+
+	    ret = wcscoll(a, b);
+	    if (ret)
+		return ret;
+	}
+#else
 	if (pos[0].c < pos[1].c)
 	    return -1;
 	else if (pos[0].c > pos[1].c)
 	    return +1;
+#endif
 
 	if (!pos[0].c)
 	    break;		       /* they're equal */
