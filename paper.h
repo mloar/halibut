@@ -168,6 +168,7 @@ struct line_data_Tag {
      * relative to the left margin.
      */
     word *aux_text;
+    word *aux_text_2;
     int aux_left_indent;
     /*
      * This line might have a non-negotiable page break before it.

@@ -17,9 +17,6 @@
  * 
  *  - do PDF outline
  * 
- *  - all the missing features in text rendering (code paragraphs,
- *    list bullets, indentation, section heading styles)
- * 
  *  - index
  * 
  * That should bring us to the same level of functionality that
@@ -51,17 +48,22 @@ static page_data *page_breaks(line_data *first, line_data *last,
 			      int page_height);
 static void render_line(line_data *ldata, int left_x, int top_y,
 			xref_dest *dest, keywordlist *keywords);
+static int paper_width_simple(para_data *pdata, word *text);
+static void code_paragraph(para_data *pdata,
+			   font_data *fn, font_data *fi, font_data *fb,
+			   int font_size, int indent, word *words);
 
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			indexdata *idx) {
     paragraph *p;
     document *doc;
-    int indent, extra_indent, firstline_indent;
+    int indent, extra_indent, firstline_indent, aux_indent;
     para_data *pdata;
     line_data *ldata, *firstline, *lastline;
-    font_data *tr, *ti, *cr;
+    font_data *tr, *ti, *hr, *hi, *cr, *co, *cb;
     page_data *pages;
     font_list *fontlist;
+    word *aux, *aux2;
 
     /*
      * FIXME: All these things ought to become configurable.
@@ -77,13 +79,14 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     int indent_quote = 18 * 4096;
     int base_leading = 4096;
     int base_para_spacing = 10 * 4096;
+    int chapter_top_space = 72 * 4096;
+    int sect_num_left_space = 12 * 4096;
 
     int base_width = paper_width - left_margin - right_margin;
     int page_height = paper_height - top_margin - bottom_margin;
 
     IGNORE(keywords);		       /* FIXME */
     IGNORE(idx);		       /* FIXME */
-    IGNORE(indent_list_bullet);	       /* FIXME */
 
     /*
      * First, set up some font structures.
@@ -92,7 +95,11 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     fontlist->head = fontlist->tail = NULL;
     tr = make_std_font(fontlist, "Times-Roman");
     ti = make_std_font(fontlist, "Times-Italic");
+    hr = make_std_font(fontlist, "Helvetica-Bold");
+    hi = make_std_font(fontlist, "Helvetica-BoldOblique");
     cr = make_std_font(fontlist, "Courier");
+    co = make_std_font(fontlist, "Courier-Oblique");
+    cb = make_std_font(fontlist, "Courier-Bold");
 
     /*
      * Go through and break up each paragraph into lines.
@@ -137,7 +144,9 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	     * specially.
 	     */
 	  case para_Code:
-	    /* FIXME */
+	    pdata = mknew(para_data);
+	    code_paragraph(pdata, cr, co, cb, 12, indent, p->words);
+	    p->private_data = pdata;
 	    break;
 
 	    /*
@@ -162,43 +171,185 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	    pdata = mknew(para_data);
 
 	    /*
-	     * FIXME: Subsidiary switch on paragraph type to decide
-	     * what font set to use for this paragraph.
+	     * Choose fonts for this paragraph.
+	     * 
+	     * FIXME: All of this ought to be completely
+	     * user-configurable.
 	     */
-	    pdata->fonts[FONT_NORMAL] = tr;
-	    pdata->sizes[FONT_NORMAL] = 12;
-	    pdata->fonts[FONT_EMPH] = ti;
-	    pdata->sizes[FONT_EMPH] = 12;
-	    pdata->fonts[FONT_CODE] = cr;
-	    pdata->sizes[FONT_CODE] = 12;
+	    switch (p->type) {
+	      case para_Title:
+		pdata->fonts[FONT_NORMAL] = hr;
+		pdata->sizes[FONT_NORMAL] = 24;
+		pdata->fonts[FONT_EMPH] = hi;
+		pdata->sizes[FONT_EMPH] = 24;
+		pdata->fonts[FONT_CODE] = cb;
+		pdata->sizes[FONT_CODE] = 24;
+		break;
+
+	      case para_Chapter:
+	      case para_Appendix:
+	      case para_UnnumberedChapter:
+		pdata->fonts[FONT_NORMAL] = hr;
+		pdata->sizes[FONT_NORMAL] = 20;
+		pdata->fonts[FONT_EMPH] = hi;
+		pdata->sizes[FONT_EMPH] = 20;
+		pdata->fonts[FONT_CODE] = cb;
+		pdata->sizes[FONT_CODE] = 20;
+		break;
+
+	      case para_Heading:
+	      case para_Subsect:
+		pdata->fonts[FONT_NORMAL] = hr;
+		pdata->fonts[FONT_EMPH] = hi;
+		pdata->fonts[FONT_CODE] = cb;
+		pdata->sizes[FONT_NORMAL] =
+		    pdata->sizes[FONT_EMPH] =
+		    pdata->sizes[FONT_CODE] =
+		    (p->aux == 0 ? 16 : p->aux == 1 ? 14 : 13);
+		break;
+
+	      case para_Normal:
+	      case para_BiblioCited:
+	      case para_Bullet:
+	      case para_NumberedList:
+	      case para_DescribedThing:
+	      case para_Description:
+	      case para_Copyright:
+		pdata->fonts[FONT_NORMAL] = tr;
+		pdata->sizes[FONT_NORMAL] = 12;
+		pdata->fonts[FONT_EMPH] = ti;
+		pdata->sizes[FONT_EMPH] = 12;
+		pdata->fonts[FONT_CODE] = cr;
+		pdata->sizes[FONT_CODE] = 12;
+		break;
+	    }
 
 	    /*
-	     * FIXME: Also select an indentation level depending on
-	     * the paragraph type (list paragraphs other than
+	     * Also select an indentation level depending on the
+	     * paragraph type (list paragraphs other than
 	     * para_DescribedThing need extra indent).
 	     * 
-	     * Perhaps at some point we might even arrange for the
-	     * user to be able to request indented first lines in
-	     * paragraphs.
+	     * (FIXME: Perhaps at some point we might even arrange
+	     * for the user to be able to request indented first
+	     * lines in paragraphs.)
 	     */
-	    extra_indent = 0;
-	    firstline_indent = 0;
+	    if (p->type == para_Bullet ||
+		p->type == para_NumberedList ||
+		p->type == para_Description) {
+		extra_indent = firstline_indent = indent_list;
+	    } else {
+		extra_indent = firstline_indent = 0;
+	    }
+
+	    /*
+	     * Find the auxiliary text for this paragraph.
+	     */
+	    aux = aux2 = NULL;
+	    aux_indent = 0;
+
+	    switch (p->type) {
+	      case para_Chapter:
+	      case para_Appendix:
+	      case para_Heading:
+	      case para_Subsect:
+		/*
+		 * For some heading styles (FIXME: be able to
+		 * configure which), the auxiliary text contains
+		 * the chapter number and is arranged to be
+		 * right-aligned a few points left of the primary
+		 * margin. For other styles, the auxiliary text is
+		 * the full chapter _name_ and takes up space
+		 * within the (wrapped) chapter title, meaning that
+		 * we must move the first line indent over to make
+		 * space for it.
+		 */
+		if (p->type == para_Heading || p->type == para_Subsect) {
+		    int len;
+
+		    aux = p->kwtext2;
+		    len = paper_width_simple(pdata, p->kwtext2);
+		    aux_indent = -len - sect_num_left_space;
+		} else {
+		    aux = p->kwtext;
+		    aux2 = mknew(word);
+		    aux2->next = NULL;
+		    aux2->alt = NULL;
+		    aux2->type = word_Normal;
+		    aux2->text = ustrdup(L": ");
+		    aux2->breaks = FALSE;
+		    aux2->aux = 0;
+		    aux_indent = 0;
+
+		    firstline_indent += paper_width_simple(pdata, aux);
+		    firstline_indent += paper_width_simple(pdata, aux2);
+		}
+		break;
+
+	      case para_Bullet:
+		/*
+		 * Auxiliary text consisting of a bullet. (FIXME:
+		 * configurable bullet.)
+		 */
+		aux = mknew(word);
+		aux->next = NULL;
+		aux->alt = NULL;
+		aux->type = word_Normal;
+		aux->text = ustrdup(L"\x2022");
+		aux->breaks = FALSE;
+		aux->aux = 0;
+		aux_indent = indent + indent_list_bullet;
+		break;
+
+	      case para_NumberedList:
+		/*
+		 * Auxiliary text consisting of the number followed
+		 * by a (FIXME: configurable) full stop.
+		 */
+		aux = p->kwtext;
+		aux2 = mknew(word);
+		aux2->next = NULL;
+		aux2->alt = NULL;
+		aux2->type = word_Normal;
+		aux2->text = ustrdup(L".");
+		aux2->breaks = FALSE;
+		aux2->aux = 0;
+		aux_indent = indent + indent_list_bullet;
+		break;
+
+	      case para_BiblioCited:
+		/*
+		 * Auxiliary text consisting of the bibliography
+		 * reference text, and a trailing space.
+		 */
+		aux = p->kwtext;
+		aux2 = mknew(word);
+		aux2->next = NULL;
+		aux2->alt = NULL;
+		aux2->type = word_Normal;
+		aux2->text = ustrdup(L" ");
+		aux2->breaks = FALSE;
+		aux2->aux = 0;
+		aux_indent = indent;
+		firstline_indent += paper_width_simple(pdata, aux);
+		firstline_indent += paper_width_simple(pdata, aux2);
+		break;
+	    }
 
 	    wrap_paragraph(pdata, p->words, base_width,
 			   indent + firstline_indent,
 			   indent + extra_indent);
 
-	    /*
-	     * FIXME: Also find the auxiliary data for this
-	     * paragraph. For para_Bullet it's a bullet; for
-	     * para_NumberedList it's the number; for some section
-	     * headings (depending on the style of section heading
-	     * selected) it's the section number.
-	     * 
-	     * Assign into pdata->first->aux_*.
-	     */
-
 	    p->private_data = pdata;
+
+	    pdata->first->aux_text = aux;
+	    pdata->first->aux_text_2 = aux2;
+	    pdata->first->aux_left_indent = aux_indent;
+
+	    break;
+	}
+
+	if (p->private_data) {
+	    pdata = (para_data *)p->private_data;
 
 	    /*
 	     * Set the line spacing for each line in this paragraph.
@@ -216,18 +367,20 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	    }
 
 	    /*
-	     * FIXME: some kinds of section heading do require a
-	     * page break before them.
+	     * Some kinds of section heading do require a page
+	     * break before them.
 	     */
+	    if (p->type == para_Title ||
+		p->type == para_Chapter ||
+		p->type == para_Appendix ||
+		p->type == para_UnnumberedChapter) {
+		pdata->first->page_break = TRUE;
+		pdata->first->space_before = chapter_top_space;
+	    }
 
-	    break;
-	}
-
-	/*
-	 * Link all line structures together into a big list.
-	 */
-	if (p->private_data) {
-	    pdata = (para_data *)p->private_data;
+	    /*
+	     * Link all line structures together into a big list.
+	     */
 	    if (pdata->first) {
 		if (lastline) {
 		    lastline->next = pdata->first;
@@ -451,6 +604,18 @@ static int paper_width(void *vctx, word *word)
     return paper_width_internal(vctx, word, NULL);
 }
 
+static int paper_width_simple(para_data *pdata, word *text)
+{
+    struct paper_width_ctx ctx;
+
+    ctx.pdata = pdata;
+    ctx.minspacewidth =
+	(pdata->sizes[FONT_NORMAL] *
+	 string_width(pdata->fonts[FONT_NORMAL], L" ", NULL));
+
+    return paper_width_list(&ctx, text, NULL, NULL);
+}
+
 static void wrap_paragraph(para_data *pdata, word *words,
 			   int w, int i1, int i2)
 {
@@ -545,6 +710,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	    ldata->hshortfall = 0;
 
 	ldata->aux_text = NULL;
+	ldata->aux_text_2 = NULL;
 	ldata->aux_left_indent = 0;
     }
 
@@ -919,12 +1085,17 @@ static void render_line(line_data *ldata, int left_x, int top_y,
     xref *xr;
     
     if (ldata->aux_text) {
+	int x;
 	xr = NULL;
 	nspace = 0;
-	render_text(ldata->page, ldata->pdata, ldata,
-		    left_x + ldata->aux_left_indent,
-		    top_y - ldata->ypos,
-		    ldata->aux_text, NULL, &xr, 0, 0, &nspace, keywords);
+	x = render_text(ldata->page, ldata->pdata, ldata,
+			left_x + ldata->aux_left_indent,
+			top_y - ldata->ypos,
+			ldata->aux_text, NULL, &xr, 0, 0, &nspace, keywords);
+	if (ldata->aux_text_2)
+	    render_text(ldata->page, ldata->pdata, ldata,
+			x, top_y - ldata->ypos,
+			ldata->aux_text_2, NULL, &xr, 0, 0, &nspace, keywords);
     }
     nspace = 0;
 
@@ -957,4 +1128,112 @@ static void render_line(line_data *ldata, int left_x, int top_y,
 	*dest = xr->dest;
     } else
 	dest->type = NONE;
+}
+
+static void code_paragraph(para_data *pdata,
+			   font_data *fn, font_data *fi, font_data *fb,
+			   int font_size, int indent, word *words)
+{
+    /*
+     * For code paragraphs, I'm going to hack grievously and
+     * pretend the three normal fonts are the three code paragraph
+     * fonts.
+     */
+    pdata->fonts[FONT_NORMAL] = fb;
+    pdata->fonts[FONT_EMPH] = fi;
+    pdata->fonts[FONT_CODE] = fn;
+    pdata->sizes[FONT_NORMAL] =
+	pdata->sizes[FONT_EMPH] =
+	pdata->sizes[FONT_CODE] = font_size;
+
+    pdata->first = pdata->last = NULL;
+
+    for (; words; words = words->next) {
+	wchar_t *t, *e, *start;
+	word *lhead = NULL, *ltail = NULL, *w;
+	line_data *ldata;
+	int prev = -1, curr;
+
+	t = words->text;
+	if (words->next && words->next->type == word_Emph) {
+	    e = words->next->text;
+	    words = words->next;
+	} else
+	    e = NULL;
+
+	start = t;
+
+	while (*start) {
+	    while (*t) {
+		if (!e || !*e)
+		    curr = 0;
+		else if (*e == L'i')
+		    curr = 1;
+		else if (*e == L'b')
+		    curr = 2;
+		else
+		    curr = 0;
+
+		if (prev < 0)
+		    prev = curr;
+
+		if (curr != prev)
+		    break;
+
+		t++;
+		if (e && *e)
+		    e++;
+	    }
+
+	    /*
+	     * We've isolated a maximal subsequence of the line
+	     * which has the same emphasis. Form it into a word
+	     * structure.
+	     */
+	    w = mknew(word);
+	    w->next = NULL;
+	    w->alt = NULL;
+	    w->type = (prev == 0 ? word_WeakCode :
+		      prev == 1 ? word_Emph : word_Normal);
+	    w->text = mknewa(wchar_t, t-start+1);
+	    memcpy(w->text, start, (t-start) * sizeof(wchar_t));
+	    w->text[t-start] = '\0';
+	    w->breaks = FALSE;
+
+	    if (ltail)
+		ltail->next = w;
+	    else
+		lhead = w;
+	    ltail = w;
+
+	    start = t;
+	    prev = -1;
+	}
+
+	ldata = mknew(line_data);
+
+	ldata->pdata = pdata;
+	ldata->first = lhead;
+	ldata->end = NULL;
+	ldata->line_height = font_size * 4096;
+
+	ldata->xpos = indent;
+
+	if (pdata->last) {
+	    pdata->last->next = ldata;
+	    ldata->prev = pdata->last;
+	} else {
+	    pdata->first = ldata;
+	    ldata->prev = NULL;
+	}
+	ldata->next = NULL;
+	pdata->last = ldata;
+
+	ldata->hshortfall = 0;
+	ldata->nspaces = 0;
+	ldata->aux_text = NULL;
+	ldata->aux_text_2 = NULL;
+	ldata->aux_left_indent = 0;
+
+    }
 }
