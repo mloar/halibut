@@ -124,4 +124,4 @@ The HTML output isn't very good.
 
 Unicode handling is atrocious.
 
-Several more output formats (PostScript, PDF, \cw{info}) are missing.
+Several more output formats (PostScript, PDF) are missing.
