@@ -76,7 +76,7 @@ release:
 	    ) > reltmp/$(RELDIR)/manifest;                              \
 	    echo "-DVERSION=\"$(VERSION)\"" > reltmp/$(RELDIR)/version; \
 	fi
-	tar chzvCf reltmp - $(RELDIR) > $(RELDIR).tar.gz
+	tar chzvoCf reltmp - $(RELDIR) > $(RELDIR).tar.gz
 	rm -rf reltmp
 
 else
