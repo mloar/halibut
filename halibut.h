@@ -219,7 +219,6 @@ enum {
     err_misplacedlcont,		       /* \lcont not after a list item */
     err_sectmarkerinblock,	       /* section marker appeared in block */
     err_infodirentry,		       /* \cfg{info-dir-entry} missing param */
-    err_infoindexcolon,		       /* colon in index term in info */
     err_infonodechar,		       /* colon/comma in node name in info */
     err_whatever                       /* random error of another type */
 };

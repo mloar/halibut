@@ -1,15 +1,28 @@
 /*
  * info backend for Halibut
  * 
- * TODO:
- * 
- *  - configurable choice of how to allocate node names
- *  - might be helpful to diagnose duplicate node names!
- *  - test everything in info(1), and probably jed too
- * 
- * Later:
+ * Possible future work:
  * 
  *  - configurable indentation, bullets, emphasis, quotes etc?
+ * 
+ *  - configurable choice of how to allocate node names?
+ *     + possibly a template-like approach, choosing node names to
+ * 	 be the full section title or perhaps the internal keyword?
+ *     + neither of those seems quite right. Perhaps instead a
+ * 	 Windows Help-like mechanism, where a magic config
+ * 	 directive allows user choice of name for every node.
+ *     + Only trouble with that is, now what happens to the section
+ * 	 numbers? Do they become completely vestigial and just sit
+ * 	 in the title text of each node? Or do we keep them in the
+ * 	 menus somehow? I think people might occasionally want to
+ * 	 go to a section by number, if only because all the _other_
+ * 	 formats of the same document will reference the numbers
+ * 	 all the time. So our menu lines could look like one of
+ * 	 these:
+ *        * Nodename: Section 1.2. Title of section.
+ *        * Section 1.2: Nodename. Title of section.
+ * 
+ *  - might be helpful to diagnose duplicate node names!
  */
 
 #include <stdio.h>
@@ -182,27 +195,11 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
 	    info_idx *ii = mknew(info_idx);
 	    rdstringc rs = { 0, 0, NULL };
-	    char *p, *q;
 
 	    ii->nnodes = ii->nodesize = 0;
 	    ii->nodes = NULL;
 
 	    info_rdaddwc(&rs, entry->text, NULL, FALSE);
-
-	    /*
-	     * We cannot have colons in index terms, since they
-	     * disrupt the structure of the index menu. Remove any
-	     * that we find, with a warning.
-	     */
-	    p = q = rs.text;
-	    while (*p) {
-		if (*p == ':') {
-		    error(err_infoindexcolon, &entry->fpos);
-		} else {
-		    *q++ = *p;
-		}
-		p++;
-	    }
 
 	    ii->text = rs.text;
 
@@ -422,7 +419,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	newnode->prev = currnode;
 	currnode->listnext = newnode;
 
-	rdaddsc(&newnode->text, "Index\n-----\n\n* Menu:\n\n");
+	rdaddsc(&newnode->text, "Index\n-----\n\n");
 
 	info_menu_item(&topnode->text, newnode, NULL);
 
@@ -431,7 +428,6 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 
 	    for (j = 0; j < ii->nnodes; j++) {
 		int pos0 = newnode->text.pos;
-		rdaddsc(&newnode->text, "* ");
 		/*
 		 * When we have multiple references for a single
 		 * index term, we only display the actual term on
@@ -442,9 +438,9 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 		    rdaddsc(&newnode->text, ii->text);
 		for (k = newnode->text.pos - pos0; k < index_width; k++)
 		    rdaddc(&newnode->text, ' ');
-		rdaddsc(&newnode->text, ": ");
+		rdaddsc(&newnode->text, "   *Note ");
 		rdaddsc(&newnode->text, ii->nodes[j]->name);
-		rdaddsc(&newnode->text, ".\n");
+		rdaddsc(&newnode->text, "::\n");
 	    }
 	}
     }

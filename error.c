@@ -208,12 +208,6 @@ static void do_error(int code, va_list ap) {
 		" parameters");
 	flags = FILEPOS;
 	break;
-      case err_infoindexcolon:
-	fpos = *va_arg(ap, filepos *);
-	sprintf(error, "info output format does not support colons in"
-		" index terms; removing");
-	flags = FILEPOS;
-	break;
       case err_infonodechar:
 	fpos = *va_arg(ap, filepos *);
 	c = (char)va_arg(ap, int);
