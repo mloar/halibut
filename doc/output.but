@@ -8,7 +8,7 @@ that format.
 \H{output-text} Plain text
 
 This output format generates the document as a single \i{plain text}
-file.
+file. No index is generated.
 
 The precise formatting of the text file can be controlled by a
 variety of configuration directives. They are listed in the
