@@ -76,36 +76,6 @@ static int get(input *in) {
 }
 
 /*
- * Small routines to amalgamate a string from an input source.
- */
-typedef struct tagRdstring rdstring;
-struct tagRdstring {
-    int pos, size;
-    wchar_t *text;
-};
-static void rdadd(rdstring *rs, wchar_t c) {
-    if (rs->pos >= rs->size-1) {
-	rs->size = rs->pos + 128;
-	rs->text = resize(rs->text, rs->size);
-    }
-    rs->text[rs->pos++] = c;
-    rs->text[rs->pos] = 0;
-}
-static void rdadds(rdstring *rs, wchar_t *p) {
-    int len = ustrlen(p);
-    if (rs->pos >= rs->size - len) {
-	rs->size = rs->pos + len + 128;
-	rs->text = resize(rs->text, rs->size);
-    }
-    ustrcpy(rs->text + rs->pos, p);
-    rs->pos += len;
-}
-static wchar_t *rdtrim(rdstring *rs) {
-    rs->text = resize(rs->text, rs->pos + 1);
-    return rs->text;
-}
-
-/*
  * Lexical analysis of source files.
  */
 typedef struct token_Tag token;

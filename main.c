@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
     int nogo;
     int errs;
     int reportcols;
+    int debug;
 
     /*
      * Set up initial (default) parameters.
@@ -26,6 +27,7 @@ int main(int argc, char **argv) {
     nfiles = 0;
     nogo = errs = FALSE;
     reportcols = 0;
+    debug = 0;
 
     if (argc == 1) {
 	usage();
@@ -85,6 +87,7 @@ int main(int argc, char **argv) {
 		  case 'V':
 		  case 'L':
 		  case 'P':
+		  case 'd':
 		    /*
 		     * Option requiring no parameter.
 		     */
@@ -103,6 +106,9 @@ int main(int argc, char **argv) {
 			break;
 		      case 'P':
 			reportcols = 1;
+			break;
+		      case 'd':
+			debug = TRUE;
 			break;
 		    }
 		    break;
@@ -193,10 +199,14 @@ int main(int argc, char **argv) {
 		index_merge(idx, TRUE, p->keyword, p->words);
 
 	build_index(idx);
-	index_debug(idx);
 
-	dbg_prtkws(keywords);
-	dbg_prtsource(sourceform);
+	if (debug) {
+	    index_debug(idx);
+	    dbg_prtkws(keywords);
+	    dbg_prtsource(sourceform);
+	}
+
+	text_backend(sourceform, keywords, idx);
 
 	free_para_list(sourceform);
 	free_keywords(keywords);

@@ -89,8 +89,10 @@ static void doanumber(word ***wret, int num) {
     dotext(wret, p);
 }
 
-word *number_mktext(numberstate *state, int para, int aux, int prev) {
+word *number_mktext(numberstate *state, int para, int aux, int prev,
+		    word **auxret) {
     word *ret = NULL;
+    word **ret2 = &ret;
     word **pret = &ret;
     int i, level;
 
@@ -101,6 +103,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev) {
 	    state->sectionlevels[i] = 0;
 	dotext(&pret, L"Chapter");
 	dospace(&pret);
+	ret2 = pret;
 	donumber(&pret, state->chapternum);
 	state->ischapter = 1;
 	break;
@@ -117,6 +120,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev) {
 	    state->sectionlevels[i] = 0;
 	dotext(&pret, L"Section");
 	dospace(&pret);
+	ret2 = pret;
 	if (state->ischapter)
 	    donumber(&pret, state->chapternum);
 	else
@@ -134,10 +138,12 @@ word *number_mktext(numberstate *state, int para, int aux, int prev) {
 	    state->sectionlevels[i] = 0;
 	dotext(&pret, L"Appendix");
 	dospace(&pret);
+	ret2 = pret;
 	doanumber(&pret, state->appendixnum);
 	state->ischapter = 0;
 	break;
       case para_NumberedList:
+	ret2 = pret;
 	if (prev != para_NumberedList)
 	    state->listitem = 0;
 	state->listitem++;
@@ -145,5 +151,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev) {
 	break;
     }
 
+    if (auxret)
+	*auxret = *ret2;
     return ret;
 }

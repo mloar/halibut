@@ -128,12 +128,13 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
  * entries.
  */
 void build_index(index *i) {
-    indextag *t, **ta;
+    indextag *t;
+    word **ta;
     enum23 e;
     int j;
 
     for (t = (indextag *)first23(i->tags, &e); t;
-	 t = (indextag *)next23(i->tags, &e)) {
+	 t = (indextag *)next23(&e)) {
 	if (t->implicit_text) {
 	    t->nrefs = 1;
 	    ta = &t->implicit_text;
@@ -156,10 +157,9 @@ void cleanup_index(index *i) {
     indextag *t;
     indexentry *ent;
     enum23 e;
-    int j;
 
     for (t = (indextag *)first23(i->tags, &e); t;
-	 t = (indextag *)next23(i->tags, &e)) {
+	 t = (indextag *)next23(&e)) {
 	sfree(t->name);
 	free_word_list(t->implicit_text);
 	sfree(t->explicit_texts);
@@ -168,12 +168,15 @@ void cleanup_index(index *i) {
     }
     freetree23(i->tags);
     for (ent = (indexentry *)first23(i->entries, &e); ent;
-	 ent = (indexentry *)next23(i->entries, &e)) {
+	 ent = (indexentry *)next23(&e)) {
 	sfree(ent);
     }
     freetree23(i->entries);
     sfree(i);
 }
+
+static void dbg_prtwordlist(int level, word *w);
+static void dbg_prtmerge(int is_explicit, wchar_t *tag, word *text);
 
 void index_debug(index *i) {
     indextag *t;
@@ -181,17 +184,13 @@ void index_debug(index *i) {
     int j;
 
     for (t = (indextag *)first23(i->tags, &e); t;
-	 t = (indextag *)next23(i->tags, &e)) {
+	 t = (indextag *)next23(&e)) {
 	if (t->implicit_text)
 	    dbg_prtmerge(0, t->name, t->implicit_text);
 	for (j = 0; j < t->nexplicit; j++)
 	    dbg_prtmerge(1, t->name, t->explicit_texts[j]);
     }
 }
-#define DEBUG
-
-#ifdef DEBUG
-static void dbg_prtwordlist(int level, word *w);
 
 static void dbg_prtmerge(int is_explicit, wchar_t *tag, word *text) {
     printf("\\IM: %splicit: \"", is_explicit ? "ex" : "im");
@@ -221,4 +220,3 @@ static void dbg_prtwordlist(int level, word *w) {
 	printf("\n");
     }
 }
-#endif

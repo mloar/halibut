@@ -100,7 +100,7 @@ keywordlist *get_keywords(paragraph *source) {
 	 * Number the chapter / section / list-item / whatever.
 	 */
 	source->kwtext = number_mktext(n, source->type, source->aux,
-				       prevpara);
+				       prevpara, &source->kwtext2);
 	prevpara = source->type;
 
 	if (source->keyword && *source->keyword) {
@@ -161,7 +161,9 @@ void subst_keywords(paragraph *source, keywordlist *kl) {
 		} else
 		    subst = dup_word_list(kw->text);
 
-		if (subst && ptr->type == word_LowerXref)
+		if (subst && ptr->type == word_LowerXref &&
+		    kw->para->type != para_Biblio &&
+		    kw->para->type != para_BiblioCited)
 		    ustrlow(subst->text);
 
 		close = mknew(word);

@@ -238,7 +238,7 @@ void *first23(tree23 *t, enum23 *e) {
     return n->elems[0];
 }
 
-void *next23(tree23 *t, enum23 *e) {
+void *next23(enum23 *e) {
     node23 *n = (node23 *)e->node;
     int pos = e->posn;
 

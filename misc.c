@@ -41,6 +41,53 @@ void *stk_pop(stack s) {
 	return NULL;
 }
 
+/*
+ * Small routines to amalgamate a string from an input source.
+ */
+void rdadd(rdstring *rs, wchar_t c) {
+    if (rs->pos >= rs->size-1) {
+	rs->size = rs->pos + 128;
+	rs->text = resize(rs->text, rs->size);
+    }
+    rs->text[rs->pos++] = c;
+    rs->text[rs->pos] = 0;
+}
+void rdadds(rdstring *rs, wchar_t *p) {
+    int len = ustrlen(p);
+    if (rs->pos >= rs->size - len) {
+	rs->size = rs->pos + len + 128;
+	rs->text = resize(rs->text, rs->size);
+    }
+    ustrcpy(rs->text + rs->pos, p);
+    rs->pos += len;
+}
+wchar_t *rdtrim(rdstring *rs) {
+    rs->text = resize(rs->text, rs->pos + 1);
+    return rs->text;
+}
+
+void rdaddc(rdstringc *rs, char c) {
+    if (rs->pos >= rs->size-1) {
+	rs->size = rs->pos + 128;
+	rs->text = resize(rs->text, rs->size);
+    }
+    rs->text[rs->pos++] = c;
+    rs->text[rs->pos] = 0;
+}
+void rdaddsc(rdstringc *rs, char *p) {
+    int len = strlen(p);
+    if (rs->pos >= rs->size - len) {
+	rs->size = rs->pos + len + 128;
+	rs->text = resize(rs->text, rs->size);
+    }
+    strcpy(rs->text + rs->pos, p);
+    rs->pos += len;
+}
+char *rdtrimc(rdstringc *rs) {
+    rs->text = resize(rs->text, rs->pos + 1);
+    return rs->text;
+}
+
 int compare_wordlists(word *a, word *b) {
     int t;
     while (a && b) {
@@ -83,4 +130,71 @@ int compare_wordlists(word *a, word *b) {
 	return (a ? +1 : -1);
     else
 	return 0;
+}
+
+wrappedline *wrap_para(word *text, int width, int subsequentwidth,
+		       int (*widthfn)(word *)) {
+    wrappedline *head = NULL, **ptr = &head;
+    word *spc;
+    int nspc;
+    int thiswidth, lastgood;
+
+    while (text) {
+	wrappedline *w = mknew(wrappedline);
+	*ptr = w;
+	ptr = &w->next;
+	w->next = NULL;
+
+	w->begin = text;
+	spc = NULL;
+	nspc = 0;
+	thiswidth = lastgood = 0;
+	while (text) {
+	    thiswidth += widthfn(text);
+	    if (text->next && text->next->type == word_WhiteSpace) {
+		if (thiswidth > width)
+		    break;
+		spc = text->next;
+		lastgood = thiswidth;
+		nspc++;
+	    }
+	    text = text->next;
+	}
+	/*
+	 * We've exited this loop on one of three conditions. spc
+	 * might be non-NULL and we've overflowed: we have broken
+	 * the paragraph there. spc might be NULL and text might be
+	 * NULL too: we've reached the end of the paragraph and
+	 * should output the last line. Or text might be non-NULL
+	 * and spc might be NULL: we've got an anomalously long
+	 * line with no spaces we could have broken at. Output it
+	 * anyway as the best we can do.
+	 */
+	if (spc && thiswidth > width) {
+	    w->end = spc;
+	    text = spc->next;
+	    w->nspaces = nspc-1;
+	    w->shortfall = width - lastgood;
+	} else if (!text) {
+	    w->end = NULL;	       /* no end marker needed */
+	    w->nspaces = nspc;
+	    w->shortfall = width - thiswidth;
+	} else {
+	    w->end = text;
+	    text = text->next;
+	    w->nspaces = 0;
+	    w->shortfall = width - thiswidth;
+	}
+	width = subsequentwidth;
+    }
+
+    return head;
+}
+
+void wrap_free(wrappedline *w) {
+    while (w) {
+	wrappedline *t = w->next;
+	sfree(w);
+	w = t;
+    }
 }

@@ -16,6 +16,9 @@
 #define FALSE 0
 #endif
 
+/* For suppressing unused-parameter warnings */
+#define IGNORE(x) ( (x) = (x) )
+
 /*
  * Structure tags
  */
@@ -65,6 +68,7 @@ struct paragraph_Tag {
     word *words;		       /* list of words in paragraph */
     int aux;			       /* number, in a numbered paragraph */
     word *kwtext;		       /* chapter/section indication */
+    word *kwtext2;		       /* numeric-only form of kwtext */
     filepos fpos;
 };
 enum {
@@ -140,7 +144,8 @@ enum {
     err_nestedindex,		       /* unable to nest `\i' thingys */
     err_nosuchkw,		       /* unresolved cross-reference */
     err_multiBR,		       /* multiple \BRs on same keyword */
-    err_nosuchidxtag		       /* \IM on unknown index tag (warning) */
+    err_nosuchidxtag,		       /* \IM on unknown index tag (warning) */
+    err_cantopenw		       /* can't open output file for write */
 };
 
 /*
@@ -205,7 +210,35 @@ stack stk_new(void);
 void stk_free(stack);
 void stk_push(stack, void *);
 void *stk_pop(stack);
+
+typedef struct tagRdstring rdstring;
+struct tagRdstring {
+    int pos, size;
+    wchar_t *text;
+};
+typedef struct tagRdstringc rdstringc;
+struct tagRdstringc {
+    int pos, size;
+    char *text;
+};
+void rdadd(rdstring *rs, wchar_t c);
+void rdadds(rdstring *rs, wchar_t *p);
+wchar_t *rdtrim(rdstring *rs);
+void rdaddc(rdstringc *rs, char c);
+void rdaddsc(rdstringc *rs, char *p);
+char *rdtrimc(rdstringc *rs);
+
 int compare_wordlists(word *a, word *b);
+
+typedef struct tagWrappedLine wrappedline;
+struct tagWrappedLine {
+    wrappedline *next;
+    word *begin, *end;		       /* first & last words of line */
+    int nspaces;		       /* number of whitespaces in line */
+    int shortfall;		       /* how much shorter than max width */
+};
+wrappedline *wrap_para(word *, int, int, int (*)(word *));
+void wrap_free(wrappedline *);
 
 /*
  * input.c
@@ -243,12 +276,13 @@ void cleanup_index(index *);
  * takes responsibility for arg 2 */
 void index_merge(index *, int is_explicit, wchar_t *, word *);
 void build_index(index *);
+void index_debug(index *);
 
 /*
  * contents.c
  */
 numberstate *number_init(void);
-word *number_mktext(numberstate *, int, int, int);
+word *number_mktext(numberstate *, int, int, int, word **);
 void number_free(numberstate *);
 
 /*
@@ -275,6 +309,11 @@ void freetree23(tree23 *);
 void *add23(tree23 *, void *, int (*cmp)(void *, void *));
 void *find23(tree23 *, void *, int (*cmp)(void *, void *));
 void *first23(tree23 *, enum23 *);
-void *next23(tree23 *, enum23 *);
+void *next23(enum23 *);
+
+/*
+ * bk_text.c
+ */
+void text_backend(paragraph *, keywordlist *, index *);
 
 #endif

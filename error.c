@@ -142,6 +142,11 @@ static void do_error(int code, va_list ap) {
 	flags = 0;
 	/* FIXME: need to get a filepos to here somehow */
 	break;
+      case err_cantopenw:
+	sp = va_arg(ap, char *);
+	sprintf(error, "unable to open output file `%.200s'", sp);
+	flags = PREFIX;
+	break;
     }
 
     if (flags & PREFIX)

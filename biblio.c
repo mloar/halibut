@@ -99,6 +99,7 @@ void gen_citations(paragraph *source, keywordlist *kl) {
 		wd->next = NULL;
 		kw->text = wd;
 	    }
+	    para->kwtext = kw->text;
 	}
     }
 }
