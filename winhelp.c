@@ -376,10 +376,6 @@ static unsigned long context_hash(char *context)
 	"\xC0\xC1\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF";
     unsigned long hash;
     
-    /* Sanity check the size of unsigned long */
-    enum { assertion = 1 /
-	    (((unsigned long)0xFFFFFFFF) + 2 == (unsigned long)1) };
-
     /*
      * The hash algorithm starts the hash at 0 and updates it with
      * each character. Therefore, logically, the hash of an empty
@@ -396,7 +392,38 @@ static unsigned long context_hash(char *context)
      */
     hash = 0;
     while (*context) {
-	hash = hash * 43 + bytemapping[(unsigned char)*context];
+        /*
+         * Be careful of overflowing `unsigned long', for maximum
+         * portability.
+         */
+
+        /*
+         * Multiply `hash' by 43.
+         */
+        {
+            unsigned long bottom, top;
+            bottom = (hash & 0xFFFFUL) * 43;
+            top = ((hash >> 16) & 0xFFFFUL) * 43;
+            top += (bottom >> 16);
+            bottom &= 0xFFFFUL;
+            top &= 0xFFFFUL;
+            hash = (top << 16) | bottom;
+        }
+
+        /*
+         * Add the mapping value for this byte to `hash'.
+         */
+        {
+            int val = bytemapping[(unsigned char)*context];
+
+            if (val > 0 && hash > (0xFFFFFFFFUL - val)) {
+                hash -= (0xFFFFFFFFUL - val) + 1;
+            } else if (val < 0 && hash < -val) {
+                hash += (0xFFFFFFFFUL + val) + 1;
+            } else
+                hash += val;
+        }
+
 	context++;
     }
     return hash;
