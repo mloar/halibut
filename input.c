@@ -25,7 +25,8 @@ static int get(input *in) {
 	    in->currindex++;
 	}
 	return c;
-    }
+    } else
+	return EOF;
 }
 
 paragraph *read_input(input *in) {
