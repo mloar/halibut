@@ -267,6 +267,9 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    currnode = newnode;
 	}
 	break;
+      default:
+        p->private_data = NULL;
+        break;
     }
 
     /*
