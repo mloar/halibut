@@ -1691,9 +1691,11 @@ static page_data *page_breaks(line_data *first, line_data *last,
 	    text += l->line_height;
 
 	    l->page = page;
-	    l->ypos = text + space + head +
-		space * (float)page->first_line->vshortfall[n] /
-		page->first_line->space[n];
+	    l->ypos = text + space + head;
+	    if (page->first_line->space[n]) {
+		l->ypos += space * (float)page->first_line->vshortfall[n] /
+		    page->first_line->space[n];
+	    }
 
 	    if (l == page->last_line)
 		break;
