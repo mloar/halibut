@@ -74,15 +74,13 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
      *  - a string is shown
      */
     fprintf(fp,
-	    "/t {\n"
-	    "  exch /y exch def {\n"
-	    "    /x exch def\n"
-	    "    x type /arraytype eq {x aload pop scalefont setfont} if\n"
-	    "    x type dup /integertype eq exch /realtype eq or "
-							"{x y moveto} if\n"
-	    "    x type /stringtype eq {x show} if\n"
-	    "  } forall\n"
-	    "} bind def\n");
+	    "/tdict 4 dict dup begin\n"
+	    "  /arraytype {aload pop scalefont setfont} bind def\n"
+	    "  /realtype {1 index moveto} bind def\n"
+	    "  /integertype /realtype load def\n"
+	    "  /stringtype {show} bind def\n"
+	    "end def\n"
+	    "/t { tdict begin {dup type exec} forall end } bind def\n");
 
     fprintf(fp, "%%%%EndResource\n");
     fprintf(fp, "%%%%EndProlog\n");
