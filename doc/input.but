@@ -79,14 +79,14 @@ be treated identically:
 
 \S{input-emph} \c{\\e}: Emphasising text
 
-Possibly the most obvious piece of formatting you might want to use
-in a document is \i\e{emphasis}. To emphasise text, you use the
-\i\c{\\e} command, and follow it up with the text to be emphasised
-in braces. For example, the first sentence in this paragraph was
-generated using the Halibut input
+Possibly the most obvious piece of formatting you might want
+to use in a document is \i\e{emphasis}.
+To emphasise text, you use the \i\c{\\e} command, and follow it up
+with the text to be emphasised in braces. For example, the first
+sentence in this paragraph was generated using the Halibut input
 
-\c Possibly the most obvious piece of formatting you might want to use
-\c in a document is \e{emphasis}.
+\c Possibly the most obvious piece of formatting you might want
+\c to use in a document is \e{emphasis}.
 
 \S{input-code} \c{\\c} and \c{\\cw}: Displaying \i{computer code} inline
 
@@ -151,6 +151,18 @@ changing the font if possible, or by using quotes if not.
 
 \b \c{\\cw} means \q{it would be nice to display this text in a
 fixed-width font if possible, but it's not essential}.
+
+In really extreme cases, you might want Halibut to use \i{quotation
+marks} even in output formats which can change font. In
+\k{input-date}, for example, I mention the special formatting
+command \q{\cw{\\.}}. If that appeared at the end of a sentence
+\e{without} the quotes, then the two adjacent full stops would look
+pretty strange even if they were obviously in different fonts. So I
+used the \c{\\q} command to provide my own set of quotes, and then
+used \c{\\cw} rather than \c{\\c} to ensure that none of Halibut's
+output formats would add another set of quotes:
+
+\c the special formatting command \q{\cw{\\.}}.
 
 There is a separate mechanism for displaying computer code in an
 entire paragraph; see \k{input-codepara} for that one.
@@ -236,9 +248,9 @@ but if you try to follow it with an alphabetic or numeric character
 (such as writing \c{\\dateZ}) then Halibut will assume you are
 trying to invoke the name of a macro command you have defined
 yourself, and will complain if no such command exists. To get round
-this you can use the special \c{\\.} do-nothing command. See
+this you can use the special \q{\cw{\\.}} do-nothing command. See
 \k{input-macro} for more about general Halibut command syntax and
-\c{\\.}.
+\q{\cw{\\.}}.
 
 If you would prefer the date to be generated in a specific format,
 you can follow the \c{\\date} command with a format specification in
@@ -395,13 +407,15 @@ braces, that text will be ignored by Halibut.
 
 For example, you might write
 
-\c The typical behaviour of an antelope \#{do I mean gazelle?} is...
+\c The typical behaviour of an antelope \#{do I mean
+\c gazelle?} is...
 
 and Halibut will simply leave out the aside about gazelles, and will
 generate nothing but
 
 \quote{
-The typical behaviour of an antelope \#{do I mean gazelle?} is...
+The typical behaviour of an antelope \#{do I mean
+gazelle?} is...
 }
 
 This command will respect nested braces, so you can use it to
@@ -459,7 +473,7 @@ Note that the above paragraph makes use of a backslash and a pair of
 braces, and does \e{not} need to escape them in the way described in
 \k{input-basics}. This is because code paragraphs formatted in this
 way are a special case; the intention is that you can just copy and
-paste a lump of code out of another program, put \q{\cw{\\c }} at the
+paste a lump of code out of your program, put \q{\cw{\\c }} at the
 start of every line, and simply \e{not have to worry} about the
 details - you don't have to go through the whole block looking for
 characters to escape.
@@ -578,10 +592,12 @@ Here's a list:
 
 The disadvantage of having Halibut sort out the list numbering for
 you is that if you need to refer to a list item by its number, you
-can't reliably do so. To get round this, Halibut allows an optional
-keyword in braces after the \c{\\n} command. This keyword can then
-be referenced using the \c{\\k} or \c{\\K} command (see
-\k{input-xref}) to provide the number of the list item. For example:
+can't reliably know the number in advance (because if you later add
+another item at the start of the list, the numbers will all change).
+To get round this, Halibut allows an optional keyword in braces
+after the \c{\\n} command. This keyword can then be referenced using
+the \c{\\k} or \c{\\K} command (see \k{input-xref}) to provide the
+number of the list item. For example:
 
 \c Here's a list:
 \c
@@ -722,7 +738,7 @@ Here's a list:
 
 }
 
-This syntax seems a little bit inconvenient, and perhaps
+This syntax might seem a little bit inconvenient, and perhaps
 counter-intuitive: you might expect the enclosing braces to have to
 go around the \e{whole} list item, rather than everything except the
 first paragraph.
@@ -782,8 +798,8 @@ your quoted section, and \c{\}} at the end, and the paragraphs in
 between will be formatted to indicate that they are a quotation.
 
 (This very manual, in fact, uses this feature a lot: all of the
-examples of Halibut source followed by Halibut output have the
-output quoted using \c{\\quote}.)
+examples of Halibut input followed by Halibut output have the output
+quoted using \c{\\quote}.)
 
 Here's some example Halibut input:
 
@@ -794,8 +810,8 @@ Here's some example Halibut input:
 \c \q{The question is,} said Alice, \q{whether you \e{can} make
 \c words mean so many different things.}
 \c
-\c \q{The question is,} said Humpty Dumpty, \q{who is to be master -
-\c that's all.}
+\c \q{The question is,} said Humpty Dumpty, \q{who is to be
+\c master - that's all.}
 \c
 \c }
 \c
@@ -812,8 +828,8 @@ In \q{Through the Looking Glass}, Lewis Carroll wrote:
 \q{The question is,} said Alice, \q{whether you \e{can} make
 words mean so many different things.}
 
-\q{The question is,} said Humpty Dumpty, \q{who is to be master -
-that's all.}
+\q{The question is,} said Humpty Dumpty, \q{who is to be
+master - that's all.}
 
 }
 
@@ -970,9 +986,9 @@ a comment, like this:
 \c Here's a (fairly short) paragraph which will be displayed.
 \c
 \c \# Here's a comment paragraph which will not be displayed, no
-\c matter how long it goes on. All I needed to indicate this was the
-\c single \# at the start of the paragraph; I don't need one on
-\c every line or anything like that.
+\c matter how long it goes on. All I needed to indicate this was
+\c the single \# at the start of the paragraph; I don't need one
+\c on every line or anything like that.
 \c
 \c Here's another displayed paragraph.
 
@@ -983,9 +999,9 @@ When run through Halibut, this produces the following output:
 Here's a (fairly short) paragraph which will be displayed.
 
 \# Here's a comment paragraph which will not be displayed, no
-matter how long it goes on. All I needed to indicate this was the
-single \# at the start of the paragraph; I don't need one on
-every line or anything like that.
+matter how long it goes on. All I needed to indicate this was
+the single \# at the start of the paragraph; I don't need one
+on every line or anything like that.
 
 Here's another displayed paragraph.
 

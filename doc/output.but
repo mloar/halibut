@@ -247,7 +247,7 @@ which is why all of the configuration directives start with the word
 \dd Sets the \i{output file name} in which to store the top-level
 contents page. Since this is the first page a user ought to see when
 beginning to read the document, a good choice in many cases might be
-\c{index.html} (but this is not the default, for historical
+\c{index.html} (although this is not the default, for historical
 reasons).
 
 \dt \I{\cw{\\cfg\{xhtml-index-filename\}}}\cw{\\cfg\{xhtml-index-filename\}\{}\e{filename}\cw{\}}
@@ -488,10 +488,10 @@ particular level, before displaying the section title.
 
 \dd This directive lets you specify a \i{template}, with exactly the
 same syntax used in \cw{\\cfg\{xhtml-template-filename\}} (see
-\k{output-html-file}), to be used for the anchor names (\i\cw{A
-NAME="..."}) used to allow URLs to refer to specific sections within
-a particular HTML file. So if you set this to \q{\cw{%k}}, for
-example, then each individual section in your document will be
+\k{output-html-file}), to be used for the anchor names (\i\cw{<A
+NAME="...">}) used to allow URLs to refer to specific sections
+within a particular HTML file. So if you set this to \q{\cw{%k}},
+for example, then each individual section in your document will be
 addressable by means of a URL ending in a \c{#} followed by your
 internal section keyword.
 
@@ -662,7 +662,8 @@ A traditional order for the arguments appears to be:
 
 For example, a typical \cw{man} page might contain
 
-\c \cfg{man-identity}{make-foo}{1}{June 2003}{foo-utils}{Fred Bloggs}
+\c \cfg{man-identity}{make-foo}{1}{June 2003}{foo-utils}{Fred
+\c Bloggs}
 
 }
 
@@ -704,7 +705,8 @@ simply says
 Then you have a file \c{make-foo.but}, and probably others like it
 as well, each of which looks something like this:
 
-\c \cfg{man-identity}{make-foo}{1}{June 2003}{foo-utils}{Fred Bloggs}
+\c \cfg{man-identity}{make-foo}{1}{June 2003}{foo-utils}{Fred
+\c Bloggs}
 \c
 \c \H{man-foo} \cw{man} page for \c{make-foo}
 \c 
@@ -830,7 +832,8 @@ about assigning keywords to document sections).
 For example, in a document describing many game programs, the
 configuration directive
 
-\c \cfg{info-dir-entry}{Games}{Chess}{Electronic chess game}{chess}
+\c \cfg{info-dir-entry}{Games}{Chess}{Electronic chess
+\c game}{chess}
 
 might produce text in the \c{dir} file looking something like this:
 

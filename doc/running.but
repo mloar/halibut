@@ -1,11 +1,11 @@
 \C{running} Running Halibut
 
 \I{running Halibut}In the simplest case, running Halibut is very
-simple. You provide a set of input files on its \i{command line},
-and it produces a set of output files.
+easy. You provide a set of input files on its \i{command line}, and
+it produces a set of output files.
 
-\c $ halibut intro.but getting-started.but reference.but index.but
-\e   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+\c $ halibut intro.but gettingstarted.but reference.but index.but
+\e   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
 This will generate a large set of \i{output files}:
 
@@ -154,6 +154,14 @@ can do the same: \c{\\\\}.) These strings are used as the parts of a
 will translate into the configuration directive
 
 \c \cfg{text-section-align}{2}{leftplus}
+
+(Note that your shell may also take an interest in backslashes,
+particularly under Unix. You may find that the backslash with which
+you escape a colon must be doubled in order to make the shell pass
+it to Halibut at all, and to pass a doubled backslash to Halibut you
+might have to type four backslashes on your shell command line. This
+is not part of Halibut's own behaviour, and it cannot do anything
+about it.)
 
 }
 
