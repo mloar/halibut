@@ -279,6 +279,8 @@ struct tagRdstringc {
     int pos, size;
     char *text;
 };
+extern const rdstring empty_rdstring;
+extern const rdstringc empty_rdstringc;
 void rdadd(rdstring *rs, wchar_t c);
 void rdadds(rdstring *rs, wchar_t *p);
 wchar_t *rdtrim(rdstring *rs);

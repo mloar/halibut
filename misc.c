@@ -44,6 +44,9 @@ void *stk_pop(stack s) {
 /*
  * Small routines to amalgamate a string from an input source.
  */
+const rdstring empty_rdstring = {0, 0, NULL};
+const rdstringc empty_rdstringc = {0, 0, NULL};
+
 void rdadd(rdstring *rs, wchar_t c) {
     if (rs->pos >= rs->size-1) {
 	rs->size = rs->pos + 128;

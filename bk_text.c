@@ -458,42 +458,58 @@ static void text_heading(FILE *fp, word *tprefix, word *nprefix, word *text,
 			 alignstruct align, int indent, int width) {
     rdstringc t = { 0, 0, NULL };
     int margin, length;
+    int firstlinewidth, wrapwidth;
+    wrappedline *wrapping, *p;
 
     if (align.just_numbers && nprefix) {
 	text_rdaddwc(&t, nprefix, NULL);
 	rdaddc(&t, ' ');	       /* FIXME: as below */
-	margin = strlen(t.text);
     } else if (!align.just_numbers && tprefix) {
 	text_rdaddwc(&t, tprefix, NULL);
 	rdaddsc(&t, ": ");	       /* FIXME: configurability */
-	margin = strlen(t.text);
     }
-    text_rdaddwc(&t, text, NULL);
+    margin = length = (t.text ? strlen(t.text) : 0);
 
-    length = strlen(t.text);
-
-    if (align.align == LEFTPLUS)
+    if (align.align == LEFTPLUS) {
 	margin = indent - margin;
-    else if (align.align == LEFT)
-	margin = 0;
-    else if (align.align == CENTRE) {
-	margin = (indent + width - length)/2;
 	if (margin < 0) margin = 0;
+	firstlinewidth = indent + width - margin - length;
+	wrapwidth = width;
+    } else if (align.align == LEFT || align.align == CENTRE) {
+	margin = 0;
+	firstlinewidth = indent + width - length;
+	wrapwidth = indent + width;
     }
 
-    fprintf(fp, "%*s%s\n", margin, "", t.text);
-    if (align.underline != L'\0') {
-	char *u, uc;
-	wchar_t uw[2];
-	uw[0] = align.underline; uw[1] = L'\0';
-	text_convert(uw, &u);
-	uc = u[0];
-	sfree(u);
-	fprintf(fp, "%*s", margin, "");
-	while (length--)
-	    putc(uc, fp);
-	putc('\n', fp);
+    wrapping = wrap_para(text, firstlinewidth, wrapwidth, text_width);
+    for (p = wrapping; p; p = p->next) {
+	text_rdaddwc(&t, p->begin, p->end);
+	length = (t.text ? strlen(t.text) : 0);
+	if (align.align == CENTRE) {
+	    margin = (indent + width - length)/2;
+	    if (margin < 0) margin = 0;
+	}
+	fprintf(fp, "%*s%s\n", margin, "", t.text);
+	if (align.underline != L'\0') {
+	    char *u, uc;
+	    wchar_t uw[2];
+	    uw[0] = align.underline; uw[1] = L'\0';
+	    text_convert(uw, &u);
+	    uc = u[0];
+	    sfree(u);
+	    fprintf(fp, "%*s", margin, "");
+	    while (length--)
+		putc(uc, fp);
+	    putc('\n', fp);
+	}
+	if (align.align == LEFTPLUS)
+	    margin = indent;
+	else
+	    margin = 0;
+	sfree(t.text);
+	t = empty_rdstringc;
     }
+    wrap_free(wrapping);
     putc('\n', fp);
 
     sfree(t.text);
