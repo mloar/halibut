@@ -22,13 +22,64 @@ static int get(input *in) {
 	if (c == EOF) {
 	    fclose(in->currfp);
 	    in->currfp = NULL;
-	    in->currindex++;
 	}
 	return c;
     } else
 	return EOF;
 }
 
+/*
+ * Lexical analysis of source files.
+ */
+typedef struct tagToken token;
+struct tagToken {
+    int type;
+    char *text;
+};
+enum {
+    tok_eof,
+    tok_eop,			       /* end of paragraph */
+    tok_word,			       /* an ordinary word */
+    tok_cmd,			       /* \command */
+    tok_bracetext		       /* {text} */
+};
+
+/*
+ * Adds a new paragraph to a linked list
+ */
+static paragraph addpara(paragraph ***hptrptr) {
+    paragraph *newpara = smalloc(sizeof(paragraph));
+    newpara->next = NULL;
+    **hptrptr = newpara;
+    *hptrptr = &newpara->next;
+    return newpara;
+}
+
+/*
+ * Reads a single file (ie until get() returns EOF)
+ */
+static void read_file(paragraph ***ret, input *in) {
+    int c;
+
+    while (1) {
+	/*
+	 * Get a token.
+	 */
+	token t = get_token(in);
+	if (t.type == tok_eof)
+	    return;
+	printf("token: %d\n", t.type);
+    }
+}
+
 paragraph *read_input(input *in) {
-    /* FIXME: do some reading */
+    paragraph *head = NULL;
+    paragraph **hptr = &head;
+
+    while (in->currindex < in->nfiles) {
+	in->currfp = fopen(in->filenames[in->currindex], "r");
+	if (in->currfp)
+	    read_file(&hptr, in);
+	in->currindex++;
+    }
 }
