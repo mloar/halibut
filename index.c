@@ -75,6 +75,11 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
 	existing = add23(idx->tags, t, compare_tags);
 	if (existing == t) {
 	    /*
+	     * Duplicate this so we can free it independently.
+	     */
+	    t->name = ustrdup(tags);
+
+	    /*
 	     * Every tag has an implicit \IM. So if this tag
 	     * doesn't exist and we're explicit, then we should
 	     * warn (and drop it, since it won't be referenced).
@@ -83,10 +88,10 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
 		error(err_nosuchidxtag, tags);
 		continue;
 	    }
+
 	    /*
 	     * Otherwise, this is a new tag with an implicit \IM.
 	     */
-	    t->name = ustrdup(tags);
 	    t->implicit_text = text;
 	} else {
 	    sfree(t);
