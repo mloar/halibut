@@ -5,8 +5,6 @@
  * Still to do:
  *
  *  +++ doesn't handle non-breaking hyphens. Not sure how to yet.
- *  +++ HTML 4 and Netscape don't like hex numeric entity refs, according
- *      to SGT. Am I wrong, or him, or them?
  *  +++ entity names (from a file -- ideally supply normal SGML files)
  *  +++ configuration directive to file split where the current layout
  *      code wouldn't. Needs changes to _ponder_layout() and _do_paras(),
@@ -598,7 +596,7 @@ static void xhtml_do_index()
       fprintf(fp, "<dt>");
       xhtml_para(fp, y->text);
       fprintf(fp, "</dt>\n<dd>");
-      
+
       xi = (xhtmlindex*) y->backend_data;
       for (i=0; i<xi->nsection; i++) {
 	xhtmlsection *sect = xi->sections[i];
@@ -1411,7 +1409,7 @@ static int xhtml_convert(wchar_t *s, char **result, int hard_spaces) {
 	      } else {
 		/* FIXME: entity names! */
 		ensure_size(plen+7); /* includes space for the NUL, which is subsequently stomped on */
-		sprintf(p+plen, "&#%4.4X;", (int)c);
+		sprintf(p+plen, "&#%i;", (int)c);
 		plen+=7;
 	      }
 	    }
