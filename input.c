@@ -187,6 +187,7 @@ enum {
     c_n,			       /* numbered list */
     c_nocite,			       /* bibliography trickery */
     c_preamble,			       /* document preamble text */
+    c_q,			       /* quote marks */
     c_rule,			       /* horizontal rule */
     c_title,			       /* document title */
     c_u,			       /* aux field is char code */
@@ -249,6 +250,7 @@ static void match_kw(token *tok) {
 	{"n", c_n},		       /* numbered list */
 	{"nocite", c_nocite},	       /* bibliography trickery */
 	{"preamble", c_preamble},      /* document preamble text */
+	{"q", c_q},		       /* quote marks */
 	{"rule", c_rule},	       /* horizontal rule */
 	{"title", c_title},	       /* document title */
 	{"versionid", c_versionid},    /* document RCS id */
@@ -504,6 +506,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	    stack_style = 2,	       /* \e, \c, \cw */
 	    stack_idx = 4,	       /* \I, \i, \ii */
 	    stack_hyper = 8,	       /* \W */
+	    stack_quote = 16,	       /* \q */
 	} type;
 	word **whptr;		       /* to restore from \u alternatives */
 	word **idximplicit;	       /* to restore from \u alternatives */
@@ -807,6 +810,20 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			if (indexing)
 			    addword(wd, &idximplicit);
 		    }
+		    if (sitem->type & stack_quote) {
+			wd.text = NULL;
+			wd.type = toquotestyle(style);
+			wd.alt = NULL;
+			wd.aux = quote_Close;
+			wd.fpos = t.pos;
+			wd.breaks = FALSE;
+			if (!indexing || index_visible)
+			    addword(wd, &whptr);
+			if (indexing) {
+			    rdadd(&indexstr, L'"');
+			    addword(wd, &idximplicit);
+			}
+		    }
 		}
 		sfree(sitem);
 		break;
@@ -844,6 +861,28 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 			    iswhite = TRUE;
 			    already = FALSE;
 			}
+		    }
+		    break;
+		  case c_q:
+		    dtor(t), t = get_token(in);
+		    if (t.type != tok_lbrace) {
+			error(err_explbr, &t.pos);
+		    } else {
+			wd.text = NULL;
+			wd.type = toquotestyle(style);
+			wd.alt = NULL;
+			wd.aux = quote_Open;
+			wd.fpos = t.pos;
+			wd.breaks = FALSE;
+			if (!indexing || index_visible)
+			    addword(wd, &whptr);
+			if (indexing) {
+			    rdadd(&indexstr, L'"');
+			    addword(wd, &idximplicit);
+			}
+			sitem = mknew(struct stack_item);
+			sitem->type = stack_quote;
+			stk_push(parsestk, sitem);
 		    }
 		    break;
 		  case c_K:

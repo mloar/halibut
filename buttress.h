@@ -121,7 +121,12 @@ enum {
     word_WhiteSpace,		       /* text is NULL or ignorable */
     word_EmphSpace,		       /* WhiteSpace when emphasised */
     word_CodeSpace,		       /* WhiteSpace when code */
-    word_WkCodeSpace,		       /* WhiteSpace when weak code */
+    word_WkCodeSpace,		       /* WhiteSpace when weak code */ 
+    /* ... and must be in the same order as these quote types ... */
+    word_Quote,			       /* text is NULL or ignorable */
+    word_EmphQuote,		       /* Quote when emphasised */
+    word_CodeQuote,		       /* (can't happen) */
+    word_WkCodeQuote,		       /* (can't happen) */
     /* END ORDERING CONSTRAINT */
     word_internal_endattrs,
     word_UpperXref,		       /* \K */
@@ -133,15 +138,28 @@ enum {
 };
 /* aux values for attributed words */
 enum {
-    attr_Only,			       /* a lone word with the attribute */
-    attr_First,			       /* the first of a series */
-    attr_Last,			       /* the last of a series */
-    attr_Always			       /* any other part of a series */
+    attr_Only   = 0x0000,	       /* a lone word with the attribute */
+    attr_First  = 0x0001,	       /* the first of a series */
+    attr_Last   = 0x0002,	       /* the last of a series */
+    attr_Always	= 0x0003,	       /* any other part of a series */
+    attr_mask   = 0x0003,
+};
+/* aux values for quote-type words */
+enum {
+    quote_Open  = 0x0010,
+    quote_Close = 0x0020,
+    quote_mask  = 0x0030,
 };
 #define isattr(x) ( ( (x) > word_Normal && (x) < word_WhiteSpace ) || \
                     ( (x) > word_WhiteSpace && (x) < word_internal_endattrs ) )
-#define sameattr(x,y) ( (x)-(y) == 0 || (x)-(y) == 4 || (x)-(y) == -4 )
-#define tospacestyle(x) ( (x) + 4 )
+#define sameattr(x,y) ( (((x)-(y)) & 3) == 0 )
+#define towordstyle(x) ( word_Normal + ((x) & 3) )
+#define tospacestyle(x) ( word_WhiteSpace + ((x) & 3) )
+#define toquotestyle(x) ( word_Quote + ((x) & 3) )
+#define removeattr(x) ( word_Normal + ((x) &~ 3) )
+
+#define attraux(x) ( (x) & attr_mask )
+#define quoteaux(x) ( (x) & quote_mask )
 
 /*
  * error.c

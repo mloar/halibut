@@ -7,13 +7,13 @@ date \date{%Y.%m.%d} (default format is \date).
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
 reserved.
 
-\define{coopt} co\u00F6{-o}pt
-
 \define{metacoopt} [this is a nested,
 multi-line macro, talking about \coopt
 a bit]
 
-\versionid $Id: test.but,v 1.9 1999/10/24 17:14:16 simon Exp $
+\define{coopt} co\u00F6{-o}pt
+
+\versionid $Id: test.but,v 1.10 1999/11/07 16:14:23 simon Exp $
 
 \C{ch\\ap} First chapter title
 
@@ -56,7 +56,7 @@ This is a numbered list:
 
 \n{keyword} Aah.
 
-\n Eek. `Aah' is point \k{keyword}.
+\n Eek. \q{Aah} is point \k{keyword}.
 
 A-paragraph-full-of-hyphens-to-test-the-idea-that-word-wrapping-can-happen-somewhere-in-all-this-hyphenatory-nonsense.
 
@@ -73,7 +73,7 @@ characters, to be precise. And their code equivalents, \c{\\},
 \S{subhead} First subheading
 
 So here's a \I{subheading}\I{subsection}subsection. Just
-incidentally, `this' is in quotes. \ii{Those} quotes had better work
+incidentally, \q{this} is in quotes. \ii{Those} quotes had better work
 in all formats.
 
 We'll try for some Unicode here: \i{Schr\u00F6{oe}dinger}.

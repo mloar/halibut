@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "buttress.h"
 
 typedef enum { LEFT, CENTRE } alignment;
@@ -267,41 +268,43 @@ static void text_rdaddwc(rdstringc *rs, word *text, word *end) {
       case word_Emph:
       case word_Code:
       case word_WeakCode:
-	if (text->type == word_Emph &&
-	    (text->aux == attr_First || text->aux == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (text->type == word_Code &&
-		 (text->aux == attr_First || text->aux == attr_Only))
-	    rdaddc(rs, '`');	       /* FIXME: configurability */
-	if (text_convert(text->text, &c))
-	    rdaddsc(rs, c);
-	else
-	    text_rdaddwc(rs, text->alt, NULL);
-	sfree(c);
-	if (text->type == word_Emph &&
-	    (text->aux == attr_Last || text->aux == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (text->type == word_Code &&
-		 (text->aux == attr_Last || text->aux == attr_Only))
-	    rdaddc(rs, '\'');	       /* FIXME: configurability */
-	break;
-
       case word_WhiteSpace:
       case word_EmphSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
-	if (text->type == word_EmphSpace &&
-	    (text->aux == attr_First || text->aux == attr_Only))
+      case word_Quote:
+      case word_EmphQuote:
+      case word_CodeQuote:
+      case word_WkCodeQuote:
+	assert(text->type != word_CodeQuote &&
+	       text->type != word_WkCodeQuote);
+	if (towordstyle(text->type) == word_Emph &&
+	    (attraux(text->aux) == attr_First ||
+	     attraux(text->aux) == attr_Only))
 	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (text->type == word_CodeSpace &&
-		 (text->aux == attr_First || text->aux == attr_Only))
+	else if (towordstyle(text->type) == word_Code &&
+		 (attraux(text->aux) == attr_First ||
+		  attraux(text->aux) == attr_Only))
 	    rdaddc(rs, '`');	       /* FIXME: configurability */
-	rdaddc(rs, ' ');
-	if (text->type == word_EmphSpace &&
-	    (text->aux == attr_Last || text->aux == attr_Only))
+	if (removeattr(text->type) == word_Normal) {
+	    if (text_convert(text->text, &c))
+		rdaddsc(rs, c);
+	    else
+		text_rdaddwc(rs, text->alt, NULL);
+	    sfree(c);
+	} else if (removeattr(text->type) == word_WhiteSpace) {
+	    rdaddc(rs, ' ');
+	} else if (removeattr(text->type) == word_Quote) {
+	    rdaddc(rs, quoteaux(text->aux) == quote_Open ? '`' : '\'');
+				       /* FIXME: configurability */
+	}
+	if (towordstyle(text->type) == word_Emph &&
+	    (attraux(text->aux) == attr_Last ||
+	     attraux(text->aux) == attr_Only))
 	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (text->type == word_CodeSpace &&
-		 (text->aux == attr_Last || text->aux == attr_Only))
+	else if (towordstyle(text->type) == word_Code &&
+		 (attraux(text->aux) == attr_Last ||
+		  attraux(text->aux) == attr_Only))
 	    rdaddc(rs, '\'');	       /* FIXME: configurability */
 	break;
     }
@@ -334,8 +337,8 @@ static int text_width(word *text) {
       case word_WeakCode:
 	return (((text->type == word_Emph ||
 		  text->type == word_Code)
-		 ? (text->aux == attr_Only ? 2 :
-		    text->aux == attr_Always ? 0 : 1)
+		 ? (attraux(text->aux) == attr_Only ? 2 :
+		    attraux(text->aux) == attr_Always ? 0 : 1)
 		 : 0) +
 		(text_convert(text->text, NULL) ?
 		 ustrlen(text->text) :
@@ -345,10 +348,16 @@ static int text_width(word *text) {
       case word_EmphSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
-	return (((text->type == word_EmphSpace ||
-		  text->type == word_CodeSpace)
-		 ? (text->aux == attr_Only ? 2 :
-		    text->aux == attr_Always ? 0 : 1)
+      case word_Quote:
+      case word_EmphQuote:
+      case word_CodeQuote:
+      case word_WkCodeQuote:
+	assert(text->type != word_CodeQuote &&
+	       text->type != word_WkCodeQuote);
+	return (((towordstyle(text->type) == word_Emph ||
+		  towordstyle(text->type) == word_Code)
+		 ? (attraux(text->aux) == attr_Only ? 2 :
+		    attraux(text->aux) == attr_Always ? 0 : 1)
 		 : 0) + 1);
     }
     return 0;			       /* should never happen */

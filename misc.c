@@ -143,9 +143,9 @@ void mark_attr_ends(paragraph *sourceform) {
 			      sameattr(wp->type, w->type));
 		int after = (w->next && isattr(w->next->type) &&
 			     sameattr(w->next->type, w->type));
-		w->aux = (before ?
-			  (after ? attr_Always : attr_Last) :
-			  (after ? attr_First : attr_Only));
+		w->aux |= (before ?
+			   (after ? attr_Always : attr_Last) :
+			   (after ? attr_First : attr_Only));
 	    }
 	    wp = w;
 	}
