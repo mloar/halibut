@@ -218,6 +218,7 @@ enum {
     err_multikw,		       /* keyword clash in sections */
     err_misplacedlcont,		       /* \lcont not after a list item */
     err_sectmarkerinblock,	       /* section marker appeared in block */
+    err_infodirentry,		       /* \cfg{info-dir-entry} missing param */
     err_whatever                       /* random error of another type */
 };
 

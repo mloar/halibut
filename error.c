@@ -200,7 +200,13 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "section headings are not supported within \\%.100s",
 		sp);
 	flags = FILEPOS;
-	break; 
+	break;
+      case err_infodirentry:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "\\cfg{info-dir-entry} expects at least three"
+		" parameters");
+	flags = FILEPOS;
+	break;
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
