@@ -313,7 +313,14 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
      * Tidy up
      */
     fclose(fp);
-    sfree(conf.bullet.text);
+    {
+	int i;
+	sfree(conf.achapter.number_suffix);
+	for (i = 0; i < conf.nasect; i++)
+	    sfree(conf.asect[i].number_suffix);
+	sfree(conf.asect);
+	sfree(conf.bullet.text);
+    }
 }
 
 /*

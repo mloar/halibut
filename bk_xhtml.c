@@ -28,6 +28,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include "halibut.h"
 
@@ -674,6 +675,13 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords,
       sfree(xi);
     }
     ientry->backend_data = NULL;
+  }
+  {
+    int i;
+    sfree(conf.fchapter.number_suffix);
+    for (i = 0; i < conf.nfsect; i++)
+      sfree(conf.fsect[i].number_suffix);
+    sfree(conf.fsect);
   }
 }
 

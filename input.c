@@ -547,7 +547,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	}
 	already = FALSE;
 	if (t.type == tok_eof)
-	    return;
+	    break;
 
 	/*
 	 * Parse code paragraphs separately.
@@ -1181,6 +1181,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	stk_free(parsestk);
 	addpara(par, ret);
     }
+
+    /*
+     * We break to here rather than returning, because otherwise
+     * this cleanup doesn't happen.
+     */
     dtor(t);
     macrocleanup(macros);
 }
