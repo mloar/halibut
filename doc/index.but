@@ -20,6 +20,15 @@
 \IM{\\cfg\{man-filename\}} \c{man-filename} configuration directive
 \IM{\\cfg\{man-filename\}} \cw{\\cfg\{man-filename\}}
 
+\IM{\\cfg\{info-filename\}} \c{info-filename} configuration directive
+\IM{\\cfg\{info-filename\}} \cw{\\cfg\{info-filename\}}
+
+\IM{\\cfg\{info-dir-entry\}} \c{info-dir-entry} configuration directive
+\IM{\\cfg\{info-dir-entry\}} \cw{\\cfg\{info-dir-entry\}}
+
+\IM{\\cfg\{info-max-file-size\}} \c{info-max-file-size} configuration directive
+\IM{\\cfg\{info-max-file-size\}} \cw{\\cfg\{info-max-file-size\}}
+
 \IM{\\cfg\{winhelp-filename\}} \c{winhelp-filename} configuration directive
 \IM{\\cfg\{winhelp-filename\}} \cw{\\cfg\{winhelp-filename\}}
 
@@ -357,3 +366,10 @@ directive
 \IM{keyword syntax} chapter keywords, syntax of
 \IM{keyword syntax} heading keywords, syntax of
 \IM{keyword syntax} syntax of keywords
+
+\IM{GNU info} GNU \c{info}
+\IM{GNU info} \c{info}
+
+\IM{INFO-DIR-ENTRY} \cw{INFO-DIR-ENTRY}
+\IM{INFO-DIR-ENTRY} \cw{START-INFO-DIR-ENTRY}
+\IM{INFO-DIR-ENTRY} \cw{END-INFO-DIR-ENTRY}

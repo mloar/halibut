@@ -35,6 +35,10 @@ the topmost one that users should be directed to initially. If you
 have configured Halibut to generate a single file, it will be called
 \c{Manual.html}.
 
+\b \c{output.info}, and some additional files \c{output.info-1},
+\c{output.info-2} etc., will be files suitable for use with GNU
+\c{info}.
+
 \H{running-options} \ii{Command-line options}
 
 Halibut supports command-line options in case you don't want to use
@@ -71,7 +75,7 @@ line, using the \c{-C} option).
 
 \dt \i\cw{--winhelp}[\cw{=}\e{filename}]
 
-\dd Specifies that you want to generate plain text output. You can
+\dd Specifies that you want to generate Windows Help output. You can
 optionally specify a file name (e.g. \c{--winhelp=myfile.hlp}), in
 which case Halibut will change the name of the output file as well.
 
@@ -93,9 +97,25 @@ Halibut will append it. Halibut will also generate a contents file
 
 \dt \i\cw{--man}[\cw{=}\e{filename}]
 
-\dd Specifies that you want to generate plain text output. You can
-optionally specify a file name (e.g. \c{--man=myfile.5}), in which
-case Halibut will change the name of the output file as well.
+\dd Specifies that you want to generate \cw{man} page output. You
+can optionally specify a file name (e.g. \c{--man=myfile.5}), in
+which case Halibut will change the name of the output file as well.
+
+\dt \i\cw{--info}[\cw{=}\e{filename}]
+
+\dd Specifies that you want to generate GNU \c{info} output. You can
+optionally specify a file name (e.g. \c{--info=myfile.info}), in
+which case Halibut will change the name of the output file as well.
+
+\lcont{
+
+Unless the \c{info} output format is configured not to (see
+\k{output-info}), Halibut will divide the \c{info} output into many
+small files. The extra files will have numeric suffixes on their
+names; so, for example, \c{output.info} might be accompanied by
+additional files \c{output.info-1}, \c{output.info-2} and so on.
+
+}
 
 If you do not specify any of the above options, Halibut will simply
 produce \e{all} of its output formats.

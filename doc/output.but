@@ -740,3 +740,104 @@ The \i{default settings} for the \cw{man} page output format are:
 \c \cfg{man-identity}{}
 \c \cfg{man-headnumbers}{false}
 \c \cfg{man-mindepth}{0}
+
+\H{output-info} GNU \c{info}
+
+This output format generates files which can be used with the \i{GNU
+\c{info}} program.
+
+There are typically multiple output files: a primary file whose name
+usually ends in \c{.info}, and one or more subsidiary files whose
+names have numbers on the end, so that they end in \c{.info-1},
+\c{.info-2} and so on. Alternatively, this output format can be
+configured to output a single large file containing the whole
+document.
+
+The \c{info} output format supports the following configuration
+directives:
+
+\dt \I{\cw{\\cfg\{info-filename\}}}\cw{\\cfg\{info-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the output file name in which to store the \c{info} file.
+This directive is implicitly generated if you provide a file name
+parameter after the command-line option \i\c{--info} (see
+\k{running-options}).
+
+\lcont{
+
+The suffixes \c{-1}, \c{-2}, \c{-3} and so on will be appended to
+your output file name to produce any subsidiary files required.
+
+Note that \c{info} files refer to their own names internally, so
+these files cannot be \I{renaming \c{info} files}renamed after
+creation and remain useful.
+
+}
+
+\dt \I{\cw{\\cfg\{info-max-file-size\}}}\cw{\\cfg\{info-max-file-size\}\{}\e{bytes}\cw{\}}
+
+\dd Sets the preferred \i{maximum file size} for each subsidiary
+file. As a special case, if you set this to zero, there will be no
+subsidiary files and the whole document will be placed in a single
+self-contained output file. (However, note that this file can still
+not be renamed usefully.)
+
+\lcont{
+
+The preferred maximum file size is only a guideline. Halibut may be
+forced to exceed it if a single section of the document is larger
+than the maximum size (since individual \c{info} nodes may not be
+split between files).
+
+}
+
+\dt \I{\cw{\\cfg\{info-dir-entry\}}}\cw{\\cfg\{info-dir-entry\}\{}\e{section}\cw{\}\{}\e{short
+name}\cw{\}\{}\e{long name}\cw{\}}[\cw{\{}\e{keyword}\cw{\}}]
+
+\dd Constructs an \i\cw{INFO-DIR-ENTRY} section and places it in the
+header of the Info file. This mechanism is used to automatically
+generate the \i{\c{dir} file} at the root of a Unix system's
+\c{info} collection.
+
+\lcont{
+
+The parameters to this directive are:
+
+\dt \e{section}
+
+\dd Specifies the section of the \c{dir} file in which you want your
+document referenced. For example, \q{Development}, or \q{Games}, or
+\q{Miscellaneous}.
+
+\dt \e{short name}
+
+\dd Specifies a short name for the directory entry, which will
+appear at the start of the menu line.
+
+\dt \e{long name}
+
+\dd Specifies a long name for the directory entry, which will appear
+at the end of the menu line.
+
+\dt \e{keyword}
+
+\dd This parameter is optional. If it is present, then the directory
+entry will cause a jump to a particular subsection of your document,
+rather than starting at the top. The subsection will be the one
+referred to by the given keyword (see \k{input-sections} for details
+about assigning keywords to document sections).
+
+For example, in a document describing many game programs, the
+configuration directive
+
+\c \cfg{info-dir-entry}{Games}{Chess}{Electronic chess game}{chess}
+
+might produce text in the \c{dir} file looking something like this:
+
+\c Games
+\c * Chess: (mygames)Chapter 3.   Electronic chess game
+
+if the output file were called \c{mygames.info} and the keyword
+\c{chess} had been used to define Chapter 3 of the document.
+
+}
