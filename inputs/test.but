@@ -4,6 +4,9 @@ Lines, Not Just Two. How's That For Ludicrous?
 
 \cfg{xhtml-leaf-smallest-contents}{2}
 \cfg{xhtml-leaf-contains-contents}{true}
+\cfg{info-dir-entry}{Sillinesses}{test.but}{Halibut test document}
+\cfg{info-dir-entry}{Florbles}{test.but}{Subsection of Halibut test
+document}{sub-sub}
 \cfg{man-headnumbers}{true}
 
 This paragraph is not labelled \q{preamble}, but should still appear
@@ -29,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.25 2004/03/30 20:22:00 simon Exp $
+\versionid $Id: test.but,v 1.26 2004/04/09 18:47:33 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
