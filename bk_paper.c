@@ -12,10 +12,7 @@
 /*
  * To be done:
  * 
- *  - implement some simple graphics
- *     * I had an underline below chapter headings in the original
- * 	 Perl version, and I thought it looked rather nice
- *     * also we need para_Rule.
+ *  - implement para_Rule
  * 
  *  - set up contents section now we know what sections begin on
  *    which pages
@@ -60,6 +57,7 @@ static int paper_width_simple(para_data *pdata, word *text);
 static void code_paragraph(para_data *pdata,
 			   font_data *fn, font_data *fi, font_data *fb,
 			   int font_size, int indent, word *words);
+static void add_rect_to_page(page_data *page, int x, int y, int w, int h);
 
 void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			indexdata *idx) {
@@ -89,6 +87,8 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     int base_para_spacing = 10 * 4096;
     int chapter_top_space = 72 * 4096;
     int sect_num_left_space = 12 * 4096;
+    int chapter_underline_depth = 14 * 4096;
+    int chapter_underline_thickness = 3 * 4096;
 
     int base_width = paper_width - left_margin - right_margin;
     int page_height = paper_height - top_margin - bottom_margin;
@@ -124,7 +124,6 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	     */
 	  case para_IM:
 	  case para_BR:
-	  case para_Rule:
 	  case para_Biblio:
 	  case para_NotParaType:
 	  case para_Config:
@@ -432,6 +431,8 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 		p->type == para_UnnumberedChapter) {
 		pdata->first->page_break = TRUE;
 		pdata->first->space_before = chapter_top_space;
+		pdata->last->space_after +=
+		    chapter_underline_depth + chapter_underline_thickness;
 	    }
 
 	    /*
@@ -472,6 +473,20 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 			    &dest, keywords);
 		if (ldata == pdata->last)
 		    break;
+	    }
+
+	    /*
+	     * Some section headings (FIXME: should be configurable
+	     * which) want to be underlined.
+	     */
+	    if (p->type == para_Chapter || p->type == para_Appendix ||
+		p->type == para_UnnumberedChapter || p->type == para_Title) {
+		add_rect_to_page(pdata->last->page,
+				 left_margin,
+				 (paper_height - top_margin -
+				  pdata->last->ypos - chapter_underline_depth),
+				 base_width,
+				 chapter_underline_thickness);
 	    }
 	}
     }
@@ -881,8 +896,8 @@ static page_data *page_breaks(line_data *first, line_data *last,
 	page->last_line = l->page_last;
 
 	page->first_text = page->last_text = NULL;
-
 	page->first_xref = page->last_xref = NULL;
+	page->first_rect = page->last_rect = NULL;
 
 	/*
 	 * Now assign a y-coordinate to each line on the page.
@@ -908,6 +923,23 @@ static page_data *page_breaks(line_data *first, line_data *last,
     }
 
     return ph;
+}
+
+static void add_rect_to_page(page_data *page, int x, int y, int w, int h)
+{
+    rect *r = mknew(rect);
+
+    r->next = NULL;
+    if (page->last_rect)
+	page->last_rect->next = r;
+    else
+	page->first_rect = r;
+    page->last_rect = r;
+
+    r->x = x;
+    r->y = y;
+    r->w = w;
+    r->h = h;
 }
 
 static void add_string_to_page(page_data *page, int x, int y,
@@ -1056,6 +1088,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		else
 		    page->first_xref = *xr;
 		page->last_xref = *xr;
+		(*xr)->next = NULL;
 
 		/*
 		 * FIXME: Ideally we should have, and use, some
@@ -1156,6 +1189,7 @@ static void render_line(line_data *ldata, int left_x, int top_y,
      */
     if (dest->type != NONE) {
 	xr = mknew(xref);
+	xr->next = NULL;
 	xr->dest = *dest;    /* structure copy */
 	if (ldata->page->last_xref)
 	    ldata->page->last_xref->next = xr;

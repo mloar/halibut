@@ -19,6 +19,7 @@ typedef struct subfont_map_entry_Tag subfont_map_entry;
 typedef struct text_fragment_Tag text_fragment;
 typedef struct xref_Tag xref;
 typedef struct xref_dest_Tag xref_dest;
+typedef struct rect_Tag rect;
 
 /*
  * This data structure represents the overall document, in the form
@@ -227,6 +228,12 @@ struct page_data_Tag {
     xref *first_xref;
     xref *last_xref;
     /*
+     * Rectangles to be drawn. (These are currently only used for
+     * underlining chapter titles and drawing horizontal rules.)
+     */
+    rect *first_rect;
+    rect *last_rect;
+    /*
      * This spare pointer field is for use by the client backends.
      */
     void *spare;
@@ -250,6 +257,11 @@ struct xref_Tag {
     xref *next;
     int lx, rx, ty, by;
     xref_dest dest;
+};
+
+struct rect_Tag {
+    rect *next;
+    int x, y, w, h;
 };
 
 /*

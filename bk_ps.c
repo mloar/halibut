@@ -106,11 +106,12 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndSetup\n");
 
     /*
-     * Output the text.
+     * Output the text and graphics.
      */
     pageno = 0;
     for (page = doc->pages; page; page = page->next) {
 	text_fragment *frag;
+	rect *r;
 
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
@@ -136,6 +137,13 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    }
 	}
 #endif
+
+	for (r = page->first_rect; r; r = r->next) {
+	    fprintf(fp, "%g %g moveto %g 0 rlineto 0 %g rlineto "
+		    "-%g 0 rlineto closepath fill\n",
+		    r->x / 4096.0, r->y / 4096.0, r->w / 4096.0,
+		    r->h / 4096.0, r->w / 4096.0);
+	}
 
 	for (frag = page->first_text; frag; frag = frag->next) {
 	    char *c;

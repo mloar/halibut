@@ -198,6 +198,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     pageno = 0;
     for (page = doc->pages; page; page = page->next) {
 	object *opage, *cstr;
+	rect *r;
 	text_fragment *frag;
 	char buf[256];
 
@@ -227,6 +228,16 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	objtext(opage, "/Contents ");
 	objref(opage, cstr);
 	objtext(opage, "\n");
+
+	/*
+	 * Render any rectangles on the page.
+	 */
+	for (r = page->first_rect; r; r = r->next) {
+	    char buf[512];
+	    sprintf(buf, "%g %g %g %g re f\n", r->x / 4096.0,
+		    r->y / 4096.0, r->w / 4096.0, r->h / 4096.0);
+	    objstream(cstr, buf);
+	}
 
 	objstream(cstr, "BT\n");
 	for (frag = page->first_text; frag; frag = frag->next) {
