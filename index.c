@@ -61,6 +61,24 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text) {
     indextag *t, *existing;
 
     /*
+     * For an implicit merge, we want to remove all emphasis,
+     * because the chances are that the user didn't really want to
+     * index the term as emphasised.
+     */
+    {
+	word *w;
+
+	for (w = text; w; w = w->next) {
+	    if (w->type == word_Emph)
+		w->type = word_Normal;
+	    else if (w->type == word_EmphSpace)
+		w->type = word_WhiteSpace;
+	    else if (w->type == word_EmphQuote)
+		w->type = word_Quote;
+	}
+    }
+
+    /*
      * FIXME: want to warn on overlapping source sets.
      */
     for (; *tags; tags = uadv(tags)) {

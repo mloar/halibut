@@ -1059,6 +1059,11 @@ still want it to look like code in the index, whereas most people
 indexing an emphasised word will \e{not} want it emphasised in the
 index.
 
+(In fact, \e{no} emphasis in the text inside \c{\\i} will be
+preserved in the index. If you really want a term in the index to
+appear emphasised, you must say so explicitly using \c{\\IM}; see
+\k{input-index-rewrite}.)
+
 Sometimes you might want to index a term which is not explicitly
 mentioned, but which is highly relevant to the text and you think
 that somebody looking up that term in the index might find it useful
