@@ -31,11 +31,6 @@
  *    remaining confusion issues such as <?xml?> and obsoleteness
  *    of <a name>.
  * 
- *  - proper naming of all fragment IDs. The ones for sections are
- *    fine; the ones for numbered list and bibliociteds are utter
- *    crap; the ones for indexes _might_ do but it might be worth
- *    giving some thought to how to do them better.
- * 
  *  - nonbreaking spaces.
  * 
  *  - free up all the data we have allocated while running this
@@ -561,17 +556,28 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		p->private_data = sect;
 
 		/*
-		 * FIXME: We need a much better means of naming
-		 * these, possibly involving an additional
-		 * configuration template. For the moment I'll just
-		 * invent something completely stupid.
+		 * Fragment IDs for these paragraphs will simply be
+		 * `p' followed by an integer.
 		 */
 		sect->fragment = snewn(40, char);
-		sprintf(sect->fragment, "frag%p", sect);
+		sprintf(sect->fragment, "p%d",
+			sect->file->last_fragment_number++);
 		sect->fragment = html_sanitise_fragment(&files, sect->file,
 							sect->fragment);
 	    }
 	}
+    }
+
+    /*
+     * Reset the fragment numbers in each file. I've just used them
+     * to generate `p' fragment IDs for non-section paragraphs
+     * (numbered list elements, bibliocited), and now I want to use
+     * them for `i' fragment IDs for index entries.
+     */
+    {
+	htmlfile *file;
+	for (file = files.head; file; file = file->next)
+	    file->last_fragment_number = 0;
     }
 
     /*
