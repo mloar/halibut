@@ -9,11 +9,14 @@
 # Currently depends on GNU make, because:
 #  - the Makefile uses GNU ifdef / ifndef commands and GNU make `%'
 #    pattern rules
+#  - we use .PHONY
 
 prefix=/usr/local
 exec_prefix=$(prefix)
 bindir=$(exec_prefix)/bin
 INSTALL=install -c
+
+.PHONY: all install clean spotless topclean release
 
 ifdef RELEASE
 ifndef VERSION
