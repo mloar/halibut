@@ -1,0 +1,306 @@
+\IM{Windows Help} Windows Help
+\IM{Windows Help} Help, Windows
+
+\IM{Help compiler} Help compiler, lack of need for
+
+\IM{plain text} plain text
+\IM{plain text} text, plain
+
+\IM{text width} text width
+\IM{text width} width, of text
+\IM{text width} line length
+\IM{text width} length of lines
+
+\IM{\\cfg\{text-width\}} \c{text-width} configuration directive
+\IM{\\cfg\{text-width\}} \cw{\\cfg\{text-width\}}
+
+\IM{\\cfg\{text-indent\}} \c{text-indent} configuration directive
+\IM{\\cfg\{text-indent\}} \cw{\\cfg\{text-indent\}}
+
+\IM{\\cfg\{text-indent-code\}} \c{text-indent-code} configuration
+directive
+\IM{\\cfg\{text-indent-code\}} \cw{\\cfg\{text-indent-code\}}
+
+\IM{\\cfg\{text-list-indent\}} \c{text-list-indent} configuration
+directive
+\IM{\\cfg\{text-list-indent\}} \cw{\\cfg\{text-list-indent\}}
+
+\IM{\\cfg\{text-listitem-indent\}} \c{text-listitem-indent}
+configuration directive
+\IM{\\cfg\{text-listitem-indent\}} \cw{\\cfg\{text-listitem-indent\}}
+
+\IM{\\cfg\{text-indent-preamble\}} \c{text-indent-preamble}
+configuration directive
+\IM{\\cfg\{text-indent-preamble\}} \cw{\\cfg\{text-indent-preamble\}}
+
+\IM{\\cfg\{text-title-align\}} \c{text-title-align} configuration
+directive
+\IM{\\cfg\{text-title-align\}} \cw{\\cfg\{text-title-align\}}
+
+\IM{\\cfg\{text-title-underline\}} \c{text-title-underline}
+configuration directive
+\IM{\\cfg\{text-title-underline\}} \cw{\\cfg\{text-title-underline\}}
+
+\IM{\\cfg\{text-chapter-align\}} \c{text-chapter-align}
+configuration directive
+\IM{\\cfg\{text-chapter-align\}} \cw{\\cfg\{text-chapter-align\}}
+
+\IM{\\cfg\{text-chapter-underline\}} \c{text-chapter-underline}
+configuration directive
+\IM{\\cfg\{text-chapter-underline\}}
+\cw{\\cfg\{text-chapter-underline\}}
+
+\IM{\\cfg\{text-chapter-numeric\}} \c{text-chapter-numeric}
+configuration directive
+\IM{\\cfg\{text-chapter-numeric\}} \cw{\\cfg\{text-chapter-numeric\}}
+
+\IM{\\cfg\{text-chapter-suffix\}} \c{text-chapter-suffix}
+configuration directive
+\IM{\\cfg\{text-chapter-suffix\}} \cw{\\cfg\{text-chapter-suffix\}}
+
+\IM{\\cfg\{text-section-align\}} \c{text-section-align}
+configuration directive
+\IM{\\cfg\{text-section-align\}} \cw{\\cfg\{text-section-align\}}
+
+\IM{\\cfg\{text-section-underline\}} \c{text-section-underline}
+configuration directive
+\IM{\\cfg\{text-section-underline\}}
+\cw{\\cfg\{text-section-underline\}}
+
+\IM{\\cfg\{text-section-numeric\}} \c{text-section-numeric}
+configuration directive
+\IM{\\cfg\{text-section-numeric\}} \cw{\\cfg\{text-section-numeric\}}
+
+\IM{\\cfg\{text-section-suffix\}} \c{text-section-suffix}
+configuration directive
+\IM{\\cfg\{text-section-suffix\}} \cw{\\cfg\{text-section-suffix\}}
+
+\IM{\\cfg\{text-versionid\}} \c{text-versionid} configuration
+directive
+\IM{\\cfg\{text-versionid\}} \cw{\\cfg\{text-versionid\}}
+
+\IM{\\cfg\{text-bullet\}} \c{text-bullet} configuration directive
+\IM{\\cfg\{text-bullet\}} \cw{\\cfg\{text-bullet\}}
+
+\IM{\\cfg\{xhtml-leaf-level\}} \c{xhtml-leaf-level} configuration
+directive
+\IM{\\cfg\{xhtml-leaf-level\}} \cw{\\cfg\{xhtml-leaf-level\}}
+
+\IM{\\cfg\{xhtml-contents-depth\}} \c{xhtml-contents-depth}
+configuration directive
+\IM{\\cfg\{xhtml-contents-depth\}} \cw{\\cfg\{xhtml-contents-depth\}}
+
+\IM{\\cfg\{xhtml-leaf-contains-contents\}}
+\c{xhtml-leaf-contains-contents} configuration directive
+\IM{\\cfg\{xhtml-leaf-contains-contents\}}
+\cw{\\cfg\{xhtml-leaf-contains-contents\}}
+
+\IM{\\cfg\{xhtml-leaf-smallest-contents\}}
+\c{xhtml-leaf-smallest-contents} configuration directive
+\IM{\\cfg\{xhtml-leaf-smallest-contents\}}
+\cw{\\cfg\{xhtml-leaf-smallest-contents\}}
+
+\IM{\\cfg\{xhtml-head-end\}} \c{xhtml-head-end} configuration
+directive
+\IM{\\cfg\{xhtml-head-end\}} \cw{\\cfg\{xhtml-head-end\}}
+
+\IM{\\cfg\{xhtml-body-tag\}} \c{xhtml-body-tag} configuration
+directive
+\IM{\\cfg\{xhtml-body-tag\}} \cw{\\cfg\{xhtml-body-tag\}}
+
+\IM{\\cfg\{xhtml-body-start\}} \c{xhtml-body-start} configuration
+directive
+\IM{\\cfg\{xhtml-body-start\}} \cw{\\cfg\{xhtml-body-start\}}
+
+\IM{\\cfg\{xhtml-body-end\}} \c{xhtml-body-end} configuration
+directive
+\IM{\\cfg\{xhtml-body-end\}} \cw{\\cfg\{xhtml-body-end\}}
+
+\IM{\\cfg\{xhtml-address-start\}} \c{xhtml-address-start}
+configuration directive
+\IM{\\cfg\{xhtml-address-start\}} \cw{\\cfg\{xhtml-address-start\}}
+
+\IM{\\cfg\{xhtml-address-end\}} \c{xhtml-address-end} configuration
+directive
+\IM{\\cfg\{xhtml-address-end\}} \cw{\\cfg\{xhtml-address-end\}}
+
+\IM{\\cfg\{xhtml-navigation-attributes\}}
+\c{xhtml-navigation-attributes} configuration directive
+\IM{\\cfg\{xhtml-navigation-attributes\}}
+\cw{\\cfg\{xhtml-navigation-attributes\}}
+
+\IM{\\cfg\{xhtml-chapter-numeric\}} \c{xhtml-chapter-numeric}
+configuration directive
+\IM{\\cfg\{xhtml-chapter-numeric\}}
+\cw{\\cfg\{xhtml-chapter-numeric\}}
+
+\IM{\\cfg\{xhtml-chapter-suffix\}} \c{xhtml-chapter-suffix}
+configuration directive
+\IM{\\cfg\{xhtml-chapter-suffix\}} \cw{\\cfg\{xhtml-chapter-suffix\}}
+
+\IM{\\cfg\{xhtml-section-numeric\}} \c{xhtml-section-numeric}
+configuration directive
+\IM{\\cfg\{xhtml-section-numeric\}}
+\cw{\\cfg\{xhtml-section-numeric\}}
+
+\IM{\\cfg\{xhtml-section-suffix\}} \c{xhtml-section-suffix}
+configuration directive
+\IM{\\cfg\{xhtml-section-suffix\}} \cw{\\cfg\{xhtml-section-suffix\}}
+
+\IM{\\cfg\{xhtml-versionid\}} \c{xhtml-versionid} configuration
+directive
+\IM{\\cfg\{xhtml-versionid\}} \cw{\\cfg\{xhtml-versionid\}}
+
+\IM{\\cfg\{xhtml-suppress-address\}} \c{xhtml-suppress-address}
+configuration directive
+\IM{\\cfg\{xhtml-suppress-address\}}
+\cw{\\cfg\{xhtml-suppress-address\}}
+
+\IM{\\cfg\{xhtml-author\}} \c{xhtml-author} configuration directive
+\IM{\\cfg\{xhtml-author\}} \cw{\\cfg\{xhtml-author\}}
+
+\IM{\\cfg\{xhtml-description\}} \c{xhtml-description} configuration
+directive
+\IM{\\cfg\{xhtml-description\}} \cw{\\cfg\{xhtml-description\}}
+
+\IM{\\cfg\{winhelp-topic\}} \c{winhelp-topic} configuration directive
+\IM{\\cfg\{winhelp-topic\}} \cw{\\cfg\{winhelp-topic\}}
+
+\IM{\\cfg\{man-identity\}} \c{man-identity} configuration directive
+\IM{\\cfg\{man-identity\}} \cw{\\cfg\{man-identity\}}
+
+\IM{\\cfg\{man-headnumbers\}} \c{man-headnumbers} configuration
+directive
+\IM{\\cfg\{man-headnumbers\}} \cw{\\cfg\{man-headnumbers\}}
+
+\IM{\\cfg\{man-mindepth\}} \c{man-mindepth} configuration directive
+\IM{\\cfg\{man-mindepth\}} \cw{\\cfg\{man-mindepth\}}
+
+\IM{\\cfg\{chapter\}} \c{chapter} configuration directive
+\IM{\\cfg\{chapter\}} \cw{\\cfg\{chapter\}}
+
+\IM{\\cfg\{section\}} \c{section} configuration directive
+\IM{\\cfg\{section\}} \cw{\\cfg\{section\}}
+
+\IM{\\cfg\{appendix\}} \c{appendix} configuration directive
+\IM{\\cfg\{appendix\}} \cw{\\cfg\{appendix\}}
+
+\IM{configuring heading display} configuring heading display
+\IM{configuring heading display} headings, configuring display
+\IM{configuring heading display} section headings, configuring display
+\IM{configuring heading display} chapter headings, configuring display
+
+\IM{section headings} section headings
+\IM{section headings} chapter headings
+\IM{section headings} headings
+
+\IM{depth of contents} depth of contents
+\IM{depth of contents} contents, depth
+
+\IM{version ID paragraphs} version IDs
+\IM{version IDs} version IDs
+
+\IM{author} author, of document
+
+\IM{header}{headers} headers
+\IM{header}{headers} page headers
+
+\IM{footer}{footers} footers
+\IM{footer}{footers} page footers
+
+\IM{inline formatting commands} inline formatting commands
+\IM{inline formatting commands} formatting commands, inline
+
+\IM{line break}{line breaks} line breaks
+
+\IM{computer code} code
+\IM{computer code} computer code
+
+\IM{\\e} \c{\\e} command
+\IM{\\c} \c{\\c} command
+\IM{\\cw} \c{\\cw} command
+\IM{\\q} \c{\\q} command
+\IM{\\_} \c{\\_} command
+\IM{\\-} \c{\\-} command
+\IM{\\date} \c{\\date} command
+\IM{\\W} \c{\\W} command
+\IM{\\u} \c{\\u} command
+\IM{\\k} \c{\\k} command
+\IM{\\K} \c{\\K} command
+\IM{\\#} \c{\\#} command
+\IM{\\b} \c{\\b} command
+\IM{\\n} \c{\\n} command
+\IM{\\dt} \c{\\dt} command
+\IM{\\dd} \c{\\dd} command
+\IM{\\lcont} \c{\\lcont} command
+\IM{\\rule} \c{\\rule} command
+\IM{\\quote} \c{\\quote} command
+\IM{\\C} \c{\\C} command
+\IM{\\H} \c{\\H} command
+\IM{\\S} \c{\\S} command
+\IM{\\A} \c{\\A} command
+\IM{\\U} \c{\\U} command
+\IM{\\S2} \c{\\S2}, \c{\\S3} commands etc.
+\IM{\\title} \c{\\title} command
+\IM{\\copyright} \c{\\copyright} command
+\IM{\\versionid} \c{\\versionid} command
+\IM{\\B} \c{\\B} command
+\IM{\\BR} \c{\\BR} command
+\IM{\\nocite} \c{\\nocite} command
+\IM{\\i} \c{\\i} command
+\IM{\\i\\c} \c{\\i\\c} combination
+\IM{\\i\\cw} \c{\\i\\cw} combination
+\IM{\\i\\e} \c{\\i\\e} combination
+\IM{\\I} \c{\\I} command
+\IM{\\ii} \c{\\ii} command
+\IM{\\IM} \c{\\IM} command
+\IM{\\cfg} \c{\\cfg} command
+\IM{\\define} \c{\\define} command
+\IM{\\.} \c{\\.} command
+
+\IM{wrapping paragraphs} wrapping paragraphs
+\IM{wrapping paragraphs} paragraphs, wrapping
+
+\IM{non-breaking hyphens} non-breaking hyphens
+\IM{non-breaking hyphens} hyphens, non-breaking
+
+\IM{non-breaking spaces} non-breaking spaces
+\IM{non-breaking spaces} spaces, non-breaking
+
+\IM{hyperlink}{hyperlinks} hyperlinks
+
+\IM{numbered list}{numbered lists} numbered lists
+\IM{numbered list}{numbered lists} lists, numbered
+
+\IM{bulletted lists} bulletted lists
+\IM{bulletted lists} lists, bulletted
+
+\IM{description lists} description lists
+\IM{description lists} definition lists
+\IM{description lists} lists, description
+
+\IM{paragraph-level commands} commands, paragraph-level
+\IM{paragraph-level commands} paragraph-level formatting commands
+\IM{paragraph-level commands} formatting commands, paragraph-level
+
+\IM{continuing list items} continuing list items
+\IM{continuing list items} list items, continuing
+
+\IM{nested lists} nested lists
+\IM{nested lists} lists, nested
+
+\IM{horizontal rules} rules, horizontal
+\IM{horizontal rules} horizontal rules
+
+\IM{section numbering} section numbering
+\IM{section numbering} chapter numbering
+\IM{section numbering} numbering, of sections
+
+\IM{writing a FAQ} writing FAQs
+\IM{writing a FAQ} FAQs, writing
+
+\IM{renaming sections} renaming sections
+\IM{renaming sections} chapters, renaming
+\IM{renaming sections} sections, renaming
+\IM{renaming sections} appendices, renaming
+
