@@ -14,6 +14,21 @@ If you have GNU make and gcc, you should simply be able to type
 `make'. The Makefile will generate a `build' subdirectory, and will
 put all the object files and binaries in there.
 
+In a release archive, the Makefile will also check the source files
+against a list of MD5 checksums, and if they match it will
+automatically add the correct version number to the build. This is
+_not_ a secure measure intended to enforce that only approved
+Halibut sources are ever built into a binary with a given version
+number; it is merely a sanity check against heavily modified copies
+_accidentally_ confusing users expecting standard versions of
+Halibut. Distribution maintainers are entirely at liberty, if they
+choose, to modify Halibut source files as appropriate for their
+distribution and then have the resulting binary call itself by the
+original version number. If you run `make VERSION=x.y', the
+resulting Halibut binary will call itself version x.y irrespective
+of the md5sum manifest. (You may also need to do this if your build
+system does not have the md5sum program.)
+
 Halibut unfortunately does not yet come with an autoconf-generated
 makefile, so if you do not have these utilities then you will have
 to do the build manually. Look in the master `Makefile' to find the

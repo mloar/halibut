@@ -10,6 +10,20 @@
 #  - the Makefile uses GNU ifdef / ifndef commands and GNU make `%'
 #    pattern rules
 
+ifdef RELEASE
+ifndef VERSION
+VERSION := $(RELEASE)
+endif
+else
+CFLAGS += -g
+endif
+
+ifeq (x$(VERSION)y,xy)
+RELDIR := halibut
+else
+RELDIR := halibut-$(VERSION)
+endif
+
 # `make' from top level will build in directory `build'
 # `make BUILDDIR=foo' from top level will build in directory foo
 ifndef REALBUILD
@@ -20,20 +34,46 @@ else
 BUILDDIR := build
 endif
 endif
+
 all:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile REALBUILD=yes
+
 spotless: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile spotless REALBUILD=yes
+
 clean: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile clean REALBUILD=yes
+
+# Remove Halibut output files in the source directory (may
+# have been created by running, for example, `build/halibut
+# inputs/test.but').
 topclean:
-	# Remove Halibut output files in the source directory (may
-	# have been created by running, for example, `build/halibut
-	# inputs/test.but').
-	rm -f *.html output.*
+	rm -f *.html output.* *.tar.gz
+
+# Make a release archive. If $(VERSION) is specified, this will
+# also contain a `manifest' file which will be used to decide the
+# version number automatically.
+release:
+	find . -name CVS -prune -o -name build -prune -o -name reltmp -prune \
+	       -o -type d -exec mkdir -p reltmp/$(RELDIR)/{} \;
+	find . -name CVS -prune -o -name build -prune -o -name reltmp -prune \
+	       -o -name '*.orig' -prune -o -name '*.rej' -prune \
+	       -o -name '*.txt' -prune -o -name '*.html' -prune \
+	       -o -name '*.1' -prune -o -name '.cvsignore' -prune \
+	       -o -name '*.gz' -prune -o -name '.[^.]*' -prune \
+	       -o -type f -exec ln -s $(PWD)/{} reltmp/$(RELDIR)/{} \;
+	if test "x$(VERSION)y" != "xy"; then                            \
+	    (cd reltmp/$(RELDIR);                                       \
+	     find . -name '*.[ch]' -exec md5sum {} \;                   \
+	    ) > reltmp/$(RELDIR)/manifest;                              \
+	    echo "-DVERSION=\"$(VERSION)\"" > reltmp/$(RELDIR)/version; \
+	fi
+	tar chzvCf reltmp - $(RELDIR) > $(RELDIR).tar.gz
+	rm -rf reltmp
+
 else
 
 # The `real' makefile part.
@@ -45,21 +85,15 @@ CFLAGS += -DLOGALLOC
 LIBS += -lefence
 endif
 
-ifdef RELEASE
-ifndef VERSION
-VERSION := $(RELEASE)
-endif
-else
-CFLAGS += -g
-endif
-
 ifndef VER
 ifdef VERSION
 VER := $(VERSION)
 endif
 endif
 ifdef VER
-VDEF := -DVERSION=\"$(VER)\"
+VDEF = -DVERSION=\"$(VER)\"
+else
+VDEF = `(cd $(SRC); md5sum -c manifest && cat version)`
 endif
 
 SRC := ../
