@@ -4,7 +4,6 @@
  * TODO:
  * 
  *  - rules
- *  - indexing
  *  - allow user to specify section contexts.
  */
 
