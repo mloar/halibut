@@ -13,7 +13,7 @@ set_syntax_flags ($1, 8);
 %enable_highlight_cache ("buttress.dfa", $1);
 define_highlight_rule ("\\\\#.*$", "comment", $1);
 define_highlight_rule ("^\\\\c([ \t].*)?$", "string", $1);
-define_highlight_rule ("\\\\[\\\\{}]", "keyword0", $1);
+define_highlight_rule ("\\\\[\\\\{}\\-_]", "keyword0", $1);
 define_highlight_rule ("\\\\[A-Za-tv-z][A-Za-z0-9]*", "keyword0", $1);
 define_highlight_rule ("\\\\u[A-Fa-f0-9][A-Fa-f0-9][A-Fa-f0-9][A-Fa-f0-9]",
 		       "keyword0", $1);

@@ -13,7 +13,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.10 1999/11/07 16:14:23 simon Exp $
+\versionid $Id: test.but,v 1.11 2000/11/22 20:11:48 simon Exp $
 
 \C{ch\\ap} First chapter title
 
@@ -62,6 +62,9 @@ A-paragraph-full-of-hyphens-to-test-the-idea-that-word-wrapping-can-happen-somew
 
 A\-paragraph\-full\-of\-nonbreaking\-hyphens
 to\-test\-the\-idea\-that\-word\-wrapping\-misses\-them.
+
+A\_paragraph\_full\_of\_nonbreaking\_spaces
+to\_test\_the\_idea\_that\_word\_wrapping\_misses\_them\_too.
 
 Use of macros: let's talk about \coopt. And about \coopt some more.
 And a nested macro: \metacoopt.

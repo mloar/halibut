@@ -163,6 +163,7 @@ enum {
     c__invalid,			       /* invalid command */
     c__comment,			       /* comment command (\#) */
     c__escaped,			       /* escaped character */
+    c__nbsp,			       /* nonbreaking space */
     c_A,			       /* appendix heading */
     c_B,			       /* bibliography entry */
     c_BR,			       /* bibliography rewrite */
@@ -238,6 +239,7 @@ static void match_kw(token *tok) {
 	{"U", c_U},		       /* unnumbered-chapter heading */
 	{"W", c_W},		       /* Web hyperlink */
 	{"\\", c__escaped},	       /* escaped backslash (\\) */
+	{"_", c__nbsp},		       /* nonbreaking space (\_) */
 	{"b", c_b},		       /* bulletted list */
 	{"c", c_c},		       /* code */
 	{"cfg", c_cfg},		       /* configuration directive */
@@ -350,7 +352,8 @@ token get_token(input *in) {
 	return ret;
     } else if (c == '\\') {	       /* tok_cmd */
 	c = get(in, &cpos);
-	if (c == '-' || c == '\\' || c == '#' || c == '{' || c == '}') {
+	if (c == '-' || c == '\\' || c == '_' ||
+	    c == '#' || c == '{' || c == '}') {
 	    /* single-char command */
 	    rdadd(&rs, c);
 	} else if (c == 'u') {
@@ -654,8 +657,10 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    while (dtor(t), t = get_token(in),
 			   t.type == tok_word || 
 			   t.type == tok_white ||
+			   (t.type == tok_cmd && t.cmd == c__nbsp) ||
 			   (t.type == tok_cmd && t.cmd == c__escaped)) {
-			if (t.type == tok_white)
+			if (t.type == tok_white ||
+			    (t.type == tok_cmd && t.cmd == c__nbsp))
 			    rdadd(&rs, ' ');
 			else
 			    rdadds(&rs, t.text);
@@ -741,6 +746,12 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	    if (t.type == tok_cmd && t.cmd == c__escaped) {
 		t.type = tok_word;     /* nice and simple */
 		t.aux = 0;	       /* even if `\-' - nonbreaking! */
+	    }
+	    if (t.type == tok_cmd && t.cmd == c__nbsp) {
+		t.type = tok_word;     /* nice and simple */
+		sfree(t.text);
+		t.text = ustrdup(L" ");  /* text is ` ' not `_' */
+		t.aux = 0;	       /* (nonbreaking) */
 	    }
 	    switch (t.type) {
 	      case tok_white:
