@@ -464,6 +464,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
     htmlconfig conf;
     htmlfilelist files = { NULL, NULL, NULL, NULL, NULL };
     htmlsectlist sects = { NULL, NULL }, nonsects = { NULL, NULL };
+    int has_index;
 
     IGNORE(unused);
 
@@ -532,16 +533,19 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 							sect->fragment);
 	    }
 
-	/* And the index. */
-	sect = html_new_sect(&sects, NULL);
-	sect->text = NULL;
-	sect->type = INDEX;
-	sect->parent = topsect;
-	html_file_section(&conf, &files, sect, 0);   /* peer of chapters */
-	sect->fragment = utoa_dup(conf.index_text, CS_ASCII);
-	sect->fragment = html_sanitise_fragment(&files, sect->file,
-						sect->fragment);
-	files.index = sect->file;
+	/* And the index, if we have one. */
+	has_index = (count234(idx->entries) > 0);
+	if (has_index) {
+	    sect = html_new_sect(&sects, NULL);
+	    sect->text = NULL;
+	    sect->type = INDEX;
+	    sect->parent = topsect;
+	    html_file_section(&conf, &files, sect, 0);   /* peer of chapters */
+	    sect->fragment = utoa_dup(conf.index_text, CS_ASCII);
+	    sect->fragment = html_sanitise_fragment(&files, sect->file,
+						    sect->fragment);
+	    files.index = sect->file;
+	}
     }
 
     /*
@@ -862,13 +866,15 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 		html_text(&ho, conf.nav_separator);
 
-		if (f != files.index) {
-		    element_open(&ho, "a");
-		    element_attr(&ho, "href", files.index->filename);
+		if (has_index) {
+		    if (f != files.index) {
+			element_open(&ho, "a");
+			element_attr(&ho, "href", files.index->filename);
+		    }
+		    html_text(&ho, conf.index_text);
+		    if (f != files.index)
+			element_close(&ho, "a");
 		}
-		html_text(&ho, conf.index_text);
-		if (f != files.index)
-		    element_close(&ho, "a");
 
 		html_text(&ho, conf.nav_separator);
 
