@@ -42,7 +42,7 @@ static manconfig man_configure(paragraph *source) {
     /*
      * Two-pass configuration so that we can pick up global config
      * (e.g. `quotes') before having it overridden by specific
-     * config (`text-quotes'), irrespective of the order in which
+     * config (`man-quotes'), irrespective of the order in which
      * they occur.
      */
     for (p = source; p; p = p->next) {
@@ -81,7 +81,7 @@ static manconfig man_configure(paragraph *source) {
 		ret.filename = dupstr(adv(p->origkeyword));
 	    } else if (!ustricmp(p->keyword, L"man-bullet")) {
 		ret.bullet = uadv(p->keyword);
-	    } else if (!ustricmp(p->keyword, L"text-quotes")) {
+	    } else if (!ustricmp(p->keyword, L"man-quotes")) {
 		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
 		    ret.lquote = uadv(p->keyword);
 		    ret.rquote = uadv(ret.lquote);
