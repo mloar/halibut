@@ -213,6 +213,7 @@ int main(int argc, char **argv) {
 	}
 
 	text_backend(sourceform, keywords, idx);
+	xhtml_backend(sourceform, keywords, idx);
 
 	free_para_list(sourceform);
 	free_keywords(keywords);

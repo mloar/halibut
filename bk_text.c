@@ -15,7 +15,7 @@ typedef struct {
 } alignstruct;
 
 typedef struct {
-    int indent;
+    int indent, indent_code;
     int listindentbefore, listindentafter;
     int width;
     alignstruct atitle, achapter, *asect;
@@ -56,6 +56,7 @@ static textconfig text_configure(paragraph *source) {
      * Defaults.
      */
     ret.indent = 7;
+    ret.indent_code = 2;
     ret.listindentbefore = 1;
     ret.listindentafter = 3;
     ret.width = 68;
@@ -77,6 +78,8 @@ static textconfig text_configure(paragraph *source) {
 	if (source->type == para_Config) {
 	    if (!ustricmp(source->keyword, L"text-indent")) {
 		ret.indent = utoi(uadv(source->keyword));
+	    } else if (!ustricmp(source->keyword, L"text-indent-code")) {
+		ret.indent_code = utoi(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-width")) {
 		ret.width = utoi(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-list-indent")) {
@@ -273,7 +276,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
 	break;
 
       case para_Code:
-	text_codepara(fp, p->words, conf.indent, conf.width);
+	text_codepara(fp, p->words, conf.indent + conf.indent_code, conf.width - 2 * conf.indent_code);
 	break;
     }
 

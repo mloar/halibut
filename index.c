@@ -6,28 +6,6 @@
 #include <stdlib.h>
 #include "buttress.h"
 
-typedef struct indextag_Tag indextag;
-typedef struct indexentry_Tag indexentry;
-
-struct index_Tag {
-    tree23 *tags;		       /* holds type `indextag' */
-    tree23 *entries;		       /* holds type `indexentry' */
-};
-
-struct indextag_Tag {
-    wchar_t *name;
-    word *implicit_text;
-    word **explicit_texts;
-    int nexplicit, explicit_size;
-    int nrefs;
-    indexentry **refs;		       /* array of entries referenced by tag */
-};
-
-struct indexentry_Tag {
-    word *text;
-    void *backend_data;		       /* private to back end */
-};
-
 index *make_index(void) {
     index *ret = mknew(index);
     ret->tags = newtree23();
@@ -187,15 +165,27 @@ static void dbg_prtmerge(int is_explicit, wchar_t *tag, word *text);
 
 void index_debug(index *i) {
     indextag *t;
+    indexentry *y;
     enum23 e;
     int j;
 
+    printf("\nINDEX TAGS\n==========\n\n");
     for (t = (indextag *)first23(i->tags, &e); t;
 	 t = (indextag *)next23(&e)) {
+        printf("\n");
 	if (t->implicit_text)
 	    dbg_prtmerge(0, t->name, t->implicit_text);
 	for (j = 0; j < t->nexplicit; j++)
 	    dbg_prtmerge(1, t->name, t->explicit_texts[j]);
+    }
+
+    printf("\nINDEX ENTRIES\n=============\n\n");
+    for (y = (indexentry *)first23(i->entries, &e); y;
+	 y = (indexentry *)next23(&e)) {
+        printf("\n");
+	printf("{\n");
+	dbg_prtwordlist(1, y->text);
+	printf("}\n");
     }
 }
 

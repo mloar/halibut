@@ -162,6 +162,11 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "macro `%.200s' already defined", sp);
 	flags = FILEPOS;
 	break;
+      case err_whatever:
+	sp = va_arg(ap, char *);
+        vsprintf(error, sp, ap);
+        flags = PREFIX;
+        break;
     }
 
     if (flags & PREFIX)

@@ -53,7 +53,7 @@ SRC := ../
 
 MODULES := main malloc ustring error help licence version misc tree23
 MODULES += input keywords contents index style biblio
-MODULES += bk_text
+MODULES += bk_text bk_xhtml
 
 OBJECTS := $(addsuffix .o,$(MODULES))
 DEPS := $(addsuffix .d,$(MODULES))

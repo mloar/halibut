@@ -195,9 +195,8 @@ void *find23(tree23 *t, void *e, int (*cmp)(void *, void *)) {
     node23 *n;
     int c;
 
-    if (t->root == NULL)
+    if (t == NULL || t->root == NULL)
 	return NULL;
-
     n = t->root;
     while (n) {
 	c = cmp(e, n->elems[0]);

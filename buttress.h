@@ -33,7 +33,10 @@ typedef struct keyword_Tag keyword;
 typedef struct userstyle_Tag userstyle;
 typedef struct numberstate_Tag numberstate;
 typedef struct index_Tag index;
+typedef struct indextag_Tag indextag;
+typedef struct indexentry_Tag indexentry;
 typedef struct macrostack_Tag macrostack;
+typedef struct tree23_Tag tree23;
 
 /*
  * Data structure to hold a file name and index, a line and a
@@ -72,7 +75,9 @@ struct paragraph_Tag {
     int type;
     wchar_t *keyword;		       /* for most special paragraphs */
     word *words;		       /* list of words in paragraph */
-    int aux;			       /* number, in a numbered paragraph */
+    int aux;			       /* number, in a numbered paragraph
+                                        * or subsection level
+                                        */
     word *kwtext;		       /* chapter/section indication */
     word *kwtext2;		       /* numeric-only form of kwtext */
     filepos fpos;
@@ -122,7 +127,7 @@ enum {
     word_WhiteSpace,		       /* text is NULL or ignorable */
     word_EmphSpace,		       /* WhiteSpace when emphasised */
     word_CodeSpace,		       /* WhiteSpace when code */
-    word_WkCodeSpace,		       /* WhiteSpace when weak code */ 
+    word_WkCodeSpace,		       /* WhiteSpace when weak code */
     /* ... and must be in the same order as these quote types ... */
     word_Quote,			       /* text is NULL or ignorable */
     word_EmphQuote,		       /* Quote when emphasised */
@@ -193,7 +198,8 @@ enum {
     err_multiBR,		       /* multiple \BRs on same keyword */
     err_nosuchidxtag,		       /* \IM on unknown index tag (warning) */
     err_cantopenw,		       /* can't open output file for write */
-    err_macroexists		       /* this macro already exists */
+    err_macroexists,		       /* this macro already exists */
+    err_whatever                       /* random error of another type */
 };
 
 /*
@@ -324,6 +330,35 @@ void subst_keywords(paragraph *, keywordlist *);
 /*
  * index.c
  */
+
+/*
+ * Data structure to hold both sides of the index.
+ */
+struct index_Tag {
+    tree23 *tags;		       /* holds type `indextag' */
+    tree23 *entries;		       /* holds type `indexentry' */
+};
+
+/*
+ * Data structure to hold an index tag (LHS of index).
+ */
+struct indextag_Tag {
+    wchar_t *name;
+    word *implicit_text;
+    word **explicit_texts;
+    int nexplicit, explicit_size;
+    int nrefs;
+    indexentry **refs;		       /* array of entries referenced by tag */
+};
+
+/*
+ * Data structure to hold an index entry (RHS of index).
+ */
+struct indexentry_Tag {
+    word *text;
+    void *backend_data;		       /* private to back end */
+};
+
 index *make_index(void);
 void cleanup_index(index *);
 /* index_merge takes responsibility for freeing arg 3 iff implicit; never
@@ -354,7 +389,6 @@ struct userstyle_Tag {
 /*
  * tree23.c
  */
-typedef struct tree23_Tag tree23;
 typedef struct enum23_Tag {
     void *node;
     int posn;
@@ -370,5 +404,10 @@ void *next23(enum23 *);
  * bk_text.c
  */
 void text_backend(paragraph *, keywordlist *, index *);
+
+/*
+ * bk_xhtml.c
+ */
+void xhtml_backend(paragraph *, keywordlist *, index *);
 
 #endif
