@@ -136,6 +136,7 @@ typedef struct {
 typedef struct {
     htmlsect *section;
     char *fragment;
+    int generated, referenced;
 } htmlindexref;
 
 typedef struct {
@@ -621,6 +622,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    indextag *tag;
 		    int i;
 
+		    hr->referenced = hr->generated = FALSE;
 		    hr->section = lastsect;
 		    {
 			char buf[40];
@@ -1223,6 +1225,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 				html_href(&ho, f, hr->section->file,
 					  hr->fragment);
+				hr->referenced = TRUE;
 				if (p && p->kwtext)
 				    html_words(&ho, p->kwtext, MARKUP|LINKS,
 					       f, keywords, &conf);
@@ -1311,6 +1314,23 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    html_nl(&ho);
 	    cleanup(&ho);
 	}
+    }
+
+    /*
+     * Go through and check that no index fragments were referenced
+     * without being generated, or indeed vice versa.
+     * 
+     * (When I actually get round to freeing everything, this can
+     * probably be the freeing loop as well.)
+     */
+    for (p = sourceform; p; p = p->next) {
+	word *w;
+	for (w = p->words; w; w = w->next)
+	    if (w->type == word_IndexRef) {
+		htmlindexref *hr = (htmlindexref *)w->private_data;
+
+		assert(!hr->referenced == !hr->generated);
+	    }
     }
 
     /*
@@ -1471,6 +1491,7 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	    element_open(ho, "a");
 	    element_attr(ho, "name", hr->fragment);
 	    element_close(ho, "a");
+	    hr->generated = TRUE;
 	}
 	break;
       case word_Normal:
