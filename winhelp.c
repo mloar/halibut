@@ -418,7 +418,7 @@ static unsigned long context_hash(char *context)
 
             if (val > 0 && hash > (0xFFFFFFFFUL - val)) {
                 hash -= (0xFFFFFFFFUL - val) + 1;
-            } else if (val < 0 && hash < -val) {
+            } else if (val < 0 && hash < (unsigned long)-val) {
                 hash += (0xFFFFFFFFUL + val) + 1;
             } else
                 hash += val;
