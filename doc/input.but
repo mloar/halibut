@@ -202,10 +202,12 @@ ASCII one if they aren't available. But I recommend using the
 built-in \c{\\q} command in most cases, because it's simple and does
 the best it can everywhere.
 
-(Note that if you're using the \c{\\c} or \c{\\cw} commands to
-display literal computer code, you probably \e{will} want to use
-literal \i{ASCII quote characters}, because it is likely to matter
-precisely which quote character you use.)
+If you're using the \c{\\c} or \c{\\cw} commands to display literal
+computer code, you will probably want to use literal \i{ASCII quote
+characters}, because it is likely to matter precisely which quote
+character you use. In fact, Halibut actually \e{disallows} the use
+of \c{\\q} within either of \c{\\c} and \c{\\cw}, since this
+simplifies some of the output formats.
 
 \S{input-nonbreaking} \c{\\-} and \c{\\_}: \ii{Non-breaking hyphens}
 and \I{non-breaking spaces}spaces
