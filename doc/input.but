@@ -1333,6 +1333,43 @@ they deem appropriate.
 
 }
 
+\dt \I\cw{\\cfg\{quotes\}}\cw{\\cfg\{quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd This specifies the quote characters which should be used. You
+should separately specify the open and close quote marks; each
+quote mark can be one character (\cw{\\cfg\{quotes\}\{`\}\{'\}}), or
+more than one (\cw{\\cfg\{quotes\}\{<<\}\{>>\}}).
+
+\lcont{
+
+\cw{\\cfg\{quotes\}} can be overridden by configuration directives for
+each individual backend (see \k{output}); it is a convenient way of
+setting quote characters for all backends at once.
+
+All backends use these characters in response to the \c{\\q} command
+(see \k{input-quotes}). Some (such as the text backend) use them for
+other purposes too.
+
+You can specify multiple fallback options in this command (a pair of
+open and close quotes, each in their own braces, then another pair,
+then another if you like), and Halibut will choose the first pair
+which the output character set supports (Halibut will always use a
+matching pair). (This is to allow you to configure quote characters
+once, generate output in several different character sets, and have
+Halibut constantly adapt to make the best use of the current
+encoding.) For example, you might write
+
+\c \cfg{quotes}{\u201c}{\u201d}{"}{"}
+
+and Halibut would use the Unicode matched double quote characters if
+possible, and fall back to ASCII double quotes otherwise. If the
+output character set were to contain U+201C but not U+201D, then
+Halibut would fall back to using the ASCII double quote character as
+\e{both} open and close quotes. (No known character set is that
+silly; I mention it only as an example.)
+
+}
+
 In addition to these configuration commands, there are also
 configuration commands provided by each individual output format.
 These configuration commands are discussed along with each output
@@ -1344,6 +1381,9 @@ The \i{default settings} for the above options are:
 \c \cfg{section}{Section}
 \c \cfg{appendix}{Appendix}
 \c \cfg{input-charset}{ASCII}
+
+(The default settings for \cw{\\cfg\{quotes\}} are backend-specific;
+see \k{output}.)
 
 \H{input-macro} Defining \i{macros}
 

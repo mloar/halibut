@@ -10,11 +10,6 @@ that format.
 This output format generates the document as a single \i{plain text}
 file.
 
-The output file is currently assumed to be in the \i{ISO 8859-1}
-character set. Any Unicode characters representable in this set will
-be output verbatim; any other characters will not be output and
-their \i{fallback text} (if any) will be used instead.
-
 The precise formatting of the text file can be controlled by a
 variety of configuration directives. They are listed in the
 following subsections.
@@ -188,12 +183,9 @@ in bulletted lists. It can be one character
 
 \lcont{
 
-You can specify multiple possible options (each in their own pair of
-braces) after this command, and Halibut will choose the first one
-which the output character set supports. (This is to allow you to
-configure the bullet character once, generate output in several
-different character sets, and have Halibut constantly adapt to make
-the best use of the current encoding.) For example, you might write
+Like \cw{\\cfg\{quotes\}} (see \k{input-config}), you can specify multiple
+possible options after this command, and Halibut will choose the first one
+which the output character set supports. For example, you might write
 \cw{\\cfg\{text-bullet\}\{\\u2022\}\{\\u00b7\}\{*\}}, in which case
 Halibut would use the Unicode \q{BULLET} character where possible,
 fall back to the ISO-8859-1 \q{MIDDLE DOT} if that wasn't available,
@@ -219,28 +211,14 @@ options in this command.
 
 \dt \I{\cw{\\cfg\{text-quotes\}}}\cw{\\cfg\{text-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
 
-\dd This specifies the quote characters which should be used in
-response to the \c{\\q} command (see \k{input-quotes}). These quotes
-will also be used to mark text enclosed in the \c{\\c} command (see
-\k{input-code}).
+\dd This specifies a set of quote characters for the text backend,
+overriding any defined by \cw{\\cfg\{quotes\}}. It has the same syntax
+(see \k{input-config}).
 
 \lcont{
 
-You should separately specify the open and close quote characters,
-each of which can be more than one character if you want. Also, like
-\cw{\\cfg\{text-bullet\}}, you can specify multiple fallback options
-in this command (a pair of open and close quotes, then another pair,
-then another if you like); Halibut will always use a matching pair.
-For example, you might write
-
-\c \cfg{text-quotes}{\u201c}{\u201d}{"}{"}
-
-and Halibut would use the Unicode matched double quote characters if
-possible, and fall back to ASCII double quotes otherwise. If the
-output character set were to contain U+201C but not U+201D, then
-Halibut would fall back to using the ASCII double quote character as
-\e{both} open and close quotes. (No known character set is that
-silly; I mention it only as an example.)
+In this backend, these quotes will also be used to mark text enclosed
+in the \c{\\c} command (see \k{input-code}).
 
 }
 
@@ -261,6 +239,22 @@ matching pair.
 }
 
 \S{output-text-misc} Miscellaneous configuration options
+
+\dt \I\cw{\\cfg\{text-charset\}}\cw{\\cfg\{text-charset\}\{}\e{character set name}\cw{\}}
+
+\dd This tells Halibut what \i{character set} the output should be
+in. Any Unicode characters representable in this set will be output
+verbatim; any other characters will not be output and their
+\i{fallback text} (if any) will be used instead.
+
+\lcont{
+
+The character set names are the same as for
+\cw{\\cfg\{input-charset\}} (see \k{input-config}). However, unlike
+\cw{\\cfg\{input-charset\}}, this directive affects the \e{entire}
+output; it's not possible to switch encodings halfway through.
+
+}
 
 \dt \I{\cw{\\cfg\{text-list-suffix\}}}\cw{\\cfg\{text-list-suffix\}\{}\e{text}\cw{\}}
 
@@ -320,6 +314,7 @@ The \i{default settings} for Halibut's plain text output format are:
 \c \cfg{text-quotes}{\u2018}{\u2019}{`}{'}
 \c \cfg{text-emphasis}{_}{_}
 \c
+\c \cfg{text-charset}{ASCII}
 \c \cfg{text-list-suffix}{.}
 \c \cfg{text-versionid}{true}
 
@@ -672,6 +667,8 @@ This output format generates data that can be used by the \i{Windows
 Help} program \cw{WINHELP.EXE}. There are two actual files
 generated, one ending in \c{.hlp} and the other ending in \c{.cnt}.
 
+The output is in the \q{\i{Win1252}} character set.
+
 The Windows Help output format supports the following configuration
 directives:
 
@@ -689,6 +686,38 @@ Halibut will append it. Halibut will also generate a contents file
 (ending in \c{.cnt}) alongside the file name you specify.
 
 }
+
+\dt \I{\cw{\\cfg\{winhelp-contents-titlepage\}}}\cw{\\cfg\{winhelp-contents-titlepage\}\{}\e{title}\cw{\}}
+
+\dd Sets the text used to describe the help page containing the blurb
+(see \k{input-blurb}) and table of contents.
+
+\dt
+\I{\cw{\\cfg\{winhelp-section-suffix\}}}\cw{\\cfg\{winhelp-section-suffix\}\{}\e{text}\cw{\}}
+
+\dd Specifies the \I{suffix text, in section titles}suffix text to
+be appended to section numbers, before displaying the section title.
+(Applies to all levels.)
+
+\dt \I{\cw{\\cfg\{winhelp-list-suffix\}}}\cw{\\cfg\{winhelp-list-suffix\}\{}\e{text}\cw{\}}
+
+\dd This text is appended to the number on a \i{numbered list} item,
+in exactly the same way as \cw{\\cfg\{text-list-suffix\}} (see
+\k{output-text-misc}).
+
+\dt \I{\cw{\\cfg\{winhelp-bullet\}}}\cw{\\cfg\{winhelp-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text to use as the \i{bullet} in bulletted lists.
+You can specify multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-bullet\}} directive (see
+\k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{winhelp-quotes\}}}\cw{\\cfg\{winhelp-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd Specifies the quotation marks to use, overriding any
+\cw{\\cfg\{quotes\}} directive. You can specify multiple
+fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
+directive (see \k{output-text-characters}).
 
 \dt \I{\cw{\\cfg\{winhelp-topic\}}}\cw{\\cfg\{winhelp-topic\}\{}\e{topic-name}\cw{\}}
 
@@ -718,6 +747,11 @@ different help contexts which you can use in this way.
 The \i{default settings} for the Windows Help output format are:
 
 \c \cfg{winhelp-filename}{output.hlp}
+\c \cfg{winhelp-contents-titlepage}{Title page}
+\c \cfg{winhelp-section-suffix}{: }
+\c \cfg{winhelp-list-suffix}{.}
+\c \cfg{winhelp-bullet}{\u2022}{-}
+\c \cfg{winhelp-quotes}{\u2018}{\u2019}{"}{"}
 
 and no \c{\\cfg\{winhelp-topic\}} directives anywhere.
 
@@ -833,12 +867,36 @@ expect.
 
 }
 
+\dt \I{\cw{\\cfg\{man-charset\}}}\cw{\\cfg\{man-charset\}\{}\e{character set}\cw{\}}
+
+\dd Specifies what character set the output should be in, similarly to
+\cw{\\cfg\{text-charset\}} (see \k{output-text-misc}).
+
+\# FIXME: you're probably on your own in making sure that it's
+sensible to output man pages in that charset.
+
+\dt \I{\cw{\\cfg\{man-bullet\}}}\cw{\\cfg\{man-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text to use as the \i{bullet} in bulletted lists.
+You can specify multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-bullet\}} directive (see \k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{man-quotes\}}}\cw{\\cfg\{man-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd Specifies the quotation marks to use, overriding any
+\cw{\\cfg\{quotes\}} directive. You can specify multiple
+fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
+directive (see \k{output-text-characters}).
+
 The \i{default settings} for the \cw{man} page output format are:
 
 \c \cfg{man-filename}{output.1}
 \c \cfg{man-identity}{}
 \c \cfg{man-headnumbers}{false}
 \c \cfg{man-mindepth}{0}
+\c \cfg{man-charset}{ASCII}
+\c \cfg{man-bullet}{\u2022}{o}
+\c \cfg{man-quotes}{\u2018}{\u2019}{"}{"}
 
 \H{output-info} GNU \c{info}
 
@@ -905,6 +963,16 @@ directive (see \k{output-text-dimensions}).
 item. Works exactly like the \cw{\\cfg\{text-listitem-indent\}}
 directive (see \k{output-text-dimensions}).
 
+\dt \I{\cw{\\cfg\{info-charset\}}}\cw{\\cfg\{info-charset\}\{}\e{character set}\cw{\}}
+
+\dd Specifies what character set the output should be in, similarly to
+\cw{\\cfg\{text-charset\}} (see \k{output-text-misc}).
+
+\# FIXME: if you try sufficiently hard, you can probably find an
+output encoding that will break the info format by trampling on its
+special characters. So either don't do that, or tell us what we should
+do about it.
+
 \dt \I{\cw{\\cfg\{info-section-suffix\}}}\cw{\\cfg\{info-section-suffix\}\{}\e{text}\cw{\}}
 
 \dd Specifies the suffix text to be appended to each section number
@@ -935,7 +1003,8 @@ specify multiple fallback options. Works exactly like the
 
 \dt \I{\cw{\\cfg\{info-quotes\}}}\cw{\\cfg\{info-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
 
-\dd Specifies the quotation marks to use. You can specify multiple
+\dd Specifies the quotation marks to use, overriding any
+\cw{\\cfg\{quotes\}} directive. You can specify multiple
 fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
 directive (see \k{output-text-characters}).
 
@@ -1031,6 +1100,8 @@ The \i{default settings} for the \c{info} output format are:
 \c \cfg{info-index-width}{40}
 \c \cfg{info-list-indent}{1}
 \c \cfg{info-listitem-indent}{3}
+\c
+\c \cfg{info-charset}{ASCII}
 \c
 \c \cfg{info-section-suffix}{: }
 \c
