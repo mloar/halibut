@@ -230,6 +230,16 @@ and Halibut generates something like
 This document was generated on \date.
 }
 
+You can follow the \c{\\date} command directly with punctuation (as
+in this example, where it is immediately followed by a full stop),
+but if you try to follow it with an alphabetic or numeric character
+(such as writing \c{\\dateZ}) then Halibut will assume you are
+trying to invoke the name of a macro command you have defined
+yourself, and will complain if no such command exists. To get round
+this you can use the special \c{\\.} do-nothing command. See
+\k{input-macro} for more about general Halibut command syntax and
+\c{\\.}.
+
 If you would prefer the date to be generated in a specific format,
 you can follow the \c{\\date} command with a format specification in
 braces. The format specification will be run through the standard C
@@ -393,6 +403,14 @@ generate nothing but
 \quote{
 The typical behaviour of an antelope \#{do I mean gazelle?} is...
 }
+
+This command will respect nested braces, so you can use it to
+comment out sections of Halibut markup:
+
+\c This function is \#{very, \e{very}} important.
+
+In this example, the comment lasts until the final closing brace (so
+that the whole \q{very, \e{very}} section is commented out).
 
 The \c{\\#} command can also be used to produce a whole-paragraph
 comment; see \k{input-commentpara} for details of that.
@@ -588,6 +606,12 @@ Here's a list:
 
 \n Now go back to step \k{this-one}.
 }
+
+The keyword you supply after \c{\\n} is allowed to contain escaped
+special characters (\c{\\\\}, \c{\\\{} and \c{\\\}}), but should not
+contain any other Halibut markup. It is intended to be a word or two
+of ordinary text. (This also applies to keywords used in other
+commands, such as \c{\\B} and \c{\\C}).
 
 \S2{input-list-description} \i\c{\\dt} and \i\c{\\dd}:
 \ii{Description lists}
@@ -821,6 +845,12 @@ written as
 and this allows me to use the command \c{\\k\{input\}} to generate a
 cross-reference to that chapter somewhere else.
 
+The \I{keyword syntax}keyword you supply after one of these commands
+is allowed to contain escaped special characters (\c{\\\\}, \c{\\\{}
+and \c{\\\}}), but should not contain any other Halibut markup. It
+is intended to be a word or two of ordinary text. (This also applies
+to keywords used in other commands, such as \c{\\B} and \c{\\n}).
+
 The next level down from \c{\\C} is \c{\\H}, for \q{heading}. This
 is used in exactly the same way as \c{\\C}, but section headings
 defined with \c{\\H} are considered to be part of a containing
@@ -1012,6 +1042,12 @@ notation, such as [Fred1993], you can use the \i\c{\\BR}
 format for a particular book:
 
 \c \BR{freds-book} [Fred1993]
+
+The keyword you supply after \c{\\B} is allowed to contain escaped
+special characters (\c{\\\\}, \c{\\\{} and \c{\\\}}), but should not
+contain any other Halibut markup. It is intended to be a word or two
+of ordinary text. (This also applies to keywords used in other
+commands, such as \c{\\n} and \c{\\C}).
 
 \H{input-index} Creating an \i{index}
 
@@ -1245,14 +1281,23 @@ macro, using the \i\c{\\define} command:
 
 \c \define{eur} \u20AC{EUR\_}
 
+Your macro names may include Roman alphabetic characters
+(\c{a}-\c{z}, \c{A}-\c{Z}) and ordinary Arabic numerals
+(\c{0}-\c{9}), but nothing else. (This is general \I{command
+syntax}syntax for all of Halibut's commands, except for a few
+special ones such as \c{\\_} and \c{\\-} which consist of a single
+punctuation character only.)
+
 Then you can just write ...
 
 \c This is likely to cost \eur 2500 at least.
 
 ... except that that's not terribly good, because you end up with a
-space between the Euro sign and the number. In this case, it's
-helpful to use the special \i\c{\\.} command, which is defined to
-\I{NOP}\I{doing nothing}do nothing at all! But it acts as a
+space between the Euro sign and the number. (If you had written
+\c{\\eur2500}, Halibut would have tried to interpret it as a macro
+command called \c{eur2500}, which you didn't define.) In this case,
+it's helpful to use the special \i\c{\\.} command, which is defined
+to \I{NOP}\I{doing nothing}do nothing at all! But it acts as a
 separator between your macro and the next character:
 
 \c This is likely to cost \eur\.2500 at least.
