@@ -15,12 +15,17 @@ endif
 all:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile REALBUILD=yes
-spotless:
+spotless: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile spotless REALBUILD=yes
-clean:
+clean: topclean
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile clean REALBUILD=yes
+topclean:
+	# Remove Halibut output files in the source directory (may
+	# have been created by running, for example, `build/halibut
+	# inputs/test.but').
+	rm -f *.html output.*
 else
 
 # The `real' makefile part.
