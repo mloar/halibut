@@ -1,0 +1,49 @@
+\C{running} Running Halibut
+
+Running Halibut is very simple. You provide a set of input files on
+its command line, and it produces a set of output files.
+
+\c $ halibut intro.but getting-started.but reference.but index.but
+\e   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+This will generate a large set of output files:
+
+\b \c{output.txt} will be a plain ASCII text version of the input
+document.
+
+\b \c{output.hlp} and \c{output.cnt} will be a Windows Help version
+of the same thing. (Most of the text is in \c{output.hlp};
+\c{output.cnt} contains additional contents data used by the Windows
+help topic selector. If you lose the latter, the former should still
+be usable, but it will look less modern.)
+
+\lcont{
+Note that Halibut does not require any external software such as a
+Help compiler. It \e{directly} generates Windows Help files, and
+therefore it doesn't need to be run on Windows to do so: it can
+generate them even when run from an automated script on a Unix
+machine.
+}
+
+\b \c{output.1} will be a Unix man page.
+
+\b The set of files \c{*.html} will contain an HTML version of the
+document. If you have configured Halibut to generate more than one
+HTML file (the default), then the file \c{Contents.html} will be the
+topmost one that users should be directed to initially. If you have
+configured Halibut to generate a single file, it will be called
+\c{Manual.html}.
+
+Unfortunately, in the current version, it is not possible to
+tell Halibut to generate these files under different names; so you
+will need to rename them manually after they are generated. (Even
+this won't work for the multiple-file HTML document, because there
+will be lots of internal hyperlinks between the various files which
+use their names.) Neither is it possible to tell Halibut not to
+bother generating some of the output formats, so you will need to
+delete any that you don't want.
+
+I regret this inconvenience; it arose because I was more interested
+in getting the difficult document-formatting code to work than I was
+in sorting out details like this which should be easy. At some point
+I plan to add some command-line options to configure all this.

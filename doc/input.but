@@ -1,0 +1,1216 @@
+\C{input} Halibut input format
+
+This chapter describes the format in which you should write
+documents to be processed by Halibut.
+
+\H{input-basics} The basics
+
+Halibut's input files mostly look like ordinary ASCII text files;
+you can edit them with any text editor you like.
+
+Writing paragraphs of ordinary text is very simple: you just write
+ordinary text in the ordinary way. You can wrap a paragraph across
+more than one line using line breaks in the text file, and Halibut
+will ignore this when it rewraps the paragraph for each output
+format. To separate paragraphs, use a blank line (i.e. two
+consecutive line breaks). For example, a fragment of Halibut input
+looking like this:
+
+\c This is a line of text.
+\c This is another line of text.
+\c
+\c This line is separated from the previous one by a blank line.
+
+will produce two paragraphs looking like this:
+
+\quote{
+This is a line of text.
+This is another line of text.
+
+This line is separated from the previous one by a blank line.
+}
+
+The first two lines of the input have been merged together into a
+single paragraph, and the line break in the input file was treated
+identically to the spaces between the individual words.
+
+Halibut is designed to have very few special characters. The only
+printable characters in Halibut input which will not be treated
+exactly literally in the output are the backslash (\c{\\}) and the
+braces (\c{\{} and \c{\}}). If you do not use these characters,
+\e{everything} else you might type in normal ASCII text is perfectly
+safe. If you do need to use any of those three characters in your
+document, you will have to precede each one with a backslash. Hence,
+for example, you could write
+
+\c This \\ is a backslash, and these are \{braces\}.
+
+and Halibut would generate the text
+
+\quote{
+This \\ is a backslash, and these are \{braces\}.
+}
+
+\H{input-inline} Simple inline formatting commands
+
+Halibut formatting commands all begin with a backslash, followed by
+a word or character identifying the command. Some of them then use
+braces to surround one or more pieces of text acted on by the
+command. (In fact, the \c{\\\\}, \c{\\\{} and \c{\\\}} sequences you
+met in \k{input-basics} are themselves formatting commands.)
+
+This section describes some simple formatting commands you can use
+in Halibut documents. The commands in this section are \e{inline}
+commands, which means you can use them in the middle of a paragraph.
+\K{input-para} describes some \e{paragraph} commands, which affect a
+whole paragraph at a time.
+
+\S{input-emph} \c{\\e}: Emphasising text
+
+Possibly the most obvious piece of formatting you might want to use
+in a document is \e{emphasis}. To emphasise text, you use the
+\c{\\e} command, and follow it up with the text to be emphasised in
+braces. For example, the first sentence in this paragraph was
+generated using the Halibut input
+
+\c Possibly the most obvious piece of formatting you might want to use
+\c in a document is \e{emphasis}.
+
+\S{input-code} \c{\\c} and \c{\\cw}: Displaying computer code inline
+
+Halibut was primarily designed to produce software manuals. It can
+be used for other types of document as well, but software manuals
+are its speciality.
+
+In software manuals, you often want to format text in a way that
+indicates that it is something you might see displayed verbatim on
+a computer screen. In printed manuals, this is typically done by
+setting that text in a font which is obviously fixed-width. This
+provides a visual cue that the text being displayed is code, and it
+also ensures that punctuation marks are clearly separated and shown
+individually (so that a user can copy the text accurately and
+conveniently).
+
+Halibut provides \e{two} commands for this, which are subtly
+different. The names of those commands are \c{\\c} (\q{code}) and
+\c{\\cw} (\q{weak code}). You use them just like \c{\\e}, by
+following them with some text in braces. For example, this...
+
+\c This sentence contains some \c{code} and some \cw{weak code}.
+
+... produces this:
+
+\quote{
+This sentence contains some \c{code} and some \cw{weak code}.
+}
+
+The distinction between code and weak code is mainly important when
+producing plain text output. Plain text output is typically viewed
+in a fixed-width font, so there is no need (and no way) to change
+font in order to make the order of punctuation marks clear. However,
+marking text as code is also \e{sometimes} done to provide a visual
+distinction between it and the text around it, so that the reader
+knows where the literal computer text starts and stops; and in plain
+text, this cannot be done by changing font, so there needs to be an
+alternative way.
+
+So in the plain text back end, things marked as code (\c{\\c}) will
+be surrounded by quote marks, so that it's obvious where they start
+and finish. Things marked as weak code (\c{\\cw}) will not look any
+different from normal text.
+
+I recommend using weak code for any application where it is
+\e{obvious} that the text is literal computer input or output. For
+example, if the text is capitalised, that's usually good enough. If
+I talk about the Pentium's \cw{EAX} and \cw{EDX} registers, for
+example, you don't need quotes to notice that those are special; so
+I would write that in Halibut as \q{\c{the Pentium's \\cw\{EAX\} and
+\\cw\{EDX\} registers}}. But if I'm talking about the Unix command
+\c{man}, which is an ordinary English word in its own right, a reader
+might be slightly confused if it appeared in the middle of a
+sentence undecorated; so I would write that as \q{\c{the Unix command
+\\c\{man\}}}.
+
+In summary:
+
+\b \c{\\c} means \q{this text \e{must} be visually distinct from the
+text around it}. Halibut's various output formats will do this by
+changing the font if possible, or by using quotes if not.
+
+\b \c{\\cw} means \q{it would be nice to display this text in a
+fixed-width font if possible, but it's not essential}.
+
+There is a separate mechanism for displaying computer code in an
+entire paragraph; see \k{input-codepara} for that one.
+
+\S{input-quotes} \c{\\q}: Quotation marks
+
+Halibut's various output formats don't all use the same conventions
+for displaying text in ordinary quotation marks (\q{like these}).
+Some output formats have access to proper matched quote characters,
+whereas others are restricted to using plain ASCII. Therefore, it is
+not ideal to use the ordinary ASCII double quote character in your
+document (although you can if you like).
+
+Halibut provides the formatting command \c{\\q} to indicate quoted
+text. If you write
+
+\c Here is some \q{text in quotes}.
+
+then Halibut will print
+
+\quote{
+Here is some \q{text in quotes}.
+}
+
+and in every output format Halibut generates, it will choose the
+best quote characters available to it in that format.
+
+You can still use ordinary ASCII double quotes if you prefer; or you
+could even use the \c{\\u} command (see \k{input-unicode}) to
+generate Unicode matched double quotes and fall back to the normal
+ASCII one if they aren't available. But I recommend using the
+built-in \c{\\q} command in most cases, because it's simple and does
+the best it can everywhere.
+
+(Note that if you're using the \c{\\c} or \c{\\cw} commands to
+display literal computer code, you probably \e{will} want to use
+literal ASCII quote characters, because it is likely to matter
+precisely which quote character you use.)
+
+\S{input-nonbreaking} \c{\\-} and \c{\\_}: Non-breaking hyphens and
+spaces
+
+If you use an ordinary hyphen in the middle of a word (such as
+\q{built-in}), Halibut's output formats will feel free to break a
+line after that hyphen when wrapping paragraphs. This is fine for a
+word like \q{built-in}, but if you were displaying some literal
+computer code such as the Emacs command
+\c{M\-x\_psychoanalyze\-pinhead}, you might prefer to see the whole
+hyphenated word treated as an unbreakable block. In some cases, you
+might even want to prevent the \e{space} in that command from
+becoming a line break.
+
+For these purposes, Halibut provides the commands \c{\\-} and
+\c{\\_}, which generate a non-breaking hyphen and a non-breaking
+space respectively. So the above Emacs command might be written as
+
+\c the Emacs command \c{M\-x\_psychoanalyze\-pinhead}
+
+Unfortunately, some of Halibut's output formats do not support
+non-breaking hyphens, and others don't support \e{breaking} hyphens!
+So Halibut cannot promise to honour these commands in all situations.
+All it can do is make a best effort.
+
+\S{input-date} \c{\\date}: Automatic date generation
+
+Sometimes you might want your document to give an up-to-date
+indication of the date on which it was run through Halibut.
+
+Halibut supplies the \c{\\date} command to do this. In its simplest
+form, you simply say
+
+\c This document was generated on \date.
+
+and Halibut generates something like
+
+\quote{
+This document was generated on \date.
+}
+
+If you would prefer the date to be generated in a specific format,
+you can follow the \c{\\date} command with a format specification in
+braces. The format specification will be run through the standard C
+function \c{strftime}, so any format acceptable to that function is
+acceptable here as well. I won't document the format here, because
+the details vary from computer to computer (although there is a
+standard core which should be supported everywhere). You should look
+at your local system's manual for \c{strftime} for details.
+
+Here's an example which generates the date in the international
+standard ISO 8601 format:
+
+\c This document was generated on \date{%Y-%m-%d %H:%M:%S}.
+
+And here's some sample output from that command:
+
+\quote{
+This document was generated on \date{%Y-%m-%d %H:%M:%S}.
+}
+
+\S{input-weblink} \c{\\W}: WWW hyperlinks
+
+Since one of Halibut's output formats is HTML, it's obviously useful
+to be able to provide links to arbitrary web sites in a Halibut
+document.
+
+This is done using the \c{\\W} command. \c{\\W} expects to be
+followed by \e{two} sets of braces. In the first set of braces you
+put a URL; in the second set you put the text which should be a
+hyperlink. For example, you might write
+
+\c Try searching on \W{http://www.google.com/}{Google}.
+
+and Halibut would generate
+
+\quote{
+Try searching on \W{http://www.google.com/}{Google}.
+}
+
+Note that hyperlinks, like the non-breaking commands discussed in
+\k{input-nonbreaking}, are \e{discretionary}: if an output format
+does not support them then they will just be left out completely. So
+unless you're \e{only} intending to use the HTML output format, you
+should avoid storing vital content in the URL part of a \c{\\W}
+command. The Google example above is reasonable (because most users
+are likely to be able to find Google for themselves even without a
+convenient hyperlink leading straight there), but if you really need
+to direct users to a specific web site, you will need to give the
+URL in actual displayed text (probably displayed as code as well).
+However, there's nothing to stop you making it a hyperlink \e{as
+well} for the convenience of HTML readers.
+
+The \c{\\W} command supports a piece of extra syntax to make this
+convenient for you. You can specify \c{\\c} or \c{\\cw} \e{between}
+the first and second pairs of braces. For example, you might write
+
+\c Google is located at \W{http://www.google.com/}\cw{www.google.com}.
+
+and Halibut would produce
+
+\quote{
+Google is located at \W{http://www.google.com/}\cw{www.google.com}.
+}
+
+\S{input-unicode} \c{\\u}: Specifying arbitrary Unicode characters
+
+When Halibut is finished, it should have full Unicode support. You
+should be able to specify any (reasonably well known) character set
+for your input document, and Halibut should convert it all to
+Unicode as it reads it in. Similarly, you should be able to specify
+the character set you want for each output format and have all the
+conversion done automatically.
+
+Currently, none of this is actually supported. Input text files are
+assumed to be in ISO 8859-1, and each output format has its own
+non-configurable character set (although the HTML output can use the
+\c{&#1234;} mechanism to output any Unicode character it likes).
+
+If you need to specify a Unicode character in your input document
+which is not supported by the input character set, you can use the
+\c{\\u} command to do this. \c{\\u} expects to be followed by a
+sequence of hex digits; so that \c{\\u0041}, for example, denotes
+the Unicode character \cw{0x0041}, which is the capital letter A.
+
+If a Unicode character specified in this way is not supported in a
+particular \e{output} format, you probably don't just want it to be
+omitted. So you can put a pair of braces after the \c{\\u} command
+containing fallback text. For example, to specify an amount of money
+in euros, you might write this:
+
+\c This is likely to cost \u20AC{EUR }2500 at least.
+
+Halibut will render that as a Euro sign \e{if available}, and
+the text \q{EUR } if not. In the output format you're currently
+reading in, the above input generates this:
+
+\quote{
+This is likely to cost \u20AC{EUR }2500 at least.
+}
+
+If you read it in other formats, you may see different results.
+
+\S{input-xref} \c{\\k} and \c{\\K}: Cross-references to other sections
+
+\K{intro-features} mentions that Halibut numbers the sections of
+your document automatically, and can generate cross-references to
+them on request. \c{\\k} and \c{\\K} are the commands used to
+generate those cross-references.
+
+To use one of these commands, you simply follow it with a pair of
+braces containing the keyword for the section in question. For
+example, you might write something like
+
+\c \K{input-xref} expands on \k{intro-features}.
+
+and Halibut would generate something like
+
+\quote{
+\K{input-xref} expands on \k{intro-features}.
+}
+
+The keywords \c{input-xref} and \c{intro-features} are section
+keywords used in this manual itself. In your own document, you would
+have supplied a keyword for each one of your own sections, and you
+would provide your own keywords for the \c{\\k} command to work on.
+
+The difference between \c{\\k} and \c{\\K} is simply that \c{\\K}
+starts the cross-reference text with a capital letter; so you would
+use \c{\\K} at the beginning of a sentence, and \c{\\k} everywhere
+else.
+
+In output formats which permit it, cross-references act as
+hyperlinks, so that clicking the mouse on a cross-reference takes
+you straight to the referenced section.
+
+The \c{\\k} commands are also used for referring to entries in a
+bibliography (see \k{input-biblio} for more about bibliographies),
+and can also be used for referring to an element of a numbered list
+by its number (see \k{input-list-number} for more about numbered
+lists).
+
+See \k{input-sections} for more about chapters and sections.
+
+\S{input-inline-comment} \c{\\#}: Inline comments
+
+If you want to include comments in your Halibut input, to be seen
+when reading it directly but not copied into the output text, then
+you can use \c{\\#} to do this. If you follow \c{\\#} with text in
+braces, that text will be ignored by Halibut.
+
+For example, you might write
+
+\c The typical behaviour of an antelope \#{do I mean gazelle?} is...
+
+and Halibut will simply leave out the aside about gazelles, and will
+generate nothing but
+
+\quote{
+The typical behaviour of an antelope \#{do I mean gazelle?} is...
+}
+
+The \c{\\#} command can also be used to produce a whole-paragraph
+comment; see \k{input-commentpara} for details of that.
+
+\H{input-para} Paragraph-level commands
+
+This section describes Halibut commands which affect an entire
+paragraph, or sometimes even \e{more} than one paragraph, at a time.
+
+\S{input-codepara} \c{\\c}: Displaying whole paragraphs of computer
+code
+
+\K{input-code} describes a mechanism for displaying computer code in
+the middle of a paragraph, a few words at a time.
+
+However, this is often not enough. Often, in a computer manual, you
+really want to show several lines of code in a display paragraph.
+
+This is also done using the \c{\\c} command, in a slightly different
+way. Instead of using it in the middle of a paragraph followed by
+braces, you can use it at the start of each line of a paragraph. For
+example, you could write
+
+\c \c #include <stdio.h>
+\c \c
+\c \c int main(int argc, char **argv) {
+\c \c     printf("hello, world\n");
+\c \c     return 0;
+\c \c }
+
+and Halibut would generate
+
+\quote{
+
+\c #include <stdio.h>
+\c
+\c int main(int argc, char **argv) {
+\c     printf("hello, world\n");
+\c     return 0;
+\c }
+
+}
+
+Note that the above paragraph makes use of a backslash and a pair of
+braces, and does \e{not} need to escape them in the way described in
+\k{input-basics}. This is because code paragraphs formatted in this
+way are a special case; the intention is that you can just copy and
+paste a lump of code out of another program, put \q{\cw{\\c }} at the
+start of every line, and simply \e{not have to worry} about the
+details - you don't have to go through the whole block looking for
+characters to escape.
+
+Since a backslash inside a code paragraph generates a literal
+backslash, this means you cannot use any other Halibut formatting
+commands inside a code paragraph. In particular, if you want to
+emphasise a particular word in the paragraph, you can't do that
+using \c{\\e} (\k{input-emph}) in the normal way.
+
+Therefore, Halibut provides an alternative means of emphasis in code
+paragraphs. Each line beginning with \c{\\c} can optionally be
+followed by a single line beginning with \c{\\e}, indicating the
+emphasis in that line. The emphasis line contains the letters \c{b}
+and \c{i} (for \q{bold} and \q{italic}, although some output formats
+might render \c{i} as underlining instead of italics), positioned
+to line up under the parts of the text that you want emphasised.
+
+For example, if you wanted to do syntax highlighting on the above C
+code by highlighting the preprocessor command in italic and the
+keywords in bold, you might do it like this:
+
+\c \c #include <stdio.h>
+\c \e iiiiiiiiiiiiiiiiii
+\c \c
+\c \c int main(int argc, char **argv) {
+\c \e bbb      bbb       bbbb
+\c \c     printf("hello, world\n");
+\c \c     return 0;
+\c \e     bbbbbb
+\c \c }
+
+and Halibut would generate:
+
+\quote{
+
+\c #include <stdio.h>
+\e iiiiiiiiiiiiiiiiii
+\c
+\c int main(int argc, char **argv) {
+\e bbb      bbb       bbbb
+\c     printf("hello, world\n");
+\c     return 0;
+\e     bbbbbb
+\c }
+
+}
+
+Note that not every \c{\\c} line has to be followed by a \c{\\e}
+line; they're optional.
+
+Also, note that highlighting within a code paragraph is
+\e{discretionary}. Not all of Halibut's output formats can support
+it (plain text, in particular, has no sensible way to do it). Unless
+you know you are using a restricted range of output formats, you
+should use highlighting in code paragraphs \e{only} as a visual aid,
+and not rely on it to convey any vital semantic content.
+
+\S{input-lists} \c{\\b}, \c{\\n}, \c{\\dt}, \c{\\dd}, \c{\\lcont}: Lists
+
+Halibut supports bulletted lists, numbered lists and description
+lists.
+
+\S2{input-list-bullet} \c{\\b}: Bulletted lists
+
+To create a bulletted list, you simply prefix each paragraph
+describing a bullet point with the command \c{\\b}. For example, this
+Halibut input:
+
+\c Here's a list:
+\c
+\c \b One.
+\c
+\c \b Two.
+\c
+\c \b Three.
+
+would produce this Halibut output:
+
+\quote{
+Here's a list:
+
+\b One.
+
+\b Two.
+
+\b Three.
+}
+
+\S2{input-list-number} \c{\\n}: Numbered lists
+
+Numbered lists are just as simple: instead of \c{\\b}, you use
+\c{\\n}, and Halibut takes care of getting the numbering right for
+you. For example:
+
+\c Here's a list:
+\c
+\c \n One.
+\c
+\c \n Two.
+\c
+\c \n Three.
+
+This produces the Halibut output:
+
+\quote{
+Here's a list:
+
+\n One.
+
+\n Two.
+
+\n Three.
+}
+
+The disadvantage of having Halibut sort out the list numbering for
+you is that if you need to refer to a list item by its number, you
+can't reliably do so. To get round this, Halibut allows an optional
+keyword in braces after the \c{\\n} command. This keyword can then
+be referenced using the \c{\\k} or \c{\\K} command (see
+\k{input-xref}) to provide the number of the list item. For example:
+
+\c Here's a list:
+\c
+\c \n One.
+\c
+\c \n{this-one} Two.
+\c
+\c \n Three.
+\c
+\c \n Now go back to step \k{this-one}.
+
+This produces the following output:
+
+\quote{
+Here's a list:
+
+\n One.
+
+\n{this-one} Two.
+
+\n Three.
+
+\n Now go back to step \k{this-one}.
+}
+
+\S2{input-list-description} \c{\\dt} and \c{\\dd}: Description lists
+
+To wrie a description list, you prefix alternate paragraphs with the
+\c{\\dt} (\q{described thing}) and \c{\\dd} (description) commands.
+For example:
+
+\c \dt Pelican
+\c
+\c \dd This is a large bird with a big beak.
+\c
+\c \dt Panda
+\c
+\c \dd This isn't.
+
+This produces the following output:
+
+\quote{
+
+\dt Pelican
+
+\dd This is a large bird with a big beak.
+
+\dt Panda
+
+\dd This isn't.
+
+}
+
+\S2{input-list-continuation} Continuing list items into further
+paragraphs
+
+All three of the above list types assume that each list item is a
+single paragraph. For a short, snappy list in which each item is
+likely to be only one or two words, this is perfectly sufficient;
+but occasionally you will find you want to include several
+paragraphs in a single list item, or even to nest other types of
+paragraph (such as code paragraphs, or other lists) inside a list
+item.
+
+To do this, you use the \c{\\lcont} command. This is a command which
+can span \e{multiple} paragraphs.
+
+After the first paragraph of a list item, include the text
+\c{\\lcont\{}. This indicates that the subsequent paragraph(s) are a
+\e{continuation} of the list item that has just been seen. So you
+can include further paragraphs, and eventually include a closing
+brace \c{\}} to finish the list continuation. After that, you can
+either continue adding other items to the original list, or stop
+immediately and return to writing normal paragraphs of text.
+
+Here's a (long) example.
+
+\c Here's a list:
+\c
+\c \n One. This item is followed by a code paragraph:
+\c
+\c \lcont{
+\c
+\c \c code
+\c \c paragraph
+\c
+\c }
+\c
+\c \n Two. Now when I say \q{two}, I mean:
+\c
+\c \lcont{
+\c
+\c \n Two, part one.
+\c
+\c \n Two, part two.
+\c
+\c \n Two, part three.
+\c
+\c }
+\c
+\c \n Three.
+
+The output produced by this fragment is:
+
+\quote{
+
+Here's a list:
+
+\n One. This item is followed by a code paragraph:
+
+\lcont{
+
+\c code
+\c paragraph
+
+}
+
+\n Two. Now when I say \q{two}, I mean:
+
+\lcont{
+
+\n Two, part one.
+
+\n Two, part two.
+
+\n Two, part three.
+
+}
+
+\n Three.
+
+}
+
+This syntax seems a little bit inconvenient, and perhaps
+counter-intuitive: you might expect the enclosing braces to have to
+go around the \e{whole} list item, rather than everything except the
+first paragraph.
+
+\c{\\lcont} is a recent addition to the Halibut input language;
+previously, \e{all} lists were required to use no more than one
+paragraph per list item. So it's certainly true that this feature
+looks like an afterthought because it \e{is} an afterthought, and
+it's possible that if I'd been designing the language from scratch
+with multiple-paragraph list items in mind, I would have made it
+look different.
+
+However, the advantage of doing it this way is that no enclosing
+braces are required in the \e{common} case: simple lists with only
+one paragraph per item are really, really easy to write. So I'm not
+too unhappy with the way it turned out; it obeys the doctrine of
+making simple things simple, and difficult things possible.
+
+Note that \c{\\lcont} can only be used on \c{\\b}, \c{\\n} and
+\c{\\dd} paragraphs; it cannot be used on \c{\\dt}.
+
+\S{input-rule} \c{\\rule}: Horizontal rules
+
+The command \c{\\rule}, appearing on its own as a paragraph, will
+cause a horizontal rule to be drawn, like this:
+
+\c Some text.
+\c
+\c \rule
+\c
+\c Some more text.
+
+This produces the following output:
+
+\quote{
+
+Some text.
+
+\rule
+
+Some more text.
+
+}
+
+\S{input-quote} \c{\\quote}: Indenting multiple paragraphs as a long
+quotation
+
+Quoting verbatim text using a code paragraph (\k{input-codepara}) is
+not always sufficient for your quoting needs. Sometimes you need to
+quote some normally formatted text, possibly in multiple paragraphs.
+
+To do this, you can use the \c{\\quote} command. Like \c{\\lcont},
+this is a command which expects to enclose at least one paragraph
+and possibly more. Simply write \c{\\quote\{} at the beginning of
+your quoted section, and \c{\}} at the end, and the paragraphs in
+between will be formatted to indicate that they are a quotation.
+
+(This very manual, in fact, uses this feature a lot: all of the
+examples of Halibut source followed by Halibut output have the
+output quoted using \c{\\quote}.)
+
+Here's some example Halibut input:
+
+\c In \q{Through the Looking Glass}, Lewis Carroll wrote:
+\c
+\c \quote{
+\c
+\c \q{The question is,} said Alice, \q{whether you \e{can} make
+\c words mean so many different things.}
+\c
+\c \q{The question is,} said Humpty Dumpty, \q{who is to be master -
+\c that's all.}
+\c
+\c }
+\c
+\c So now you know.
+
+The output generated by this is:
+
+\quote{
+
+In \q{Through the Looking Glass}, Lewis Carroll wrote:
+
+\quote{
+
+\q{The question is,} said Alice, \q{whether you \e{can} make
+words mean so many different things.}
+
+\q{The question is,} said Humpty Dumpty, \q{who is to be master -
+that's all.}
+
+}
+
+So now you know.
+
+}
+
+\S{input-sections} \c{\\C}, \c{\\H}, \c{\\S}, \c{\\A}, \c{\\U}:
+Chapter and section headings
+
+\K{intro-features} mentions that Halibut numbers the sections of
+your document automatically, and can generate cross-references to
+them on request; \k{input-xref} describes the \c{\\k} and \c{\\K}
+commands used to generate the cross-references. This section
+describes the commands used to set up the sections in the first
+place.
+
+A paragraph beginning with the \c{\\C} command defines a chapter
+heading. The \c{\\C} command expects to be followed by a pair of
+braces containing a keyword for the chapter; this keyword can then
+be used with the \c{\\k} and \c{\\K} commands to generate
+cross-references to the chapter. After the closing brace, the rest
+of the paragraph is used as the displayed chapter title. So the
+heading for the current chapter of this manual, for example, is
+written as
+
+\c \C{input} Halibut input format
+
+and this allows me to use the command \c{\\k\{input\}} to generate a
+cross-reference to that chapter somewhere else.
+
+The next level down from \c{\\C} is \c{\\H}, for \q{heading}. This
+is used in exactly the same way as \c{\\C}, but section headings
+defined with \c{\\H} are considered to be part of a containing
+chapter, and will be numbered with a pair of numbers. After \c{\\H}
+comes \c{\\S}, and if necessary you can then move on to \c{\\S2},
+\c{\\S3} and so on.
+
+For example, here's a sequence of heading commands. Normally these
+commands would be separated at least by blank lines (because each is
+a separate paragraph), and probably also by body text; but for the
+sake of brevity, both of those have been left out in this example.
+
+\c \C{foo} Using Foo
+\c \H{foo-intro} Introduction to Foo
+\c \H{foo-running} Running the Foo program
+\c \S{foo-inter} Running Foo interactively
+\c \S{foo-batch} Running Foo in batch mode
+\c \H{foo-trouble} Troubleshooting Foo
+\c \C{bar} Using Bar instead of Foo
+
+This would define two chapters with keywords \c{foo} and \c{bar},
+which would end up being called Chapter 1 and Chapter 2 (unless
+there were other chapters before them). The sections \c{foo-intro},
+\c{foo-running} and \c{foo-trouble} would be referred to as Section
+1.1, Section 1.2 and Section 1.3 respectively; the subsections
+\c{foo-inter} and \c{foo-batch} would be Section 1.2.1 and Section
+1.2.2. If there had been a \c{\\S2} command within one of those, it
+would have been something like Section 1.2.1.1.
+
+If you don't like the switch from \c{\\H} to \c{\\S}, you can use
+\c{\\S1} as a synonym for \c{\\S} and \c{\\S0} as a synonym for
+\c{\\H}. Chapters are still designated with \c{\\C}, because they
+need to be distinguished from other types of chapter such as
+appendices. (Personally, I like the \c{\\C},\c{\\H},\c{\\S} notation
+because it encourages me to think of my document as a hard disk :-)
+
+You can define an appendix by using \c{\\A} in place of \c{\\C}.
+This is no different from a chapter except that it's given a letter
+instead of a number, and cross-references to it will say \q{Appendix
+A} instead of \q{Chapter 9}. Subsections of an appendix will be
+numbered \q{A.1}, \q{A.2}, \q{A.2.1} and so on.
+
+If you want a particular section to be referred to as something
+other than a \q{chapter}, \q{section} or \q{appendix}, you can
+include a second pair of braces after the keyword. For example, if
+you're writing a FAQ chapter and you want cross-references between
+questions to refer to \q{question 1.2.3} instead of \q{section
+1.2.3}, you can write each section heading as
+
+\c \S{question-about-fish}{Question} What about fish?
+
+(The word \q{Question} should be given with an initial capital
+letter. Halibut will lower-case it when you refer to it using
+\c{\\k}, and will leave it alone if you use \c{\\K}.)
+
+This technique allows you to change the designation of
+\e{particular} sections. To make an overall change in what \e{every}
+section is called, see \k{input-config}.
+
+Finally, the \c{\\U} command defines an \e{unnumbered} chapter.
+These sometimes occur in books, for specialist purposes such as
+\q{Bibliography} or \q{Acknowledgements}. \c{\\U} does not expect a
+keyword argument, because there is no sensible way to generate an
+automatic cross-reference to such a chapter anyway.
+
+\S{input-blurb} \c{\\preamble}, \c{\\copyright}, \c{\\title},
+\c{\\versionid}: Miscellaneous blurb commands
+
+These four commands define a variety of special paragraph types.
+They are all used in the same way: you put the command at the start
+of a paragraph, and then just follow it with normal text, like this:
+
+\c \title My First Manual
+
+The four special paragraph types are:
+
+\dt \c{\\title}
+
+\dd This defines the overall title of the entire document. This
+title is treated specially in some output formats (for example, it's
+used in a \cw{<title>} tag in the HTML output), so it needs a
+special paragraph type to point it out.
+
+\dt \c{\\preamble}
+
+\dd This command indicates ordinary text that appears \e{before} the
+first chapter heading. \#{FIXME: figure out what Halibut actually
+does do with ordinary text before a chapter heading. Then figure out
+whether that's sensible. Then figure out what \preamble has to offer
+that's perceptibly different. Fix if necessary.}
+
+\dt \c{\\copyright}
+
+\dd This command indicates that the paragraph attached to it
+contains a copyright statement for the document. This text is
+usually displayed inline, in the same way as \c{\\preamble} text,
+but in some output formats it is given additional special treatment.
+For example, Windows Help files have a standard slot in which to
+store a copyright notice, so that other software can display it
+prominently.
+
+\dt \c{\\versionid}
+
+\dd This command indicates that the paragraph contains a version
+identifier, such as those produced by CVS (of the form \c{$\#{hope this
+defuses CVS}Id: thingy.but,v 1.6 2004/01/01 16:47:48 simon Exp $}).
+This text will be tucked away somewhere unobtrusive, so that anyone
+wanting to (for example) report errors to the document's author can
+pick out the version IDs and send them as part of the report, so
+that the author can tell at a glance which revision of the document
+is being discussed.
+
+\S{input-commentpara} \c{\\#}: Whole-paragraph comments
+
+\K{input-inline-comment} describes the use of the \c{\\#} command to
+put a short comment in the middle of a paragraph.
+
+If you need to use a \e{long} comment, Halibut also allows you to
+use \c{\\#} without braces, to indicate that an entire paragraph is
+a comment, like this:
+
+\c Here's a (fairly short) paragraph which will be displayed.
+\c
+\c \# Here's a comment paragraph which will not be displayed, no
+\c matter how long it goes on. All I needed to indicate this was the
+\c single \# at the start of the paragraph; I don't need one on
+\c every line or anything like that.
+\c
+\c Here's another displayed paragraph.
+
+When run through Halibut, this produces the following output:
+
+\quote{
+
+Here's a (fairly short) paragraph which will be displayed.
+
+\# Here's a comment paragraph which will not be displayed, no
+matter how long it goes on. All I needed to indicate this was the
+single \# at the start of the paragraph; I don't need one on
+every line or anything like that.
+
+Here's another displayed paragraph.
+
+}
+
+\H{input-biblio} Creating a bibliography
+
+If you need your document to refer to other documents (research
+papers, books, websites, whatever), you might find a bibliography
+feature useful.
+
+You can define a bibliography entry using the \c{\\B} command. This
+looks very like the \c{\\C} command and friends: it expects a
+keyword in braces, followed by some text describing the document
+being referred to. For example:
+
+\c \B{freds-book} \q{The Taming Of The Mongoose}, by Fred Bloggs.
+\c Published by Paperjam & Notoner, 1993.
+
+If this bibliography entry appears in the finished document, it will
+look something like this:
+
+\quote{
+
+\B{freds-book} \q{The Taming Of The Mongoose}, by Fred Bloggs.
+Published by Paperjam & Notoner, 1993.
+
+}
+
+I say \q{if} above because not all bibliography entries defined
+using the \c{\\B} command will necessarily appear in the finished
+document. They only appear if they are referred to by a \c{\\k}
+command (see \k{input-xref}). This allows you to (for example)
+maintain a single Halibut source file with a centralised database of
+\e{all} the references you have ever needed in any of your writings,
+include that file in every document you feed to Halibut, and have it
+only produce the bibliography entries you actually need for each
+particular document. (In fact, you might even want this centralised
+source file to be created automatically by, say, a Perl script from
+BibTeX input, so that you can share the same bibliography with users
+of other formatting software.)
+
+If you really want a bibliography entry to appear in the document
+even though no text explicitly refers to it, you can do that using
+the \c{\\nocite} command:
+
+\c \nocite{freds-book}
+
+Normally, each bibliography entry will be referred to (in citations
+and in the bibliography itself) by a simple reference number, such
+as \k{freds-book}. If you would rather use an alternative reference
+notation, such as [Fred1993], you can use the \c{\\BR}
+(\q{Bibliography Rewrite}) command to specify your own reference
+format for a particular book:
+
+\c \BR{freds-book} [Fred1993]
+
+\H{input-index} Creating an index
+
+Halibut contains a comprehensive indexing mechanism, which attempts
+to be reasonably easy to use in the common case in spite of its
+power.
+
+\S{input-index-simple} Simple indexing
+
+In normal usage, you should be able to add index terms to your
+document simply by using the \c{\\i} command to wrap one or two
+words at a time. For example, if you write
+
+\c The \i{hippopotamus} is a particularly large animal.
+
+then the index will contain an entry under \q{hippopotamus},
+pointing to that sentence (or as close to that sentence as the
+output format sensibly permits).
+
+You can wrap more than one word in \c{\\i} as well:
+
+\c We recommend using a \i{torque wrench} for this job.
+
+\S{input-index-special} Special cases of indexing
+
+If you need to index a computer-related term, you can use the
+special case \c{\\i\\c}:
+
+\c The \i\c{grep} command is what you want here.
+
+This will cause the word \q{grep} to appear in code style, as if the
+\c{\\i} were not present and the input just said \c{\\c\{grep\}};
+the word will also appear in code style in the actual index.
+
+If you want to simultaneously index and emphasise a word, there's
+another special case \c{\\i\\e}:
+
+\c This is what we call a \i\e{paper jam}.
+
+This will cause the words \q{paper jam} to be emphasised in the
+document, but (unlike the behaviour of \c{\\i\\c}) they will \e{not}
+be emphasised in the index. This different behaviour is based on an
+expectation that most people indexing a word of computer code will
+still want it to look like code in the index, whereas most people
+indexing an emphasised word will \e{not} want it emphasised in the
+index.
+
+Sometimes you might want to index a term which is not explicitly
+mentioned, but which is highly relevant to the text and you think
+that somebody looking up that term in the index might find it useful
+to be directed here. To do this you can use the \c{\\I} command, to
+create an \e{invisible} index tag:
+
+\c If your printer runs out of toner, \I{replacing toner
+\c cartridge}here is what to do:
+
+This input will produce only the output \q{If your printer runs out
+of toner, here is what to do}; but an index entry will show up under
+\q{replacing toner cartridge}, so that if a user thinks the obvious
+place to start in the index is under R for \q{replacing}, they will
+find their way here with a minimum of fuss.
+
+(It's worth noting that there is no functional difference between
+\c{\\i\{foo\}} and \c{\\I\{foo\}foo}. The simple \c{\\i} case is
+only a shorthand for the latter.)
+
+Finally, if you want to index a word at the start of a sentence, you
+might very well not want it to show up with a capital letter in the
+index. For this, Halibut provides the \c{\\ii} command, for \q{index
+(case-)insensitively}. You use it like this:
+
+\c \ii{Lions} are at the top of the food chain in this area.
+
+This is equivalent to \c{\\I\{lions\}Lions}; in other words, the
+text will say \q{Lions}, but it will show up in the index as
+\q{lions}. The text inside \c{\\ii} is converted entirely into lower
+case before being added to the index data.
+
+\S{input-index-rewrite} Fine-tuning the index
+
+Halibut's index mechanism as described so far still has a few
+problems left:
+
+\b In a reasonably large index, it's often difficult to predict
+which of several words a user will think of first when trying to
+look something up. For example, if they want to know how to replace
+a toner cartridge, they might look up \q{replacing} or they might
+look up \q{toner cartridge}. You probably don't really want to have
+to try to figure out which of those is more likely; instead, what
+you'd like is to be able to effortlessly index the same set of
+document locations under \e{both} terms.
+
+\b Also, you may find you've indexed the same concept under multiple
+different index terms; for example, there might be several instances
+of \c{\\i\{frog\}} and several of \c{\\i\{frogs\}}, so that you'd
+end up with two separate index entries for what really ought to be
+the same concept.
+
+\b You might well not want the word \q{\cw{grep}} to appear in the
+index without explanation; you might prefer it to say something more
+verbose such as \q{\cw{grep} command}, so that a user encountering
+it in the index has some idea of what it is \e{without} having to
+follow up the reference. However, you certainly don't want to have
+to write \c{\\I\{\\cw\{grep\} command\}\\c\{grep\}} every time you
+want to add an index term for this! You wanted to write
+\c{\\i\\c\{grep\}} as shown in the previous section, and tidy it all
+up afterwards.
+
+All of these problems can be cleaned up by the \c{\\IM} (for
+\q{Index Modification}) command. \c{\\IM} expects to be followed by
+one or more pairs of braces containing index terms as seen in the
+document, and then a piece of text (not in braces) describing how it
+should be shown in the index.
+
+So to rewrite the \c{grep} example above, you might do this:
+
+\c \IM{grep} \cw{grep} command
+
+This will arrange that the set of places in the document where you
+asked Halibut to index \q{\cw{grep}} will be listed under
+\q{\cw{grep} command} rather than just under \q{\cw{grep}}.
+
+You can specify more than one index term in a \c{\\IM} command; so
+to merge the index terms \q{frog} and \q{frogs} into a single term,
+you might do this:
+
+\c \IM{frog}{frogs} frog
+
+This will arrange that the single index entry \q{frog} will list
+\e{all} the places in the document where you asked Halibut to index
+either \q{frog} or \q{frogs}.
+
+You can use multiple \c{\\IM} commands to replicate the same set of
+document locations in more than one index entry. For example:
+
+\c \IM{replacing toner cartridge} replacing toner cartridge
+\c \IM{replacing toner cartridge} toner cartridge, replacing
+
+This will arrange that every place in the document where you have
+indexed \q{replacing toner cartridge} will be listed both there
+\e{and} under \q{toner cartridge, replacing}, so that no matter
+whether the user looks under R or under T they will stil find their
+way to the same parts of the document.
+
+In this example, note that although the first \c{\\IM} command
+\e{looks} as if it's a tautology, it is still necessary, because
+otherwise those document locations will \e{only} be indexed under
+\q{toner cartridge, replacing}. If you have \e{no} explicit \c{\\IM}
+commands for a particular index term, then Halibut will assume a
+default one (typically \c{\\IM\{foo\}\_foo}, although it might be
+\c{\\IM\{foo\}\_\\c\{foo\}} if you originally indexed using
+\c{\\i\\c}); but as soon as you specify an explicit \c{\\IM},
+Halibut discards its default implicit one, and you must then specify
+that one explicitly as well if you wanted to keep it.
+
+\H{input-config} Configuring Halibut
+
+Halibut uses the \c{\\cfg} command to allow you to configure various
+aspects of its functionality.
+
+The \c{\\cfg} command expects to be followed by at least one pair of
+braces, and usually more after that. The first pair of braces
+contains a keyword indicating what aspect of Halibut you want to
+configure, and the meaning of the one(s) after that depends on the
+first keyword.
+
+The current list of configuration keywords in the main Halibut code
+is quite small. Here it is in full:
+
+\dt \cw{\\cfg\{chapter\}\{}\e{new chapter name}\cw{\}}
+
+\dd This tells Halibut that you don't want to call a chapter a
+chapter any more. For example, if you give the command
+\cw{\\cfg\{chapter\}\{Book\}}, then any chapter defined with the
+\c{\\C} command will be labelled \q{Book} rather than \q{Chapter},
+both in the section headings and in cross-references. This is
+probably most useful if your document is not written in English.
+
+\dt \cw{\\cfg\{section\}\{}\e{new section name}\cw{\}}
+
+\dd Exactly like \c{chapter}, but changes the name given to
+subsections of a chapter.
+
+\dt \cw{\\cfg\{appendix\}\{}\e{new appendix name}\cw{\}}
+
+\dd Exactly like \c{appendix}, but changes the name given to
+appendices.
+
+In addition to these configuration commands, there are also
+configuration commands provided by each individual output format.
+These configuration commands are discussed along with each output
+format, in FIXME.
+
+\H{input-macro} Defining macros
+
+If there's a complicated piece of Halibut source which you think
+you're going to use a lot, you can define your own Halibut command
+to produce that piece of source.
+
+In \k{input-unicode}, there is a sample piece of code which prints a
+Euro sign, or replaces it with \q{EUR} if the Euro sign is not
+available:
+
+\c This is likely to cost \u20AC{EUR }2500 at least.
+
+If your document quotes a \e{lot} of prices in Euros, you might not
+want to spend all your time typing that out. So you could define a
+macro, using the \c{\\define} command:
+
+\c \define{eur} \u20AC{EUR }
+
+Then you can just write
+
+\c This is likely to cost \eur 2500 at least.
+
+\# FIXME: need a NOP to allow text to directly follow this. \.?

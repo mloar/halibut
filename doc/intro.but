@@ -1,0 +1,46 @@
+\C{intro} Introduction to Halibut
+
+Halibut is a multi-format documentation processing system.
+
+What that means is that you write your document once, in Halibut's
+input format, and then the Halibut program processes it into several
+output formats which all contain the same text. So, for example, if
+you want your application to have a Windows help file, and you also
+want the same documentation available in HTML on your web site,
+Halibut can do that for you.
+
+\H{intro-formats} Output formats supported by Halibut
+
+Currently Halibut supports the following output formats:
+
+\b Plain ASCII text.
+
+\b HTML.
+
+\b Windows Help.
+
+\b Unix man page format.
+
+Several other formats have been planned (notably PostScript, PDF and
+Unix \c{info}), but the need for them has not yet been urgent.
+
+\H{intro-features} Features supported by Halibut
+
+Here's a list of Halibut's notable features.
+
+\b Halibut automatically assigns sequential numbers to your
+chapters, sections and subsections, and keeps track of them for you.
+You supply a \e{keyword} for each section, and then you can generate
+cross-references to that section using the keyword, and Halibut will
+substitute the correct section number. Also, in any output format
+where it makes sense, the cross-references will be hyperlinks to
+that section of the document.
+
+\b Halibut has some support for Unicode: you can include arbitrary
+Unicode characters in your document, and specify fallback text in
+case any output format doesn't support that character.
+
+\b Halibut's indexing support is comprehensive and carefully
+designed. It's easy to use in the simple case, but has powerful
+features that should make it possible to maintain a high-quality and
+useful index.
