@@ -23,17 +23,26 @@ typedef struct {
     int nasect;
     int include_version_id;
     int indent_preambles;
+    int charset;
     word bullet;
     char *filename;
 } textconfig;
 
-static int text_convert(wchar_t *, char **);
+typedef struct {
+    FILE *fp;
+    int charset;
+    charset_state state;
+} textfile;
 
-static void text_heading(FILE *, word *, word *, word *, alignstruct, int,int);
-static void text_rule(FILE *, int, int);
-static void text_para(FILE *, word *, char *, word *, int, int, int);
-static void text_codepara(FILE *, word *, int, int);
-static void text_versionid(FILE *, word *);
+static void text_heading(textfile *, word *, word *, word *, alignstruct,
+			 int,int);
+static void text_rule(textfile *, int, int);
+static void text_para(textfile *, word *, wchar_t *, word *, int, int, int);
+static void text_codepara(textfile *, word *, int, int);
+static void text_versionid(textfile *, word *);
+
+static void text_output(textfile *, const wchar_t *);
+static void text_output_many(textfile *, int, wchar_t);
 
 static alignment utoalign(wchar_t *p) {
     if (!ustricmp(p, L"centre") || !ustricmp(p, L"center"))
@@ -78,11 +87,16 @@ static textconfig text_configure(paragraph *source) {
     ret.indent_preambles = FALSE;
     ret.bullet.text = L"-";
     ret.filename = dupstr("output.txt");
+    ret.charset = CS_ASCII;
 
     for (; source; source = source->next) {
 	if (source->type == para_Config) {
 	    if (!ustricmp(source->keyword, L"text-indent")) {
 		ret.indent = utoi(uadv(source->keyword));
+	    } else if (!ustricmp(source->keyword, L"text-charset")) {
+		char *csname = utoa_dup(uadv(source->keyword), CS_ASCII);
+		ret.charset = charset_from_localenc(csname);
+		sfree(csname);
 	    } else if (!ustricmp(source->keyword, L"text-filename")) {
 		sfree(ret.filename);
 		ret.filename = dupstr(adv(source->origkeyword));
@@ -191,8 +205,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     textconfig conf;
     word *prefix, *body, *wp;
     word spaceword;
-    FILE *fp;
-    char *prefixextra;
+    textfile tf;
+    wchar_t *prefixextra;
     int nesting, nestindent;
     int indentb, indenta;
 
@@ -205,16 +219,18 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Open the output file.
      */
-    fp = fopen(conf.filename, "w");
-    if (!fp) {
+    tf.fp = fopen(conf.filename, "w");
+    if (!tf.fp) {
 	error(err_cantopenw, conf.filename);
 	return;
     }
+    tf.charset = conf.charset;
+    tf.state = charset_init_state;
 
     /* Do the title */
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_Title)
-	    text_heading(fp, NULL, NULL, p->words,
+	    text_heading(&tf, NULL, NULL, p->words,
 			 conf.atitle, conf.indent, conf.width);
 
     nestindent = conf.listindentbefore + conf.listindentafter;
@@ -257,20 +273,20 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Chapter:
       case para_Appendix:
       case para_UnnumberedChapter:
-	text_heading(fp, p->kwtext, p->kwtext2, p->words,
+	text_heading(&tf, p->kwtext, p->kwtext2, p->words,
 		     conf.achapter, conf.indent, conf.width);
 	nesting = 0;
 	break;
 
       case para_Heading:
       case para_Subsect:
-	text_heading(fp, p->kwtext, p->kwtext2, p->words,
+	text_heading(&tf, p->kwtext, p->kwtext2, p->words,
 		     conf.asect[p->aux>=conf.nasect ? conf.nasect-1 : p->aux],
 		     conf.indent, conf.width);
 	break;
 
       case para_Rule:
-	text_rule(fp, conf.indent + nesting, conf.width - nesting);
+	text_rule(&tf, conf.indent + nesting, conf.width - nesting);
 	break;
 
       case para_Normal:
@@ -287,7 +303,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	    indenta = conf.listindentafter;
 	} else if (p->type == para_NumberedList) {
 	    prefix = p->kwtext;
-	    prefixextra = ".";	       /* FIXME: configurability */
+	    prefixextra = L".";	       /* FIXME: configurability */
 	    indentb = conf.listindentbefore;
 	    indenta = conf.listindentafter;
 	} else if (p->type == para_Description) {
@@ -312,7 +328,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	    wp = NULL;
 	    body = p->words;
 	}
-	text_para(fp, prefix, prefixextra, body,
+	text_para(&tf, prefix, prefixextra, body,
 		  conf.indent + nesting + indentb, indenta,
 		  conf.width - nesting - indentb - indenta);
 	if (wp) {
@@ -322,7 +338,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Code:
-	text_codepara(fp, p->words,
+	text_codepara(&tf, p->words,
 		      conf.indent + nesting + conf.indent_code,
 		      conf.width - nesting - 2 * conf.indent_code);
 	break;
@@ -332,69 +348,67 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     if (conf.include_version_id) {
 	for (p = sourceform; p; p = p->next)
 	    if (p->type == para_VersionID)
- 		text_versionid(fp, p->words);
+ 		text_versionid(&tf, p->words);
     }
 
     /*
      * Tidy up
      */
-    fclose(fp);
+    text_output(&tf, NULL);	       /* end charset conversion */
+    fclose(tf.fp);
     sfree(conf.asect);
     sfree(conf.filename);
 }
 
-/*
- * Convert a wide string into a string of chars. If `result' is
- * non-NULL, mallocs the resulting string and stores a pointer to
- * it in `*result'. If `result' is NULL, merely checks whether all
- * characters in the string are feasible for the output character
- * set.
- *
- * Return is nonzero if all characters are OK. If not all
- * characters are OK but `result' is non-NULL, a result _will_
- * still be generated!
- */
-static int text_convert(wchar_t *s, char **result) {
-    /*
-     * FIXME. Currently this is ISO8859-1 only.
-     */
-    int doing = (result != 0);
-    int ok = TRUE;
-    char *p = NULL;
-    int plen = 0, psize = 0;
+static int text_ok(int charset, const wchar_t *s)
+{
+    char buf[256];
+    charset_state state = CHARSET_INIT_STATE;
+    int err, len = ustrlen(s);
 
-    for (; *s; s++) {
-	wchar_t c = *s;
-	char outc;
-
-	if ((c >= 32 && c <= 126) ||
-	    (c >= 160 && c <= 255)) {
-	    /* Char is OK. */
-	    outc = (char)c;
-	} else {
-	    /* Char is not OK. */
-	    ok = FALSE;
-	    outc = 0xBF;	       /* approximate the good old DEC `uh?' */
-	}
-	if (doing) {
-	    if (plen >= psize) {
-		psize = plen + 256;
-		p = resize(p, psize);
-	    }
-	    p[plen++] = outc;
-	}
+    err = 0;
+    while (len > 0) {
+	(void)charset_from_unicode(&s, &len, buf, lenof(buf),
+				   charset, &state, &err);
+	if (err)
+	    return FALSE;
     }
-    if (doing) {
-	p = resize(p, plen+1);
-	p[plen] = '\0';
-	*result = p;
-    }
-    return ok;
+    return TRUE;
 }
 
-static void text_rdaddwc(rdstringc *rs, word *text, word *end) {
-    char *c;
+static void text_output(textfile *tf, const wchar_t *s)
+{
+    char buf[256];
+    int ret, len;
+    const wchar_t **sp;
 
+    if (!s) {
+	sp = NULL;
+	len = 1;
+    } else {
+	sp = &s;
+	len = ustrlen(s);
+    }
+
+    while (len > 0) {
+	ret = charset_from_unicode(sp, &len, buf, lenof(buf),
+				   tf->charset, &tf->state, NULL);
+	if (!sp)
+	    len = 0;
+	fwrite(buf, 1, ret, tf->fp);
+    }
+}
+
+static void text_output_many(textfile *tf, int n, wchar_t c)
+{
+    wchar_t s[2];
+    s[0] = c;
+    s[1] = L'\0';
+    while (n--)
+	text_output(tf, s);
+}
+
+static void text_rdaddw(int charset, rdstring *rs, word *text, word *end) {
     for (; text && text != end; text = text->next) switch (text->type) {
       case word_HyperLink:
       case word_HyperEnd:
@@ -421,31 +435,30 @@ static void text_rdaddwc(rdstringc *rs, word *text, word *end) {
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
+	    rdadd(rs, L'_');	       /* FIXME: configurability */
 	else if (towordstyle(text->type) == word_Code &&
 		 (attraux(text->aux) == attr_First ||
 		  attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '`');	       /* FIXME: configurability */
+	    rdadd(rs, L'`');	       /* FIXME: configurability */
 	if (removeattr(text->type) == word_Normal) {
-	    if (text_convert(text->text, &c) || !text->alt)
-		rdaddsc(rs, c);
+	    if (text_ok(charset, text->text) || !text->alt)
+		rdadds(rs, text->text);
 	    else
-		text_rdaddwc(rs, text->alt, NULL);
-	    sfree(c);
+		text_rdaddw(charset, rs, text->alt, NULL);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
-	    rdaddc(rs, ' ');
+	    rdadd(rs, L' ');
 	} else if (removeattr(text->type) == word_Quote) {
-	    rdaddc(rs, quoteaux(text->aux) == quote_Open ? '`' : '\'');
+	    rdadd(rs, quoteaux(text->aux) == quote_Open ? L'`' : L'\'');
 				       /* FIXME: configurability */
 	}
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_Last ||
 	     attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
+	    rdadd(rs, L'_');	       /* FIXME: configurability */
 	else if (towordstyle(text->type) == word_Code &&
 		 (attraux(text->aux) == attr_Last ||
 		  attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '\'');	       /* FIXME: configurability */
+	    rdadd(rs, L'\'');	       /* FIXME: configurability */
 	break;
     }
 }
@@ -462,7 +475,7 @@ static int text_width_list(void *ctx, word *text) {
 }
 
 static int text_width(void *ctx, word *text) {
-    IGNORE(ctx);
+    int charset = * (int *) ctx;
 
     switch (text->type) {
       case word_HyperLink:
@@ -482,7 +495,7 @@ static int text_width(void *ctx, word *text) {
 		 ? (attraux(text->aux) == attr_Only ? 2 :
 		    attraux(text->aux) == attr_Always ? 0 : 1)
 		 : 0) +
-		(text_convert(text->text, NULL) || !text->alt ?
+		(text_ok(charset, text->text) || !text->alt ?
 		 ustrlen(text->text) :
 		 text_width_list(ctx, text->alt)));
 
@@ -505,29 +518,22 @@ static int text_width(void *ctx, word *text) {
     return 0;			       /* should never happen */
 }
 
-static void text_heading(FILE *fp, word *tprefix, word *nprefix, word *text,
-			 alignstruct align, int indent, int width) {
-    rdstringc t = { 0, 0, NULL };
+static void text_heading(textfile *tf, word *tprefix, word *nprefix,
+			 word *text, alignstruct align,
+			 int indent, int width) {
+    rdstring t = { 0, 0, NULL };
     int margin, length;
     int firstlinewidth, wrapwidth;
     wrappedline *wrapping, *p;
 
     if (align.just_numbers && nprefix) {
-	char *c;
-	text_rdaddwc(&t, nprefix, NULL);
-	if (text_convert(align.number_suffix, &c)) {
-	    rdaddsc(&t, c);
-	    sfree(c);
-	}
+	text_rdaddw(tf->charset, &t, nprefix, NULL);
+	rdadds(&t, align.number_suffix);
     } else if (!align.just_numbers && tprefix) {
-	char *c;
-	text_rdaddwc(&t, tprefix, NULL);
-	if (text_convert(align.number_suffix, &c)) {
-	    rdaddsc(&t, c);
-	    sfree(c);
-	}
+	text_rdaddw(tf->charset, &t, tprefix, NULL);
+	rdadds(&t, align.number_suffix);
     }
-    margin = length = (t.text ? strlen(t.text) : 0);
+    margin = length = t.pos;
 
     if (align.align == LEFTPLUS) {
 	margin = indent - margin;
@@ -540,67 +546,63 @@ static void text_heading(FILE *fp, word *tprefix, word *nprefix, word *text,
 	wrapwidth = indent + width;
     }
 
-    wrapping = wrap_para(text, firstlinewidth, wrapwidth, text_width, NULL, 0);
+    wrapping = wrap_para(text, firstlinewidth, wrapwidth,
+			 text_width, &tf->charset, 0);
     for (p = wrapping; p; p = p->next) {
-	text_rdaddwc(&t, p->begin, p->end);
-	length = (t.text ? strlen(t.text) : 0);
+	text_rdaddw(tf->charset, &t, p->begin, p->end);
+	length = t.pos;
 	if (align.align == CENTRE) {
 	    margin = (indent + width - length)/2;
 	    if (margin < 0) margin = 0;
 	}
-	fprintf(fp, "%*s%s\n", margin, "", t.text);
+	text_output_many(tf, margin, L' ');
+	text_output(tf, t.text);
+	text_output(tf, L"\n");
 	if (align.underline != L'\0') {
-	    char *u, uc;
-	    wchar_t uw[2];
-	    uw[0] = align.underline; uw[1] = L'\0';
-	    text_convert(uw, &u);
-	    uc = u[0];
-	    sfree(u);
-	    fprintf(fp, "%*s", margin, "");
-	    while (length--)
-		putc(uc, fp);
-	    putc('\n', fp);
+	    text_output_many(tf, margin, L' ');
+	    text_output_many(tf, length, align.underline);
+	    text_output(tf, L"\n");
 	}
 	if (align.align == LEFTPLUS)
 	    margin = indent;
 	else
 	    margin = 0;
 	sfree(t.text);
-	t = empty_rdstringc;
+	t = empty_rdstring;
     }
     wrap_free(wrapping);
-    putc('\n', fp);
+    text_output(tf, L"\n");
 
     sfree(t.text);
 }
 
-static void text_rule(FILE *fp, int indent, int width) {
-    while (indent--) putc(' ', fp);
-    while (width--) putc('-', fp);     /* FIXME: configurability! */
-    putc('\n', fp);
-    putc('\n', fp);
+static void text_rule(textfile *tf, int indent, int width) {
+    text_output_many(tf, indent, L' ');
+    text_output_many(tf, width, L'-');     /* FIXME: configurability! */
+    text_output_many(tf, 2, L'\n');
 }
 
-static void text_para(FILE *fp, word *prefix, char *prefixextra, word *text,
-		      int indent, int extraindent, int width) {
+static void text_para(textfile *tf, word *prefix, wchar_t *prefixextra,
+		      word *text, int indent, int extraindent, int width) {
     wrappedline *wrapping, *p;
-    rdstringc pfx = { 0, 0, NULL };
+    rdstring pfx = { 0, 0, NULL };
     int e;
     int firstlinewidth = width;
 
     if (prefix) {
-	text_rdaddwc(&pfx, prefix, NULL);
+	text_rdaddw(tf->charset, &pfx, prefix, NULL);
 	if (prefixextra)
-	    rdaddsc(&pfx, prefixextra);
-	fprintf(fp, "%*s%s", indent, "", pfx.text);
+	    rdadds(&pfx, prefixextra);
+	text_output_many(tf, indent, L' ');
+	text_output(tf, pfx.text);
 	/* If the prefix is too long, shorten the first line to fit. */
-	e = extraindent - strlen(pfx.text);
+	e = extraindent - pfx.pos;
 	if (e < 0) {
 	    firstlinewidth += e;       /* this decreases it, since e < 0 */
 	    if (firstlinewidth < 0) {
 		e = indent + extraindent;
 		firstlinewidth = width;
-		fprintf(fp, "\n");
+		text_output(tf, L"\n");
 	    } else
 		e = 0;
 	}
@@ -608,39 +610,42 @@ static void text_para(FILE *fp, word *prefix, char *prefixextra, word *text,
     } else
 	e = indent + extraindent;
 
-    wrapping = wrap_para(text, firstlinewidth, width, text_width, NULL, 0);
+    wrapping = wrap_para(text, firstlinewidth, width,
+			 text_width, &tf->charset, 0);
     for (p = wrapping; p; p = p->next) {
-	rdstringc t = { 0, 0, NULL };
-	text_rdaddwc(&t, p->begin, p->end);
-	fprintf(fp, "%*s%s\n", e, "", t.text);
+	rdstring t = { 0, 0, NULL };
+	text_rdaddw(tf->charset, &t, p->begin, p->end);
+	text_output_many(tf, e, L' ');
+	text_output(tf, t.text);
+	text_output(tf, L"\n");
 	e = indent + extraindent;
 	sfree(t.text);
     }
     wrap_free(wrapping);
-    putc('\n', fp);
+    text_output(tf, L"\n");
 }
 
-static void text_codepara(FILE *fp, word *text, int indent, int width) {
+static void text_codepara(textfile *tf, word *text, int indent, int width) {
     for (; text; text = text->next) if (text->type == word_WeakCode) {
-	char *c;
-	text_convert(text->text, &c);
-	if (strlen(c) > (size_t)width) {
+	if (ustrlen(text->text) > width) {
 	    /* FIXME: warn */
 	}
-	fprintf(fp, "%*s%s\n", indent, "", c);
-	sfree(c);
+	text_output_many(tf, indent, L' ');
+	text_output(tf, text->text);
+	text_output(tf, L"\n");
     }
 
-    putc('\n', fp);
+    text_output(tf, L"\n");
 }
 
-static void text_versionid(FILE *fp, word *text) {
-    rdstringc t = { 0, 0, NULL };
+static void text_versionid(textfile *tf, word *text) {
+    rdstring t = { 0, 0, NULL };
 
-    rdaddc(&t, '[');		       /* FIXME: configurability */
-    text_rdaddwc(&t, text, NULL);
-    rdaddc(&t, ']');		       /* FIXME: configurability */
+    rdadd(&t, L'[');		       /* FIXME: configurability */
+    text_rdaddw(tf->charset, &t, text, NULL);
+    rdadd(&t, L']');		       /* FIXME: configurability */
+    rdadd(&t, L'\n');
 
-    fprintf(fp, "%s\n", t.text);
+    text_output(tf, t.text);
     sfree(t.text);
 }
