@@ -211,7 +211,9 @@ static void do_error(int code, va_list ap) {
     if (flags & PREFIX)
 	fputs("halibut: ", stderr);
     if (flags & FILEPOS) {
-	fprintf(stderr, "%s:%d:", fpos.filename, fpos.line);
+	fprintf(stderr, "%s:", fpos.filename);
+	if (fpos.line > 0)
+	    fprintf(stderr, "%d:", fpos.line);
 	if (fpos.col > 0)
 	    fprintf(stderr, "%d:", fpos.col);
 	fputc(' ', stderr);

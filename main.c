@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
     int debug;
     int backendbits;
     int k, b;
+    paragraph *cfg, *cfg_tail;
 
     /*
      * Set up initial (default) parameters.
@@ -44,6 +45,7 @@ int main(int argc, char **argv) {
     reportcols = 0;
     debug = 0;
     backendbits = 0;
+    cfg = cfg_tail = NULL;
 
     if (argc == 1) {
 	usage();
@@ -132,8 +134,7 @@ int main(int argc, char **argv) {
 			break;
 		    }
 		    break;
-#if 0
-		  case 'o':
+		  case 'C':
 		    /*
 		     * Option requiring parameter.
 		     */
@@ -150,13 +151,54 @@ int main(int argc, char **argv) {
 		     * Now c is the option and p is the parameter.
 		     */
 		    switch (c) {
-		      case 'o':
-			outfile = p;
+		      case 'C':
+			/*
+			 * -C means we split our argument up into
+			 * colon-separated chunks and assemble them
+			 * into a config paragraph.
+			 */
+			{
+			    wchar_t *keywords;
+			    char *q;
+			    wchar_t *u;
+			    paragraph *para;
+
+			    keywords = mknewa(wchar_t, 2+strlen(p));
+
+			    u = keywords;
+			    q = p;
+
+			    while (*q) {
+				if (*q == ':') {
+				    *u++ = L'\0';
+				} else {
+				    if (*q == '\\' && q[1])
+					q++;
+				    /* FIXME: lacks charset flexibility */
+				    *u++ = *q;
+				}
+				q++;
+			    }
+			    *u = L'\0';
+
+			    para = mknew(paragraph);
+			    memset(para, 0, sizeof(*para));
+			    para->type = para_Config;
+			    para->keyword = keywords;
+			    para->next = NULL;
+			    para->fpos.filename = "<command line>";
+			    para->fpos.line = para->fpos.col = -1;
+
+			    if (cfg_tail)
+				cfg_tail->next = para;
+			    else
+				cfg = para;
+			    cfg_tail = para;
+			}
 			break;
 		    }
 		    p = NULL;	       /* prevent continued processing */
 		    break;
-#endif
 		  default:
 		    /*
 		     * Unrecognised option.
@@ -211,6 +253,21 @@ int main(int argc, char **argv) {
 	sourceform = read_input(&in, idx);
 	if (!sourceform)
 	    exit(EXIT_FAILURE);
+
+	/*
+	 * Append the config directives acquired from the command
+	 * line.
+	 */
+	{
+	    paragraph *end;
+
+	    end = sourceform;
+	    while (end && end->next)
+		end = end->next;
+	    assert(end);
+
+	    end->next = cfg;
+	}
 
 	sfree(in.pushback);
 
