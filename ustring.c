@@ -331,19 +331,9 @@ int uisdigit(wchar_t c) {
 }
 
 #define USTRFTIME_DELTA 128
-wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
-    void *blk = NULL;
-    wchar_t *wblk, *wp;
-    char *fmt, *text, *p;
-    size_t size = 0;
-    size_t len;
-
-    /*
-     * FIXME: really we ought to copy non-% parts of the format
-     * ourselves, and only resort to strftime for % parts. Also we
-     * should use wcsftime if it's present.
-     */
-
+static void ustrftime_internal(rdstring *rs, char formatchr,
+			       const struct tm *timespec)
+{
     /*
      * strftime has the entertaining property that it returns 0
      * _either_ on out-of-space _or_ on successful generation of
@@ -351,38 +341,73 @@ wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
      * generate the empty string. Somebody throw a custard pie at
      * whoever was responsible for that. Please?
      */
-    if (wfmt) {
-	len = ustrlen(wfmt);
-	fmt = mknewa(char, 2+len);
-	ustrtoa(wfmt, fmt+1, len+1, CS_ASCII);   /* CS_FIXME? */
-	fmt[0] = ' ';
-    } else
-	fmt = " %c";
 
-    while (1) {
+#ifdef HAS_WCSFTIME
+    wchar_t *buf = NULL;
+    wchar_t fmt[4];
+    int size, ret;
+
+    fmt[0] = L' ';
+    fmt[1] = L'%';
+    /* Format chars are all ASCII, so conversion to Unicode is no problem */
+    fmt[2] = formatchr;
+    fmt[3] = L'\0';
+
+    size = 0;
+    do {
 	size += USTRFTIME_DELTA;
-	blk = resize((char *)blk, size);
-	len = strftime((char *)blk, size-1, fmt, timespec);
-	if (len > 0)
-	    break;
+	buf = resize(buf, size);
+	ret = (int) wcsftime(buf, size, fmt, timespec);
+    } while (ret == 0);
+
+    rdadds(rs, buf+1);
+    sfree(buf);
+#else
+    char *buf = NULL;
+    wchar_t *cvtbuf;
+    char fmt[4];
+    int size, ret;
+
+    fmt[0] = ' ';
+    fmt[1] = '%';
+    fmt[2] = formatchr;
+    fmt[3] = '\0';
+
+    size = 0;
+    do {
+	size += USTRFTIME_DELTA;
+	buf = resize(buf, size);
+	ret = (int) strftime(buf, size, fmt, timespec);
+    } while (ret == 0);
+
+    cvtbuf = ufroma_locale_dup(buf+1);
+    rdadds(rs, cvtbuf);
+    sfree(cvtbuf);
+    sfree(buf);
+#endif
+}
+
+wchar_t *ustrftime(const wchar_t *wfmt, const struct tm *timespec)
+{
+    rdstring rs = { 0, 0, NULL };
+
+    if (!wfmt)
+	wfmt = L"%c";
+
+    while (*wfmt) {
+	if (wfmt[0] == L'%' && wfmt[1] == L'%') {
+	    rdadd(&rs, L'%');
+	    wfmt += 2;
+	} else if (wfmt[0] == L'%' && wfmt[1]) {
+	    ustrftime_internal(&rs, wfmt[1], timespec);
+	    wfmt += 2;
+	} else {
+	    rdadd(&rs, wfmt[0]);
+	    wfmt++;
+	}
     }
 
-    /* Note: +1 for the terminating 0, -1 for the initial space in fmt */
-    wblk = resize((wchar_t *)blk, len);
-    text = mknewa(char, len);
-    strftime(text, len, fmt+1, timespec);
-    /*
-     * We operate in the C locale, so this all ought to be kosher
-     * ASCII. If we ever move outside ASCII machines, we may need
-     * to make this more portable...
-     */
-    for (wp = wblk, p = text; *p; p++, wp++)
-	*wp = *p;
-    *wp = 0;
-    if (wfmt)
-	sfree(fmt);
-    sfree(text);
-    return wblk;
+    return rdtrim(&rs);
 }
 
 /*
