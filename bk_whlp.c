@@ -97,8 +97,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     filename = dupstr("output.hlp");
     for (p = sourceform; p; p = p->next) {
 	p->private_data = NULL;
-	if (p->type == para_Config && p->parent) {
-	    if (!ustricmp(p->keyword, L"winhelp-topic")) {
+	if (p->type == para_Config) {
+	    if (p->parent && !ustricmp(p->keyword, L"winhelp-topic")) {
 		char *topicname;
 		whlp_convert(uadv(p->keyword), 0, &topicname, 0);
 		/* Store the topic name in the private_data field of the
