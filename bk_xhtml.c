@@ -1131,8 +1131,8 @@ static int xhtml_convert(wchar_t *s, char **result, int hard_spaces) {
 		plen+=6;
 	      } else {
 		/* FIXME: entity names! */
-		ensure_size(plen+7); /* includes space for the NUL, which is subsequently stomped on */
-		plen+=sprintf(p+plen, "&#%i;", (int)c);
+		ensure_size(plen+8); /* includes space for the NUL, which is subsequently stomped on */
+		plen+=sprintf(p+plen, "&#%04i;", (int)c);
 	      }
 	    }
 	}
