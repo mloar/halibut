@@ -35,6 +35,8 @@ static void objtext(object *o, char const *text);
 static void objstream(object *o, char const *text);
 static void pdf_string(void (*add)(object *, char const *),
 		       object *, char const *);
+static void pdf_string_len(void (*add)(object *, char const *),
+			   object *, char const *, int);
 static void objref(object *o, object *dest);
 
 static void make_pages_node(object *node, object *parent, page_data *first,
@@ -580,44 +582,32 @@ static void make_pages_node(object *node, object *parent, page_data *first,
  * means that glyphs are identified by PS strings and hence font
  * encoding can be managed independently of the supplied encoding
  * of the font. However, in the document outline, the PDF spec
- * simply asks for ordinary text strings without mentioning what
- * character set they are supposed to be interpreted in.
- * 
- * Therefore, for the moment, I'm going to assume they're US-ASCII
- * only. If anyone knows better, they should let me know :-/
+ * encodes in either PDFDocEncoding (a custom superset of
+ * ISO-8859-1) or UTF-16BE.
  */
-static int pdf_convert(wchar_t *s, char **result) {
-    int doing = (result != 0);
-    int ok = TRUE;
-    char *p = NULL;
-    int plen = 0, psize = 0;
+static char *pdf_outline_convert(wchar_t *s, int *len) {
+    char *ret;
 
-    for (; *s; s++) {
-	wchar_t c = *s;
-	char outc;
+    ret = utoa_careful_dup(s, CS_PDF);
 
-	if (c >= 32 && c <= 126) {
-	    /* Char is OK. */
-	    outc = (char)c;
-	} else {
-	    /* Char is not OK. */
-	    ok = FALSE;
-	    outc = 0xBF;	       /* approximate the good old DEC `uh?' */
-	}
-	if (doing) {
-	    if (plen >= psize) {
-		psize = plen + 256;
-		p = resize(p, psize);
-	    }
-	    p[plen++] = outc;
-	}
+    /*
+     * Very silly special case: if the returned string begins with
+     * FE FF, then the PDF reader will mistake it for a UTF-16BE
+     * string. So in this case we give up on PDFDocEncoding and
+     * encode it in UTF-16 straight away.
+     */
+    if (ret && ret[0] == '\xFE' && ret[1] == '\xFF') {
+	sfree(ret);
+	ret = NULL;
     }
-    if (doing) {
-	p = resize(p, plen+1);
-	p[plen] = '\0';
-	*result = p;
+
+    if (!ret) {
+	ret = utoa_dup_len(s, CS_UTF16BE, len);
+    } else {
+	*len = strlen(ret);
     }
-    return ok;
+
+    return ret;
 }
 
 static int make_outline(object *parent, outline_element *items, int n,
@@ -633,6 +623,7 @@ static int make_outline(object *parent, outline_element *items, int n,
 
     while (n > 0) {
 	char *title;
+	int titlelen;
 
 	/*
 	 * Here we expect to be sitting on an item at the given
@@ -641,14 +632,14 @@ static int make_outline(object *parent, outline_element *items, int n,
 	 */
 	assert(items->level == level);
 
-	pdf_convert(items->pdata->outline_title, &title);
+	title = pdf_outline_convert(items->pdata->outline_title, &titlelen);
 
 	totalcount++;
 	curr = new_object(parent->list);
 	if (!first) first = curr;
 	last = curr;
 	objtext(curr, "<<\n/Title ");
-	pdf_string(objtext, curr, title);
+	pdf_string_len(objtext, curr, title, titlelen);
 	objtext(curr, "\n/Parent ");
 	objref(curr, parent);
 	objtext(curr, "\n/Dest [");
@@ -739,19 +730,30 @@ static int pdf_versionid(FILE *fp, word *words)
     return ret;
 }
 
-static void pdf_string(void (*add)(object *, char const *),
-		       object *o, char const *str)
+static void pdf_string_len(void (*add)(object *, char const *),
+			   object *o, char const *str, int len)
 {
     char const *p;
 
     add(o, "(");
-    for (p = str; *p; p++) {
-	char c[2];
-	if (*p == '\\' || *p == '(' || *p == ')')
-	    add(o, "\\");
-	c[0] = *p;
-	c[1] = '\0';
+    for (p = str; len > 0; p++, len--) {
+	char c[10];
+	if (*p < ' ' || *p > '~') {
+	    sprintf(c, "\\%03o", 0xFF & (int)*p);
+	} else {
+	    int n = 0;
+	    if (*p == '\\' || *p == '(' || *p == ')')
+		c[n++] = '\\';
+	    c[n++] = *p;
+	    c[n] = '\0';
+	}
 	add(o, c);
     }
     add(o, ")");
+}
+
+static void pdf_string(void (*add)(object *, char const *),
+		       object *o, char const *str)
+{
+    pdf_string_len(add, o, str, strlen(str));
 }
