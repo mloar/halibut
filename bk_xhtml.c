@@ -744,14 +744,12 @@ static void xhtml_free_file(xhtmlfile* xfile)
  * Main function.
  */
 void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords,
-		   indexdata *in_idx, void *unused)
+		   indexdata *in_idx)
 {
 /*  int i;*/
   indexentry *ientry;
   int ti;
   xhtmlsection *xsect;
-
-  IGNORE(unused);    
 
   sourceparas = sourceform;
   conf = xhtml_configure(sourceform);

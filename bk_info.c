@@ -119,7 +119,7 @@ paragraph *info_config_filename(char *filename)
 }
 
 void info_backend(paragraph *sourceform, keywordlist *keywords,
-		  indexdata *idx, void *unused) {
+		  indexdata *idx) {
     paragraph *p;
     infoconfig conf;
     word *prefix, *body, *wp;
@@ -140,7 +140,8 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     int width = 70, listindentbefore = 1, listindentafter = 3;
     int indent_code = 2, index_width = 40;
 
-    IGNORE(unused);
+    IGNORE(keywords);		       /* we don't happen to need this */
+    IGNORE(idx);		       /* or this */
 
     conf = info_configure(sourceform);
 

@@ -422,48 +422,31 @@ struct userstyle_Tag {
 /*
  * bk_text.c
  */
-void text_backend(paragraph *, keywordlist *, indexdata *, void *);
+void text_backend(paragraph *, keywordlist *, indexdata *);
 paragraph *text_config_filename(char *filename);
 
 /*
  * bk_xhtml.c
  */
-void xhtml_backend(paragraph *, keywordlist *, indexdata *, void *);
+void xhtml_backend(paragraph *, keywordlist *, indexdata *);
 paragraph *xhtml_config_filename(char *filename);
 
 /*
  * bk_whlp.c
  */
-void whlp_backend(paragraph *, keywordlist *, indexdata *, void *);
+void whlp_backend(paragraph *, keywordlist *, indexdata *);
 paragraph *whlp_config_filename(char *filename);
 
 /*
  * bk_man.c
  */
-void man_backend(paragraph *, keywordlist *, indexdata *, void *);
+void man_backend(paragraph *, keywordlist *, indexdata *);
 paragraph *man_config_filename(char *filename);
 
 /*
  * bk_info.c
  */
-void info_backend(paragraph *, keywordlist *, indexdata *, void *);
+void info_backend(paragraph *, keywordlist *, indexdata *);
 paragraph *info_config_filename(char *filename);
-
-/*
- * bk_paper.c
- */
-void *paper_pre_backend(paragraph *, keywordlist *, indexdata *);
-
-/*
- * bk_ps.c
- */
-void ps_backend(paragraph *, keywordlist *, indexdata *, void *);
-paragraph *ps_config_filename(char *filename);
-
-/*
- * bk_pdf.c
- */
-void pdf_backend(paragraph *, keywordlist *, indexdata *, void *);
-paragraph *pdf_config_filename(char *filename);
 
 #endif

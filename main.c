@@ -11,29 +11,20 @@ static void dbg_prtsource(paragraph *sourceform);
 static void dbg_prtwordlist(int level, word *w);
 static void dbg_prtkws(keywordlist *kws);
 
-static const struct pre_backend {
-    void *(*func)(paragraph *, keywordlist *, indexdata *);
-    int bitfield;
-} pre_backends[] = {
-    {paper_pre_backend, 0x0001}
-};
-
 static const struct backend {
     char *name;
-    void (*func)(paragraph *, keywordlist *, indexdata *, void *);
+    void (*func)(paragraph *, keywordlist *, indexdata *);
     paragraph *(*filename)(char *filename);
-    int bitfield, prebackend_bitfield;
+    int bitfield;
 } backends[] = {
-    {"text", text_backend, text_config_filename, 0x0001, 0},
-    {"xhtml", xhtml_backend, xhtml_config_filename, 0x0002, 0},
-    {"html", xhtml_backend, xhtml_config_filename, 0x0002, 0},
-    {"hlp", whlp_backend, whlp_config_filename, 0x0004, 0},
-    {"whlp", whlp_backend, whlp_config_filename, 0x0004, 0},
-    {"winhelp", whlp_backend, whlp_config_filename, 0x0004, 0},
-    {"man", man_backend, man_config_filename, 0x0008, 0},
-    {"info", info_backend, info_config_filename, 0x0010, 0},
-    {"ps", ps_backend, ps_config_filename, 0x0020, 0x0001},
-    {"pdf", pdf_backend, pdf_config_filename, 0x0040, 0x0001},
+    {"text", text_backend, text_config_filename, 0x0001},
+    {"xhtml", xhtml_backend, xhtml_config_filename, 0x0002},
+    {"html", xhtml_backend, xhtml_config_filename, 0x0002},
+    {"hlp", whlp_backend, whlp_config_filename, 0x0004},
+    {"whlp", whlp_backend, whlp_config_filename, 0x0004},
+    {"winhelp", whlp_backend, whlp_config_filename, 0x0004},
+    {"man", man_backend, man_config_filename, 0x0008},
+    {"info", info_backend, info_config_filename, 0x0010},
 };
 
 int main(int argc, char **argv) {
@@ -43,10 +34,9 @@ int main(int argc, char **argv) {
     int errs;
     int reportcols;
     int debug;
-    int backendbits, prebackbits;
+    int backendbits;
     int k, b;
     paragraph *cfg, *cfg_tail;
-    void *pre_backend_data[16];
 
     /*
      * Set up initial (default) parameters.
@@ -94,9 +84,7 @@ int main(int argc, char **argv) {
 			assert(opt[0] == '-');
 			for (k = 0; k < (int)lenof(backends); k++)
 			    if (!strcmp(opt+1, backends[k].name)) {
-printf("%d\n", backendbits);
 				backendbits |= backends[k].bitfield;
-printf("%d\n", backendbits);
 				if (val) {
 				    paragraph *p = backends[k].filename(val);
 				    assert(p);
@@ -243,7 +231,6 @@ printf("%d\n", backendbits);
 	    infiles[nfiles++] = p;
 	}
     }
-printf("%d\n", backendbits);
 
     if (errs)
 	exit(EXIT_FAILURE);
@@ -320,40 +307,13 @@ printf("%d\n", backendbits);
 	}
 
 	/*
-	 * Select and run the pre-backends.
-	 */
-	prebackbits = 0;
-	for (k = 0; k < (int)lenof(backends); k++)
-	    if (backendbits == 0 || (backendbits & backends[k].bitfield))
-		prebackbits |= backends[k].prebackend_bitfield;
-	for (k = 0; k < (int)lenof(pre_backends); k++)
-	    if (prebackbits & pre_backends[k].bitfield) {
-		assert(k < (int)lenof(pre_backend_data));
-		pre_backend_data[k] =
-		    pre_backends[k].func(sourceform, keywords, idx);
-	    }
-
-	/*
 	 * Run the selected set of backends.
 	 */
-printf("%d\n", backendbits);
 	for (k = b = 0; k < (int)lenof(backends); k++)
 	    if (b != backends[k].bitfield) {
 		b = backends[k].bitfield;
-		if (backendbits == 0 || (backendbits & b)) {
-		    void *pbd = NULL;
-		    int pbb = backends[k].prebackend_bitfield;
-		    int m;
-
-		    for (m = 0; m < (int)lenof(pre_backends); m++)
-			if (pbb & pre_backends[m].bitfield) {
-			    assert(m < (int)lenof(pre_backend_data));
-			    pbd = pre_backend_data[m];
-			    break;
-			}
-			    
-		    backends[k].func(sourceform, keywords, idx, pbd);
-		}
+		if (backendbits == 0 || (backendbits & b))
+		    backends[k].func(sourceform, keywords, idx);
 	    }
 
 	free_para_list(sourceform);

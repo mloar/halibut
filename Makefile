@@ -100,7 +100,7 @@ SRC := ../
 
 MODULES := main malloc ustring error help licence version misc tree234
 MODULES += input keywords contents index style biblio
-MODULES += bk_text bk_xhtml bk_whlp bk_man bk_info bk_paper bk_ps bk_pdf
+MODULES += bk_text bk_xhtml bk_whlp bk_man bk_info
 MODULES += winhelp
 
 OBJECTS := $(addsuffix .o,$(MODULES))
