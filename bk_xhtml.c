@@ -254,9 +254,13 @@ static xhtmlfile *xhtml_new_file(xhtmlsection *sect)
   ret->is_leaf=(sect!=NULL && sect->level==conf.leaf_level);
   if (sect==NULL) {
     if (conf.leaf_level==0) { /* currently unused */
-      ret->filename = "Manual.html";
+#define FILENAME_MANUAL "Manual.html"
+#define FILENAME_CONTENTS "Contents.html"
+      ret->filename = smalloc(strlen(FILENAME_MANUAL)+1);
+      sprintf(ret->filename, FILENAME_MANUAL);
     } else {
-      ret->filename = "Contents.html";
+      ret->filename = smalloc(strlen(FILENAME_CONTENTS)+1);
+      sprintf(ret->filename, FILENAME_CONTENTS);
     }
   } else {
     paragraph *p = sect->para;
