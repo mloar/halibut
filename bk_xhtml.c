@@ -844,13 +844,13 @@ static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
   if (xhtml_last_file==NULL) {
     fprintf(fp, "Previous | ");
   } else {
-    fprintf(fp, "<a href='%s'>Previous</a> | ", xhtml_last_file->filename);
+    fprintf(fp, "<a href=\"%s\">Previous</a> | ", xhtml_last_file->filename);
   }
-  fprintf(fp, "<a href='%s'>Contents</a> | ", conf.contents_filename);
+  fprintf(fp, "<a href=\"%s\">Contents</a> | ", conf.contents_filename);
   if (file == NULL) {
     fprintf(fp, "Index | ");
   } else {
-    fprintf(fp, "<a href='%s'>Index</a> | ", conf.index_filename);
+    fprintf(fp, "<a href=\"%s\">Index</a> | ", conf.index_filename);
   }
   if (file != NULL) { /* otherwise we're doing nav links for the index */
     if (xhtml_next_file==NULL)
@@ -864,10 +864,10 @@ static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
     if (file==NULL) { /* index, so no next file */
       fprintf(fp, "Next	");
     } else {
-      fprintf(fp, "<a href='%s'>Next</a>", conf.index_filename);
+      fprintf(fp, "<a href=\"%s\">Next</a>", conf.index_filename);
     }
   } else {
-    fprintf(fp, "<a href='%s'>Next</a>", xhtml_next_file->filename);
+    fprintf(fp, "<a href=\"%s\">Next</a>", xhtml_next_file->filename);
   }
   fprintf(fp, "</p>\n");
 }
@@ -896,7 +896,7 @@ static void xhtml_do_index_body(FILE *fp)
       for (i=0; i<xi->nsection; i++) {
 	xhtmlsection *sect = xi->sections[i];
 	if (sect) {
-	  fprintf(fp, "<a href='%s#%s'>", sect->file->filename, sect->fragment);
+	  fprintf(fp, "<a href=\"%s#%s\">", sect->file->filename, sect->fragment);
 	  if (sect->para->kwtext) {
 	    xhtml_para(fp, sect->para->kwtext, FALSE);
 	  } else if (sect->para->words) {
@@ -1367,7 +1367,7 @@ static void xhtml_doheader(FILE *fp, word *title)
 {
   fprintf(fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n");
   fprintf(fp, "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
-  fprintf(fp, "<html xmlns='http://www.w3.org/1999/xhtml'>\n\n<head>\n<title>");
+  fprintf(fp, "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n\n<head>\n<title>");
   if (title==NULL)
     fprintf(fp, "The thing with no name!");
   else
