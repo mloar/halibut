@@ -155,64 +155,152 @@ void mark_attr_ends(paragraph *sourceform) {
 wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 		       int (*widthfn)(word *)) {
     wrappedline *head = NULL, **ptr = &head;
-    word *spc;
-    int nspc;
-    int thiswidth, lastgood;
+    int nwords, wordsize;
+    struct wrapword {
+	word *begin, *end;
+	int width;
+	int spacewidth;
+	int cost;
+	int nwords;
+    } *wrapwords;
+    int i, j, n;
 
+    /*
+     * Break the line up into wrappable components.
+     */
+    nwords = wordsize = 0;
+    wrapwords = NULL;
     while (text) {
+	if (nwords >= wordsize) {
+	    wordsize = nwords + 64;
+	    wrapwords = srealloc(wrapwords, wordsize * sizeof(*wrapwords));
+	}
+	wrapwords[nwords].width = 0;
+	wrapwords[nwords].begin = text;
+	while (text) {
+	    wrapwords[nwords].width += widthfn(text);
+	    wrapwords[nwords].end = text->next;
+	    if (text->next && (text->next->type == word_WhiteSpace ||
+			       text->next->type == word_EmphSpace ||
+			       text->breaks))
+		break;
+	    text = text->next;
+	}
+	if (text && text->next && (text->next->type == word_WhiteSpace ||
+			   text->next->type == word_EmphSpace)) {
+	    wrapwords[nwords].spacewidth = widthfn(text->next);
+	    text = text->next;
+	} else {
+	    wrapwords[nwords].spacewidth = 0;
+	}
+	nwords++;
+	if (text)
+	    text = text->next;
+    }
+
+    /*
+     * Perform the dynamic wrapping algorithm: work backwards from
+     * nwords-1, determining the optimal wrapping for each terminal
+     * subsequence of the paragraph.
+     */
+    for (i = nwords; i-- ;) {
+	int best = -1;
+	int bestcost = 0;
+	int cost;
+	int linelen = 0, spacewidth = 0;
+	int seenspace;
+	int thiswidth = (i == 0 ? width : subsequentwidth);
+
+	j = 0;
+	seenspace = 0;
+	while (i+j < nwords) {
+	    /*
+	     * See what happens if we put j+1 words on this line.
+	     */
+	    if (spacewidth)
+		seenspace = 1;
+	    linelen += spacewidth + wrapwords[i+j].width;
+	    spacewidth = wrapwords[i+j].spacewidth;
+	    j++;
+	    if (linelen > thiswidth) {
+		/*
+		 * If we're over the width limit, abandon ship,
+		 * _unless_ there is no best-effort yet (which will
+		 * only happen if the first word is too long all by
+		 * itself).
+		 */
+		if (best > 0)
+		    break;
+	    }
+	    if (i+j == nwords) {
+		/*
+		 * Special case: if we're at the very end of the
+		 * paragraph, we don't score penalty points for the
+		 * white space left on the line, unless the line
+		 * contains no spaces (widow penalty). The widow
+		 * penalty is the square of 1/4 the line width.
+		 */
+		if (seenspace)
+		    cost = 0;
+		else
+		    cost = (thiswidth/4)*(thiswidth/4);
+	    } else {
+		cost = (thiswidth-linelen) * (thiswidth-linelen);
+		cost += wrapwords[i+j].cost;
+	    }
+	    /*
+	     * We compare bestcost >= cost, not bestcost > cost,
+	     * because in cases where the costs are identical we
+	     * want to try to look like the greedy algorithm,
+	     * because readers are likely to have spent a lot of
+	     * time looking at greedy-wrapped paragraphs and
+	     * there's no point violating the Principle of Least
+	     * Surprise if it doesn't actually gain anything.
+	     */
+	    if (best < 0 || bestcost >= cost) {
+		bestcost = cost;
+		best = j;
+	    }
+	}
+	/*
+	 * Now we know the optimal answer for this terminal
+	 * subsequence, so put it in wrapwords.
+	 */
+	wrapwords[i].cost = bestcost;
+	wrapwords[i].nwords = best;
+    }
+
+    /*
+     * We've wrapped the paragraph. Now build the output
+     * `wrappedline' list.
+     */
+    i = 0;
+    while (i < nwords) {
 	wrappedline *w = mknew(wrappedline);
 	*ptr = w;
 	ptr = &w->next;
 	w->next = NULL;
 
-	w->begin = text;
-	spc = NULL;
-	nspc = 0;
-	thiswidth = lastgood = 0;
-	while (text) {
-	    thiswidth += widthfn(text);
-	    if (text->next && (text->next->type == word_WhiteSpace ||
-			       text->next->type == word_EmphSpace ||
-			       text->breaks)) {
-		if (thiswidth > width)
-		    break;
-		spc = text->next;
-		lastgood = thiswidth;
-		nspc++;
+	n = wrapwords[i].nwords;
+	w->begin = wrapwords[i].begin;
+	w->end = wrapwords[i+n-1].end;
+
+	/*
+	 * Count along the words to find nspaces and shortfall.
+	 */
+	w->nspaces = 0;
+	w->shortfall = width;
+	for (j = 0; j < n; j++) {
+	    w->shortfall -= wrapwords[i+j].width;
+	    if (j < n-1 && wrapwords[i+j].spacewidth) {
+		w->nspaces++;
+		w->shortfall -= wrapwords[i+j].spacewidth;
 	    }
-	    text = text->next;
 	}
-	/*
-	 * We've exited this loop on one of three conditions. spc
-	 * might be non-NULL and we've overflowed: we have broken
-	 * the paragraph there. spc might be NULL and text might be
-	 * NULL too: we've reached the end of the paragraph and
-	 * should output the last line. Or text might be non-NULL
-	 * and spc might be NULL: we've got an anomalously long
-	 * line with no spaces we could have broken at. Output it
-	 * anyway as the best we can do.
-	 */
-	if (spc && thiswidth > width) {
-	    w->end = text = spc;
-	    w->nspaces = nspc-1;
-	    w->shortfall = width - lastgood;
-	} else if (!text) {
-	    w->end = NULL;	       /* no end marker needed */
-	    w->nspaces = nspc;
-	    w->shortfall = width - thiswidth;
-	} else {
-	    w->end = text;
-	    w->nspaces = 0;
-	    w->shortfall = width - thiswidth;
-	}
-	/*
-	 * Skip the space if we're on one.
-	 */
-	if (text && (text->type == word_WhiteSpace ||
-		     text->type == word_EmphSpace))
-	    text = text->next;
-	width = subsequentwidth;
+	i += n;
     }
+
+    sfree(wrapwords);
 
     return head;
 }
