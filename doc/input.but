@@ -1201,8 +1201,19 @@ macro, using the \c{\\define} command:
 
 \c \define{eur} \u20AC{EUR }
 
-Then you can just write
+Then you can just write ...
 
 \c This is likely to cost \eur 2500 at least.
 
-\# FIXME: need a NOP to allow text to directly follow this. \.?
+... except that that's not terribly good, because you end up with a
+space between the Euro sign and the number. In this case, it's
+helpful to use the special \c{\\.} command, which is defined to do
+nothing at all! But it acts as a separator between your macro and
+the next character:
+
+\c This is likely to cost \eur\.2500 at least.
+
+This way, you will see no space between the Euro sign and the number
+(although, of course, there will be space between \q{EUR} and the
+number if the Euro sign is not available, because the macro
+definition specifically asked for it).

@@ -162,6 +162,7 @@ enum {
     c__invalid,			       /* invalid command */
     c__comment,			       /* comment command (\#) */
     c__escaped,			       /* escaped character */
+    c__nop,			       /* no-op */
     c__nbsp,			       /* nonbreaking space */
     c_A,			       /* appendix heading */
     c_B,			       /* bibliography entry */
@@ -231,6 +232,7 @@ static void match_kw(token *tok) {
     static const struct { char const *name; int id; } keywords[] = {
 	{"#", c__comment},	       /* comment command (\#) */
 	{"-", c__escaped},	       /* nonbreaking hyphen */
+	{".", c__nop},		       /* no-op */
 	{"A", c_A},		       /* appendix heading */
 	{"B", c_B},		       /* bibliography entry */
 	{"BR", c_BR},		       /* bibliography rewrite */
@@ -360,7 +362,7 @@ token get_token(input *in) {
     } else if (c == '\\') {	       /* tok_cmd */
 	c = get(in, &cpos);
 	if (c == '-' || c == '\\' || c == '_' ||
-	    c == '#' || c == '{' || c == '}') {
+	    c == '#' || c == '{' || c == '}' || c == '.') {
 	    /* single-char command */
 	    rdadd(&rs, c);
 	} else if (c == 'u') {
@@ -903,6 +905,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		t.type == tok_cmd && t.cmd == start_cmd) {
 		already = TRUE;	       /* inhibit get_token at top of loop */
 		break;
+	    }
+
+	    if (t.type == tok_cmd && t.cmd == c__nop) {
+		dtor(t), t = get_token(in);
+		continue;	       /* do nothing! */
 	    }
 
 	    if (t.type == tok_cmd && t.cmd == c__escaped) {
