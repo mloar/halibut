@@ -479,22 +479,25 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
       case word_LowerXref:
 	if (subsidiary) break;	       /* disabled in subsidiary bits */
         kwl = kw_lookup(state->keywords, text->text);
-	assert(xref_target == NULL);
-	if (kwl->para->type == para_NumberedList) {
-	    break;		       /* don't xref to numbered list items */
-	} else if (kwl->para->type == para_BiblioCited) {
-	    /*
-	     * An xref to a bibliography item jumps to the section
-	     * containing it.
-	     */
-	    if (kwl->para->parent)
-		xref_target = kwl->para->parent;
-	    else
-		break;
-	} else {
-	    xref_target = kwl->para;
-	}
-	whlp_start_hyperlink(state->h, (WHLP_TOPIC)xref_target->private_data);
+        assert(xref_target == NULL);
+        if (kwl) {
+            if (kwl->para->type == para_NumberedList) {
+                break;		       /* don't xref to numbered list items */
+            } else if (kwl->para->type == para_BiblioCited) {
+                /*
+                 * An xref to a bibliography item jumps to the section
+                 * containing it.
+                 */
+                if (kwl->para->parent)
+                    xref_target = kwl->para->parent;
+                else
+                    break;
+            } else {
+                xref_target = kwl->para;
+            }
+            whlp_start_hyperlink(state->h,
+                                 (WHLP_TOPIC)xref_target->private_data);
+        }
 	break;
 
       case word_XrefEnd:
