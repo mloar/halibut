@@ -815,11 +815,11 @@ static int xhtml_do_naked_contents(FILE *fp, xhtmlfile *file)
 static int xhtml_do_contents_limit(FILE *fp, xhtmlfile *file, int limit)
 {
   int count = 0;
-  if (!file)
-    return 0;
-  count += xhtml_do_contents_section_limit(fp, file->sections, limit);
-  count += xhtml_do_contents_limit(fp, file->child, limit);
-  count += xhtml_do_contents_limit(fp, file->next, limit);
+  while (file) {
+    count += xhtml_do_contents_section_limit(fp, file->sections, limit);
+    count += xhtml_do_contents_limit(fp, file->child, limit);
+    file = file->next;
+  }
   return count;
 }
 
@@ -830,14 +830,14 @@ static int xhtml_do_contents_limit(FILE *fp, xhtmlfile *file, int limit)
 static int xhtml_do_contents_section_deep_limit(FILE *fp, xhtmlsection *section, int limit)
 {
   int count = 0;
-  if (!section)
-    return 0;
-  if (!xhtml_add_contents_entry(fp, section, limit))
-    return 0;
-  else
-    count = 1;
-  count += xhtml_do_contents_section_deep_limit(fp, section->child, limit);
-  count += xhtml_do_contents_section_deep_limit(fp, section->next, limit);
+  while (section) {
+    if (!xhtml_add_contents_entry(fp, section, limit))
+      return 0;
+    else
+      count++;
+    count += xhtml_do_contents_section_deep_limit(fp, section->child, limit);
+    section = section->next;
+  }
   return count;
 }
 
@@ -894,12 +894,12 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
  */
 static void xhtml_do_sections(FILE *fp, xhtmlsection *sections)
 {
-  if (!sections)
-    return;
-  currentsection = sections;
-  xhtml_do_paras(fp, sections->para);
-  xhtml_do_sections(fp, sections->child);
-  xhtml_do_sections(fp, sections->next);
+  while (sections) {
+    currentsection = sections;
+    xhtml_do_paras(fp, sections->para);
+    xhtml_do_sections(fp, sections->child);
+    sections = sections->next;
+  }
 }
 
 /* Write this list of paragraphs. Close off all lists at the end. */
