@@ -99,25 +99,34 @@ keywordlist *get_keywords(paragraph *source) {
     kl->nlooseends = kl->looseendssize = 0;
     kl->looseends = NULL;
     for (; source; source = source->next) {
+	wchar_t *p, *q;
+	p = q = source->keyword;
+
+	/*
+	 * Look for the section type override (`example',
+	 * `question' or whatever - to replace `chapter' or
+	 * `section' on a per-section basis).
+	 */
+	if (q) {
+	    q = uadv(q);	       /* point q at the word beyond */
+	    if (!*q) q = NULL;
+	}
+	
 	/*
 	 * Number the chapter / section / list-item / whatever.
 	 */
-	source->kwtext = number_mktext(n, source->type, source->aux,
+	source->kwtext = number_mktext(n, source->type, source->aux, q,
 				       prevpara, &source->kwtext2,
 				       source->fpos, &errors);
 	prevpara = source->type;
 
-	if (source->keyword && *source->keyword) {
+	if (p && *p) {
 	    if (source->kwtext || source->type == para_Biblio) {
-		wchar_t *p = source->keyword;
-		while (*p) {
-		    keyword *kw = mknew(keyword);
-		    kw->key = p;
-		    kw->text = source->kwtext;
-		    kw->para = source;
-		    heap_add(kl, kw);
-		    p = uadv(p);
-		}
+		keyword *kw = mknew(keyword);
+		kw->key = p;
+		kw->text = source->kwtext;
+		kw->para = source;
+		heap_add(kl, kw);
 	    }
 	} else {
 	    if (kl->nlooseends >= kl->looseendssize) {

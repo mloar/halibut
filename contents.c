@@ -115,8 +115,8 @@ void number_cfg(numberstate *state, paragraph *source) {
     }
 }
 
-word *number_mktext(numberstate *state, int para, int aux, int prev,
-		    word **auxret, filepos fpos, int *errflag) {
+word *number_mktext(numberstate *state, int para, int aux, wchar_t *category,
+		    int prev, word **auxret, filepos fpos, int *errflag) {
     word *ret = NULL;
     word **ret2 = &ret;
     word **pret = &ret;
@@ -127,7 +127,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	state->chapternum++;
 	for (i = 0; i < state->maxsectlevel; i++)
 	    state->sectionlevels[i] = 0;
-	dotext(&pret, state->chaptertext);
+	dotext(&pret, category ? category : state->chaptertext);
 	dospace(&pret);
 	ret2 = pret;
 	donumber(&pret, state->chapternum);
@@ -151,7 +151,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	state->sectionlevels[level]++;
 	for (i = level+1; i < state->maxsectlevel; i++)
 	    state->sectionlevels[i] = 0;
-	dotext(&pret, state->sectiontext);
+	dotext(&pret, category ? category : state->sectiontext);
 	dospace(&pret);
 	ret2 = pret;
 	if (state->ischapter)
@@ -169,7 +169,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	state->appendixnum++;
 	for (i = 0; i < state->maxsectlevel; i++)
 	    state->sectionlevels[i] = 0;
-	dotext(&pret, state->apptext);
+	dotext(&pret, category ? category : state->apptext);
 	dospace(&pret);
 	ret2 = pret;
 	doanumber(&pret, state->appendixnum);
