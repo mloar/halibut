@@ -19,7 +19,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.15 2001/12/04 19:12:18 simon Exp $
+\versionid $Id: test.but,v 1.16 2001/12/06 12:59:37 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -36,6 +36,8 @@ fragments}.
 \H{head} First section title (very long again, no prizes for
 guessing the reason why this time, and here's yet more text to pad
 it out to three lines of output)
+
+\cfg{winhelp-topic}{M359HPEHGW}
 
 Here's a code paragraph:
 
@@ -99,6 +101,8 @@ A tiny section. Awww. How cute. Actually, this one's a \e{florble},
 and here's a reference to it: \k{sub-sub}.
 
 \A{app} Needless appendix
+
+\# \cfg{winhelp-topic}{Y5VQEXZQVJ} (uncomment this and it clashes)
 
 Here's an \i{appendix}, for no terribly good reason at all. See
 \k{book}.

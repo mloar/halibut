@@ -205,6 +205,7 @@ enum {
     err_cantopenw,		       /* can't open output file for write */
     err_macroexists,		       /* this macro already exists */
     err_sectjump,		       /* jump a heading level, eg \C -> \S */
+    err_winhelp_ctxclash,	       /* WinHelp context ID hash clash */
     err_whatever                       /* random error of another type */
 };
 

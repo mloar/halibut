@@ -16,7 +16,7 @@
 static void do_error(int code, va_list ap) {
     char error[1024];
     char auxbuf[256];
-    char *sp;
+    char *sp, *sp2;
     wchar_t *wsp;
     filepos fpos;
     int flags;
@@ -165,6 +165,14 @@ static void do_error(int code, va_list ap) {
       case err_sectjump:
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "expected higher heading levels before this one");
+	flags = FILEPOS;
+	break;
+      case err_winhelp_ctxclash:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	sp2 = va_arg(ap, char *);
+	sprintf(error, "Windows Help context id `%.200s' clashes with "
+		"previously defined `%.200s'", sp, sp2);
 	flags = FILEPOS;
 	break;
       case err_whatever:

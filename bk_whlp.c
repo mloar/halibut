@@ -82,6 +82,23 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		     WHLP_FONT_STRIKEOUT, 0, 0, 0);
 
     /*
+     * Loop over the source form finding out whether the user has
+     * specified particular help topic names for anything.
+     */
+    for (p = sourceform; p; p = p->next) {
+	p->private_data = NULL;
+	if (p->type == para_Config && p->parent) {
+	    if (!ustricmp(p->keyword, L"winhelp-topic")) {
+		char *topicname;
+		whlp_convert(uadv(p->keyword), &topicname, 0);
+		/* Store the topic name in the private_data field of the
+		 * containing section. */
+		p->parent->private_data = topicname;
+	    }
+	}
+    }
+
+    /*
      * Loop over the source form registering WHLP_TOPICs for
      * everything.
      */
@@ -94,7 +111,15 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    p->type == para_UnnumberedChapter ||
 	    p->type == para_Heading ||
 	    p->type == para_Subsect) {
-	    p->private_data = whlp_register_topic(h, NULL, NULL);
+	    char *topicid = p->private_data;
+	    char *errstr;
+
+	    p->private_data = whlp_register_topic(h, topicid, &errstr);
+	    if (!p->private_data) {
+		p->private_data = whlp_register_topic(h, NULL, NULL);
+		error(err_winhelp_ctxclash, &p->fpos, topicid, errstr);
+	    }
+	    sfree(topicid);
 	}
     }
 
