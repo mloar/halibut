@@ -10,25 +10,59 @@
  */
 
 /*
- * To be done:
- * 
- *  - header/footer? Page numbers at least would be handy. Fully
- *    configurable footer can wait, though.
- * 
- * That should bring us to the same level of functionality that
- * original-Halibut had, and the same in PDF plus the obvious
- * interactive navigation features. After that, in future work:
+ * TODO in future work:
  * 
  *  - linearised PDF, perhaps?
+ * 
+ *  - compression of output files. For the actual text display,
+ *    both output formats currently average about 50-60 characters
+ *    per 5-6 character word of text, and almost all of it's the
+ *    same.
+ *     * In PS, we can define custom text operators to make things
+ * 	 more efficient.
+ *     * In PDF, there already are!
  * 
  *  - I'm uncertain of whether I need to include a ToUnicode CMap
  *    in each of my font definitions in PDF. Currently things (by
  *    which I mean cut and paste out of acroread) seem to be
  *    working fairly happily without it, but I don't know.
  * 
+ *  - rather than the ugly aux_text mechanism for rendering chapter
+ *    titles, we could actually build the correct word list and
+ *    wrap it as a whole.
+ * 
+ *  - get vertical font metrics and use them to position the PDF
+ *    xref boxes more pleasantly
+ * 
  *  - configurability
+ *     * all the measurements in `conf' should be configurable
+ *        + notably paper size/shape
+ *     * page header and footer should be configurable; we should
+ * 	 be able to shift the page number elsewhere, and add other
+ * 	 things such as the current chapter/section title and fixed
+ * 	 text
+ *     * remove the fixed mapping from heading levels to heading
+ * 	 styles; offer a menu of styles from which the user can
+ * 	 choose at every heading level
+ *     * first-line indent in paragraphs
+ *     * fixed text: `Contents', `Index', bullet, quotes, the
+ * 	 colon-space and full stop in chapter title constructions
+ *     * configurable location of contents?
+ *     * certainly configurably _remove_ the contents, and possibly
+ * 	 also the index
+ *     * double-sided document switch?
+ * 	  + means you have two header/footer formats which
+ * 	    alternate
+ * 	  + and means that mandatory page breaks before chapter
+ * 	    titles should include a blank page if necessary to
+ * 	    start the next section to a right-hand page
  * 
  *  - title pages
+ * 
+ *  - ability to import other Type 1 fonts
+ *     * we need to parse the font to extract its metrics
+ *     * then we pass the font bodily to both PS and PDF so it can
+ * 	 be included in the output file
  */
 
 #include <assert.h>
@@ -64,6 +98,8 @@ struct paper_conf_Tag {
     int index_gutter;
     int index_cols;
     int index_minsep;
+    int pagenum_fontsize;
+    int footer_distance;
     /* These are derived from the above */
     int base_width;
     int page_height;
@@ -103,6 +139,7 @@ static int render_line(line_data *ldata, int left_x, int top_y,
 static void render_para(para_data *pdata, paper_conf *conf,
 			keywordlist *keywords, indexdata *idx,
 			paragraph *index_placeholder, page_data *index_page);
+static int string_width(font_data *font, wchar_t const *string, int *errs);
 static int paper_width_simple(para_data *pdata, word *text);
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf);
 static para_data *rule_paragraph(int indent, paper_conf *conf);
@@ -164,6 +201,8 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     conf->index_gutter = 36 * 4096;
     conf->index_cols = 2;
     conf->index_minsep = 18 * 4096;
+    conf->pagenum_fontsize = 12;
+    conf->footer_distance = 32 * 4096;
 
     conf->base_width =
 	conf->paper_width - conf->left_margin - conf->right_margin;
@@ -172,8 +211,6 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     conf->index_colwidth =
 	(conf->base_width - (conf->index_cols-1) * conf->index_gutter)
 	/ conf->index_cols;
-
-    IGNORE(idx);		       /* FIXME */
 
     /*
      * First, set up some font structures.
@@ -661,6 +698,29 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	else
 	    lastpara->next = firstidx;
 	lastpara = lastidx;
+    }
+
+    /*
+     * Draw the headers and footers.
+     * 
+     * FIXME: this should be fully configurable, but for the moment
+     * I'm just going to put in page numbers in the centre of a
+     * footer and leave it at that.
+     */
+    {
+	page_data *page;
+
+	for (page = pages; page; page = page->next) {
+	    int width;
+
+	    width = conf->pagenum_fontsize *
+		string_width(conf->tr, page->number, NULL);
+
+	    render_string(page, conf->tr, conf->pagenum_fontsize,
+			  conf->left_margin + (conf->base_width - width)/2,
+			  conf->bottom_margin - conf->footer_distance,
+			  page->number);
+	}
     }
 
     /*
