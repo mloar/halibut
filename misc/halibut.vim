@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.6 2004/04/01 23:06:46 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.7 2004/04/01 23:21:28 jtn Exp $
 
 " I've never been entirely comfortable with vim's syntax highlighting
 " facilities, so this may have all sorts of nasty loose ends, corner cases
@@ -101,7 +101,7 @@ syn match butCmdSpecific "\\[kK]{\@=" nextgroup=butIdentArg
 syn match butLiteral     "\\u\x*" nextgroup=butTextArg
 
 " Command cluster.
-syn cluster butCmd contains=butCmdGeneric,butCmdSpecific,ButComment
+syn cluster butCmd contains=butCmdGeneric,butCmdSpecific,butComment,butQuoteLit,butQLEmph,butCommentPara,butLiteral
 
 " Types of argument. XXX is this cluster still useful?
 syn cluster butArgument contains=butTextArg,butIdentArg,butEmphArgmbutCfgArg,butIdentArgH,butTextArgH
