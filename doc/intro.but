@@ -23,8 +23,9 @@ Currently Halibut supports the following output formats:
 
 \b GNU \c{info} format.
 
-Several other formats have been planned (notably PostScript and
-PDF), but the need for them has not yet been urgent.
+\b PostScript.
+
+\b PDF.
 
 \H{intro-features} Features supported by Halibut
 

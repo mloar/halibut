@@ -841,3 +841,43 @@ if the output file were called \c{mygames.info} and the keyword
 \c{chess} had been used to define Chapter 3 of the document.
 
 }
+
+\H{output-ps} \i{PostScript}
+
+This output format generates a printable manual in PostScript format.
+
+This format is currently very new and is not yet configurable. There
+is only one available configuration option:
+
+\dt \I{\cw{\\cfg\{ps-filename\}}}\cw{\\cfg\{ps-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the PostScript
+file. This directive is implicitly generated if you provide a file
+name parameter after the command-line option \i\c{--ps} (see
+\k{running-options}).
+
+The \i{default settings} for the PostScript output format are:
+
+\c \cfg{ps-filename}{output.ps}
+
+\H{output-pdf} \i{PDF}
+
+This output format generates a printable manual in PDF format. This
+should look exactly identical to the PostScript output (see
+\k{output-ps}), but also uses some PDF interactive features to
+provide an outline of all the document's sections and clickable
+cross-references between sections.
+
+This format is currently very new and is not yet configurable. There
+is only one available configuration option:
+
+\dt \I{\cw{\\cfg\{pdf-filename\}}}\cw{\\cfg\{pdf-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the PDF file.
+This directive is implicitly generated if you provide a file name
+parameter after the command-line option \i\c{--pdf} (see
+\k{running-options}).
+
+The \i{default settings} for the PDF output format are:
+
+\c \cfg{pdf-filename}{output.pdf}

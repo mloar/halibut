@@ -83,6 +83,30 @@ you specify; the subsidiary files will have suffixes \c{-1}, \c{-2}
 etc.
 }
 
+\dt \cw{--ps}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an output file in PostScript format. If
+the optional \e{filename} parameter is supplied, the PostScript
+output file will be given that name. Otherwise, the name of
+the output PostScript file will be as specified in the input files,
+or \c{output.ps} if none is specified at all.
+
+\dt \cw{--pdf}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an output file in PDF format. If
+the optional \e{filename} parameter is supplied, the PDF
+output file will be given that name. Otherwise, the name of
+the output PDF file will be as specified in the input files,
+or \c{output.pdf} if none is specified at all.
+
+\dt \cw{--man}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an output file in Unix \cw{man} page
+format. If the optional \e{filename} parameter is supplied, the
+output \cw{man} page will be given that name. Otherwise, the name of
+the output \cw{man} page will be as specified in the input files, or
+\c{output.1} if none is specified at all.
+
 \dt \cw{-C}\e{word}\cw{:}\e{word}[\cw{:}\e{word}...]
 
 \dd Adds a configuration directive to the input processed by
@@ -123,5 +147,3 @@ This man page isn't terribly complete.
 The HTML output isn't very good.
 
 Unicode handling is atrocious.
-
-Several more output formats (PostScript, PDF) are missing.

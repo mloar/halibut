@@ -39,6 +39,10 @@ have configured Halibut to generate a single file, it will be called
 \c{output.info-2} etc., will be files suitable for use with GNU
 \c{info}.
 
+\b \c{output.ps} will be a printable PostScript manual.
+
+\b \c{output.pdf} will be a printable PDF manual.
+
 \H{running-options} \ii{Command-line options}
 
 Halibut supports command-line options in case you don't want to use
@@ -116,6 +120,18 @@ names; so, for example, \c{output.info} might be accompanied by
 additional files \c{output.info-1}, \c{output.info-2} and so on.
 
 }
+
+\dt \i\cw{--ps}[\cw{=}\e{filename}]
+
+\dd Specifies that you want to generate PostScript output. You
+can optionally specify a file name (e.g. \c{--man=myfile.ps}), in
+which case Halibut will change the name of the output file as well.
+
+\dt \i\cw{--pdf}[\cw{=}\e{filename}]
+
+\dd Specifies that you want to generate PDF output. You
+can optionally specify a file name (e.g. \c{--man=myfile.pdf}), in
+which case Halibut will change the name of the output file as well.
 
 If you do not specify any of the above options, Halibut will simply
 produce \e{all} of its output formats.

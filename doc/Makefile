@@ -4,10 +4,11 @@ INPUTS = $(patsubst %,%.but,$(CHAPTERS))
 
 HALIBUT = ../build/halibut
 
-all: Contents.html halibut.1
+all: index.html halibut.1
 
-Contents.html: $(INPUTS) $(HALIBUT)
-	$(HALIBUT) --text=halibut.txt --html --info=halibut.info $(INPUTS)
+index.html: $(INPUTS) $(HALIBUT)
+	$(HALIBUT) --text=halibut.txt --html --info=halibut.info \
+		--ps=halibut.ps --pdf=halibut.pdf $(INPUTS)
 
 halibut.1: manpage.but
 	$(HALIBUT) --man=halibut.1 manpage.but
