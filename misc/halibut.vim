@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.7 2004/04/01 23:21:28 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.8 2004/04/01 23:41:38 jtn Exp $
 
 " I've never been entirely comfortable with vim's syntax highlighting
 " facilities, so this may have all sorts of nasty loose ends, corner cases
@@ -11,6 +11,10 @@
 " I have no idea if it's compatible with vim <6.1.
 
 " Based on docs in Halibut CVS 2004-03-31
+
+" FIXME:
+"   - sync - last blank line, \quote, \lcont
+"   - add "display" etc for speed?
 
 " Rune from vim 6.1 help
 " For version 5.x: Clear all syntax items
@@ -35,7 +39,6 @@ syn match butIllegalChar "\\"
 " (matches current iscmd() in input.c; there are some oddballs which
 " don't fit this handled specially below)
 syn match butCmdGeneric "\\[A-Za-z0-9]\+" nextgroup=butTextArg
-" was: [A-Za-z0-9#]\+
 
 syn cluster butText contains=butLiteral,@butCmd,butTodo
 
@@ -72,8 +75,8 @@ syn match butCmdSpecific "\\U\_s\@=" nextgroup=butTextHeading
 " ...and overall title
 syn match butCmdSpecific "\\title\_s\@=" nextgroup=butTextHeading
 
-" Bulleted lists
-syn match butCmdSpecific "\\\(b\|n\|dd\)" nextgroup=butIdentArg
+" Bulleted lists -- arguments optional
+syn match butCmdSpecific "\\\(b\|n\|dd\)[^A-Za-z0-9]\@=" nextgroup=butIdentArg
 
 " Config
 syn match butCmdSpecific "\\cfg{\@=" nextgroup=butCfgArg
