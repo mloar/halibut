@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          http://www.chiark.greenend.org.uk/~sgtatham/halibut/
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.10 2004/04/28 17:34:54 jacob Exp $
+" Version:      $Id: halibut.vim,v 1.11 2004/06/19 13:27:52 jacob Exp $
 
 " I've never been entirely comfortable with vim's syntax highlighting
 " facilities, so this may have all sorts of nasty loose ends, corner cases
@@ -91,13 +91,13 @@ syn match butCmdSpecific "\\define{\@=" nextgroup=butIdentArg
 
 " Specific inline commands
 " (Some of these are defined out of paranoia about clashes with code quotes.)
+" Indexing -- invisible entries. (includes \I\c, \I\cw; \I\e left)
+syn match butCmdSpecific "\\I\(\\cw\|\\c\)\={\@=" nextgroup=butIndexArg
 " Formatting.
 syn match butCmdSpecific "\\e{\@=" nextgroup=butEmphArg
 syn match butCmdSpecific "\\c{\@=" nextgroup=butTextArg
 syn match butCmdSpecific "\\cw{\@=" nextgroup=butTextArg
 syn match butCmdSpecific "\\W{\@=" nextgroup=butHyperArg
-" Indexing -- invisible entries.
-syn match butCmdSpecific "\\I{\@=" nextgroup=butIndexArg
 " Xref commands
 syn match butCmdSpecific "\\[kK]{\@=" nextgroup=butIdentArg
 " Unicode literal -- a bit special.
