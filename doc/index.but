@@ -56,6 +56,9 @@ configuration directive
 directive
 \IM{\\cfg\{info-underline\}} \cw{\\cfg\{info-underline\}}
 
+\IM{\\cfg\{info-charset\}} \c{info-charset} configuration directive
+\IM{\\cfg\{info-charset\}} \cw{\\cfg\{info-charset\}}
+
 \IM{\\cfg\{info-bullet\}} \c{info-bullet} configuration directive
 \IM{\\cfg\{info-bullet\}} \cw{\\cfg\{info-bullet\}}
 
@@ -74,6 +77,23 @@ directive
 
 \IM{\\cfg\{winhelp-filename\}} \c{winhelp-filename} configuration directive
 \IM{\\cfg\{winhelp-filename\}} \cw{\\cfg\{winhelp-filename\}}
+
+\IM{\\cfg\{winhelp-bullet\}} \c{winhelp-bullet} configuration directive
+\IM{\\cfg\{winhelp-bullet\}} \cw{\\cfg\{winhelp-bullet\}}
+
+\IM{\\cfg\{winhelp-quotes\}} \c{winhelp-quotes} configuration directive
+\IM{\\cfg\{winhelp-quotes\}} \cw{\\cfg\{winhelp-quotes\}}
+
+\IM{\\cfg\{winhelp-contents-titlepage\}} \c{winhelp-contents-titlepage}
+configuration directive
+\IM{\\cfg\{winhelp-contents-titlepage\}}
+\cw{\\cfg\{winhelp-contents-titlepage\}}
+
+\IM{\\cfg\{winhelp-section-suffix\}} \c{winhelp-section-suffix} configuration directive
+\IM{\\cfg\{winhelp-section-suffix\}} \cw{\\cfg\{winhelp-section-suffix\}}
+
+\IM{\\cfg\{winhelp-list-suffix\}} \c{winhelp-list-suffix} configuration directive
+\IM{\\cfg\{winhelp-list-suffix\}} \cw{\\cfg\{winhelp-list-suffix\}}
 
 \IM{\\cfg\{xhtml-contents-filename\}} \c{xhtml-contents-filename} configuration directive
 \IM{\\cfg\{xhtml-contents-filename\}} \cw{\\cfg\{xhtml-contents-filename\}}
@@ -154,9 +174,15 @@ configuration directive
 configuration directive
 \IM{\\cfg\{text-section-suffix\}} \cw{\\cfg\{text-section-suffix\}}
 
+\IM{\\cfg\{text-list-suffix\}} \c{text-list-suffix} configuration directive
+\IM{\\cfg\{text-list-suffix\}} \cw{\\cfg\{text-list-suffix\}}
+
 \IM{\\cfg\{text-versionid\}} \c{text-versionid} configuration
 directive
 \IM{\\cfg\{text-versionid\}} \cw{\\cfg\{text-versionid\}}
+
+\IM{\\cfg\{text-charset\}} \c{text-charset} configuration directive
+\IM{\\cfg\{text-charset\}} \cw{\\cfg\{text-charset\}}
 
 \IM{\\cfg\{text-bullet\}} \c{text-bullet} configuration directive
 \IM{\\cfg\{text-bullet\}} \cw{\\cfg\{text-bullet\}}
@@ -166,6 +192,9 @@ directive
 
 \IM{\\cfg\{text-quotes\}} \c{text-quotes} configuration directive
 \IM{\\cfg\{text-quotes\}} \cw{\\cfg\{text-quotes\}}
+
+\IM{\\cfg\{text-emphasis\}} \c{text-emphasis} configuration directive
+\IM{\\cfg\{text-emphasis\}} \cw{\\cfg\{text-emphasis\}}
 
 \IM{\\cfg\{xhtml-leaf-level\}} \c{xhtml-leaf-level} configuration
 directive
@@ -261,6 +290,21 @@ directive
 \IM{\\cfg\{man-mindepth\}} \c{man-mindepth} configuration directive
 \IM{\\cfg\{man-mindepth\}} \cw{\\cfg\{man-mindepth\}}
 
+\IM{\\cfg\{man-charset\}} \c{man-charset} configuration directive
+\IM{\\cfg\{man-charset\}} \cw{\\cfg\{man-charset\}}
+
+\IM{\\cfg\{man-bullet\}} \c{man-bullet} configuration directive
+\IM{\\cfg\{man-bullet\}} \cw{\\cfg\{man-bullet\}}
+
+\IM{\\cfg\{man-quotes\}} \c{man-quotes} configuration directive
+\IM{\\cfg\{man-quotes\}} \cw{\\cfg\{man-quotes\}}
+
+\IM{\\cfg\{ps-filename\}} \c{ps-filename} configuration directive
+\IM{\\cfg\{ps-filename\}} \cw{\\cfg\{ps-filename\}}
+
+\IM{\\cfg\{pdf-filename\}} \c{pdf-filename} configuration directive
+\IM{\\cfg\{pdf-filename\}} \cw{\\cfg\{pdf-filename\}}
+
 \IM{\\cfg\{chapter\}} \c{chapter} configuration directive
 \IM{\\cfg\{chapter\}} \cw{\\cfg\{chapter\}}
 
@@ -269,6 +313,9 @@ directive
 
 \IM{\\cfg\{appendix\}} \c{appendix} configuration directive
 \IM{\\cfg\{appendix\}} \cw{\\cfg\{appendix\}}
+
+\IM{\\cfg\{quotes\}} \c{quotes} configuration directive
+\IM{\\cfg\{quotes\}} \cw{\\cfg\{quotes\}}
 
 \IM{\\cfg\{input-charset\}} \c{input-charset} configuration directive
 \IM{\\cfg\{input-charset\}} \cw{\\cfg\{input-charset\}}
