@@ -2004,13 +2004,6 @@ static void render_para(para_data *pdata, paper_conf *conf,
 	wid = paper_width_simple(pdata, w);
 	sfree(w);
 
-	render_string(pdata->last->page,
-		      pdata->fonts[FONT_NORMAL],
-		      pdata->sizes[FONT_NORMAL],
-		      conf->paper_width - conf->right_margin - wid,
-		      (conf->paper_height - conf->top_margin -
-		       pdata->last->ypos), num);
-
 	for (x = 0; x < conf->base_width; x += conf->leader_separation)
 	    if (x - conf->leader_separation > last_x - conf->left_margin &&
 		x + conf->leader_separation < conf->base_width - wid)
@@ -2020,6 +2013,13 @@ static void render_para(para_data *pdata, paper_conf *conf,
 			      conf->left_margin + x,
 			      (conf->paper_height - conf->top_margin -
 			       pdata->last->ypos), L".");
+
+	render_string(pdata->last->page,
+		      pdata->fonts[FONT_NORMAL],
+		      pdata->sizes[FONT_NORMAL],
+		      conf->paper_width - conf->right_margin - wid,
+		      (conf->paper_height - conf->top_margin -
+		       pdata->last->ypos), num);
     }
 
     /*
