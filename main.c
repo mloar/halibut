@@ -136,6 +136,9 @@ int main(int argc, char **argv) {
 				   !strcmp(opt, "-license")) {
 			    licence();
 			    nogo = TRUE;
+			} else if (!strcmp(opt, "-list-charsets")) {
+			    listcharsets();
+			    nogo = TRUE;
 			} else if (!strcmp(opt, "-precise")) {
 			    reportcols = 1;
 			} else {

@@ -316,6 +316,7 @@ int ustrwid(wchar_t const *s, int charset);
 void help(void);
 void usage(void);
 void showversion(void);
+void listcharsets(void);
 
 /*
  * licence.c

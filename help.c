@@ -16,6 +16,7 @@ static char *helptext[] = {
     "         --pdf[=filename]      generate PDF output",
     "         -Cfoo:bar:baz         append \\cfg{foo}{bar}{baz} to input",
     "         --input-charset=cs    change default input file charset",
+    "         --list-charsets       display supported character set names",
     "         --precise             report column numbers in error messages",
     "         --help                display this text",
     "         --version             display version number",
@@ -42,4 +43,14 @@ void usage(void) {
 
 void showversion(void) {
     printf("Halibut, %s\n", version);
+}
+
+void listcharsets(void) {
+    int i = 0, c;
+    do {
+	c = charset_localenc_nth(i);
+	if (c == CS_NONE) break;
+	printf("%s\n", charset_to_localenc(c));
+	i++;
+    } while (1);
 }

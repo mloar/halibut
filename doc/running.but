@@ -200,6 +200,10 @@ See \k{input-config} for more information about the input character set.
 
 }
 
+\dt \I{character sets, enumerating}\i\cw{--list-charsets}
+
+\dd List character sets known to Halibut.
+
 \dt \i\cw{--help}
 
 \dd Print a brief help message and exit immediately. (Don't confuse

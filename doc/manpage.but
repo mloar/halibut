@@ -113,6 +113,10 @@ extra input file to the command line which contains the directive
 \dd Changes the assumed character set for input files from the
 default of ASCII.
 
+\dt \cw{--list-charsets}
+
+\dd Makes Halibut list character sets known to it.
+
 \dt \cw{--precise}
 
 \dd Makes Halibut report the column number as well as the line

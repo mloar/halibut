@@ -1338,6 +1338,8 @@ input file in. By default, it is assumed to be US-ASCII (meaning
 You can specify any well-known name for any supported character set.
 For example, \c{iso-8859-1}, \c{iso8859-1} and \c{iso_8859-1} are
 all recognised, \c{GB2312} and \c{EUC-CN} both work, and so on.
+(You can list character sets known to Halibut with by invoking it
+with the \cw{--list-charsets} option; see \k{running-options}.)
 
 This directive takes effect immediately after the \c{\\cfg} command.
 All text after that until the end of the input file is expected to be
