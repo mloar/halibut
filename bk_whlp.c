@@ -676,45 +676,49 @@ static void whlp_rdaddwc(rdstringc *rs, word *text) {
  */
 static int whlp_convert(wchar_t *s, int maxlen,
 			char **result, int hard_spaces) {
+    wchar_t *s2;
+    char *ret;
+    int ok;
+
     /*
-     * FIXME. Currently this is ISO8859-1 only.
+     * Enforce maxlen.
      */
-    int doing = (result != 0);
-    int ok = TRUE;
-    char *p = NULL;
-    int plen = 0, psize = 0;
+    if (maxlen > 0 && ustrlen(s) > maxlen) {
+	s2 = mknewa(wchar_t, maxlen+1);
+	memcpy(s2, s, maxlen * sizeof(wchar_t));
+	s2[maxlen] = L'\0';
+	s = s2;
+    } else
+	s2 = NULL;
 
-    if (maxlen <= 0)
-	maxlen = -1;
+    /*
+     * We currently only support Win1252 in Windows Help files,
+     * because I don't know how to fiddle the character set
+     * designation in the |SYSTEM file to indicate anything else.
+     */
 
-    for (; *s && maxlen != 0; s++, maxlen--) {
-	wchar_t c = *s;
-	char outc;
+    ret = utoa_careful_dup(s, CS_CP1252);
+    if (!ret) {
+	ok = FALSE;
+	ret = utoa_dup(s, CS_CP1252);
+    } else
+	ok = TRUE;
 
-	if ((c >= 32 && c <= 126) ||
-	    (c >= 160 && c <= 255)) {
-	    /* Char is OK. */
-	    if (c == 32 && hard_spaces)
-		outc = '\240';
-	    else
-		outc = (char)c;
-	} else {
-	    /* Char is not OK. */
-	    ok = FALSE;
-	    outc = 0xBF;	       /* approximate the good old DEC `uh?' */
-	}
-	if (doing) {
-	    if (plen >= psize) {
-		psize = plen + 256;
-		p = resize(p, psize);
-	    }
-	    p[plen++] = outc;
-	}
+    /*
+     * Enforce hard_spaces.
+     */
+    if (hard_spaces) {
+	char *p;
+
+	for (p = ret; *p; p++)
+	    if (*p == ' ')
+		*p = '\240';
     }
-    if (doing) {
-	p = resize(p, plen+1);
-	p[plen] = '\0';
-	*result = p;
-    }
+
+    if (s2)
+	sfree(s2);
+
+    *result = ret;
+
     return ok;
 }
