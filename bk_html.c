@@ -912,7 +912,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    prevf = f;
 
 	    /*
-	     * Write out a prefix TOC for the file.
+	     * Write out a prefix TOC for the file (if a leaf file).
 	     * 
 	     * We start by going through the section list and
 	     * collecting the sections which need to be added to
@@ -995,6 +995,12 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		     */
 		    displaying = TRUE;
 		} else {
+		    /*
+		     * Doesn't belong in this file, but it may be
+		     * a descendant of a section which does, in
+		     * which case we should consider it for the
+		     * main TOC of this file (for non-leaf files).
+		     */
 		    htmlsect *a, *ac;
 		    int depth, adepth;
 
@@ -2071,13 +2077,24 @@ static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
 				htmlfile *thisfile, keywordlist *keywords,
 				htmlconfig *cfg)
 {
+    if (ho->contents_level >= depth && ho->contents_level > 0) {
+	element_close(ho, "li");
+	html_nl(ho);
+    }
+
     while (ho->contents_level > depth) {
 	element_close(ho, "ul");
 	ho->contents_level--;
+	if (ho->contents_level > 0) {
+	    element_close(ho, "li");
+	}
+	html_nl(ho);
     }
 
     while (ho->contents_level < depth) {
+	html_nl(ho);
 	element_open(ho, "ul");
+	html_nl(ho);
 	ho->contents_level++;
     }
 
@@ -2088,7 +2105,7 @@ static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
     html_href(ho, thisfile, s->file, s->fragment);
     html_section_title(ho, s, thisfile, keywords, cfg, FALSE);
     element_close(ho, "a");
-    element_close(ho, "li");
+    /* <li> will be closed by a later invocation */
 }
 
 static void html_section_title(htmloutput *ho, htmlsect *s, htmlfile *thisfile,
