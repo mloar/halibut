@@ -76,7 +76,10 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     olist.number = 1;
 
     cat = new_object(&olist);
-    outlines = new_object(&olist);
+    if (doc->n_outline_elements > 0)
+	outlines = new_object(&olist);
+    else
+	outlines = NULL;
     pages = new_object(&olist);
     resources = new_object(&olist);
 
@@ -84,11 +87,16 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
      * The catalogue just contains references to the outlines and
      * pages objects.
      */
-    objtext(cat, "<<\n/Type /Catalog\n/Outlines ");
-    objref(cat, outlines);
+    objtext(cat, "<<\n/Type /Catalog");
+    if (outlines) {
+	objtext(cat, "\n/Outlines ");
+	objref(cat, outlines);
+    }
     objtext(cat, "\n/Pages ");
     objref(cat, pages);
-    objtext(cat, "\n/PageMode /UseOutlines\n>>\n");
+    if (outlines)
+	objtext(cat, "\n/PageMode /UseOutlines");
+    objtext(cat, "\n>>\n");
 
     /*
      * Set up the resources dictionary, which mostly means
@@ -349,7 +357,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Set up the outlines dictionary.
      */
-    {
+    if (outlines) {
 	int topcount;
 	char buf[80];
 
