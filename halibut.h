@@ -112,6 +112,8 @@ enum {
     para_Config,		       /* configuration directive */
     para_LcontPush,		       /* begin continuation of list item */
     para_LcontPop,		       /* end continuation of list item */
+    para_QuotePush,		       /* begin block quote */
+    para_QuotePop,		       /* end block quote */
     para_NotParaType		       /* placeholder value */
 };
 
@@ -213,7 +215,7 @@ enum {
     err_winhelp_ctxclash,	       /* WinHelp context ID hash clash */
     err_multikw,		       /* keyword clash in sections */
     err_misplacedlcont,		       /* \lcont not after a list item */
-    err_sectmarkerinlcont,	       /* section marker appeared in \lcont */
+    err_sectmarkerinblock,	       /* section marker appeared in block */
     err_whatever                       /* random error of another type */
 };
 

@@ -222,9 +222,11 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_LcontPush:
+      case para_QuotePush:
 	fprintf(fp, ".RS\n");
       	break;
       case para_LcontPop:
+      case para_QuotePop:
 	fprintf(fp, ".RE\n");
 	break;
     }

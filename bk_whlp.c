@@ -241,9 +241,11 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_LcontPush:
+      case para_QuotePush:
 	nesting++;
 	break;
       case para_LcontPop:
+      case para_QuotePop:
 	assert(nesting > 0);
 	nesting--;
 	break;

@@ -194,9 +194,11 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "\\lcont is only expected after a list item");
 	flags = FILEPOS;
 	break;
-      case err_sectmarkerinlcont:
+      case err_sectmarkerinblock:
 	fpos = *va_arg(ap, filepos *);
-	sprintf(error, "section headings are not supported within \\lcont");
+	sp = va_arg(ap, char *);
+	sprintf(error, "section headings are not supported within \\%.100s",
+		sp);
 	flags = FILEPOS;
 	break; 
       case err_whatever:

@@ -192,6 +192,7 @@ enum {
     c_nocite,			       /* bibliography trickery */
     c_preamble,			       /* document preamble text */
     c_q,			       /* quote marks */
+    c_quote,			       /* block-quoted paragraphs */
     c_rule,			       /* horizontal rule */
     c_title,			       /* document title */
     c_u,			       /* aux field is char code */
@@ -260,6 +261,7 @@ static void match_kw(token *tok) {
 	{"nocite", c_nocite},	       /* bibliography trickery */
 	{"preamble", c_preamble},      /* document preamble text */
 	{"q", c_q},		       /* quote marks */
+	{"quote", c_quote},	       /* block-quoted paragraphs */
 	{"rule", c_rule},	       /* horizontal rule */
 	{"title", c_title},	       /* document title */
 	{"versionid", c_versionid},    /* document RCS id */
@@ -527,8 +529,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
     } *sitem;
     stack parsestk;
     struct crossparaitem {
- 	int type;		       /* currently c_lcont or -1 */
-	int seen_lcont;
+ 	int type;		       /* currently c_lcont, c_quote or -1 */
+	int seen_lcont, seen_quote;
     };
     stack crossparastk;
     word *indexword, *uword, *iword;
@@ -616,8 +618,9 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	 * finish them.
 	 */
 	if (t.type == tok_cmd &&
-	    t.cmd == c_lcont) {
+	    (t.cmd == c_lcont || t.cmd == c_quote)) {
 	    struct crossparaitem *sitem, *stop;
+	    int cmd = t.cmd;
 
 	    /*
 	     * Expect, and swallow, an open brace.
@@ -628,31 +631,54 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		continue;
 	    }
 
-	    /*
-	     * \lcont causes a continuation of a list item into
-	     * multiple paragraphs (which may in turn contain
-	     * nested lists, code paras etc). Hence, the previous
-	     * paragraph must be of a list type.
-	     */
-	    sitem = mknew(struct crossparaitem);
-	    stop = (struct crossparaitem *)stk_top(crossparastk);
-	    if (prev_para_type == para_Bullet ||
-		prev_para_type == para_NumberedList ||
-		prev_para_type == para_Description) {
-		sitem->type = c_lcont;
-		sitem->seen_lcont = 1;
-		par.type = para_LcontPush;
-		prev_para_type = par.type;
-		addpara(par, ret);
+	    if (cmd == c_lcont) {
+		/*
+		 * \lcont causes a continuation of a list item into
+		 * multiple paragraphs (which may in turn contain
+		 * nested lists, code paras etc). Hence, the previous
+		 * paragraph must be of a list type.
+		 */
+		sitem = mknew(struct crossparaitem);
+		stop = (struct crossparaitem *)stk_top(crossparastk);
+		if (stop)
+		    *sitem = *stop;
+		else
+		    sitem->seen_quote = sitem->seen_lcont = 0;
+
+		if (prev_para_type == para_Bullet ||
+		    prev_para_type == para_NumberedList ||
+		    prev_para_type == para_Description) {
+		    sitem->type = c_lcont;
+		    sitem->seen_lcont = 1;
+		    par.type = para_LcontPush;
+		    prev_para_type = par.type;
+		    addpara(par, ret);
+		} else {
+		    /*
+		     * Push a null item on the cross-para stack so that
+		     * when we see the corresponding closing brace we
+		     * don't give a cascade error.
+		     */
+		    sitem->type = -1;
+		    error(err_misplacedlcont, &t.pos);
+		}
 	    } else {
 		/*
-		 * Push a null item on the cross-para stack so that
-		 * when we see the corresponding closing brace we
-		 * don't give a cascade error.
+		 * \quote causes a group of paragraphs to be
+		 * block-quoted (typically they will be indented a
+		 * bit).
 		 */
-		sitem->type = -1;
-		sitem->seen_lcont = (stop ? stop->seen_lcont : 0);
-		error(err_misplacedlcont, &t.pos);
+		sitem = mknew(struct crossparaitem);
+		stop = (struct crossparaitem *)stk_top(crossparastk);
+		if (stop)
+		    *sitem = *stop;
+		else
+		    sitem->seen_quote = sitem->seen_lcont = 0;
+		sitem->type = c_quote;
+		sitem->seen_quote = 1;
+		par.type = para_QuotePush;
+		prev_para_type = par.type;
+		addpara(par, ret);
 	    }
 	    stk_push(crossparastk, sitem);
 	    continue;
@@ -664,6 +690,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		switch (sitem->type) {
 		  case c_lcont:
 		    par.type = para_LcontPop;
+		    prev_para_type = par.type;
+		    addpara(par, ret);
+		    break;
+		  case c_quote:
+		    par.type = para_QuotePop;
 		    prev_para_type = par.type;
 		    addpara(par, ret);
 		    break;
@@ -747,8 +778,10 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		par.type == para_Appendix ||
 		par.type == para_UnnumberedChapter) {
 		struct crossparaitem *sitem = stk_top(crossparastk);
-		if (sitem && sitem->seen_lcont) {
-		    error(err_sectmarkerinlcont, &t.pos);
+		if (sitem && (sitem->seen_lcont || sitem->seen_quote)) {
+		    error(err_sectmarkerinblock,
+			  &t.pos,
+			  (sitem->seen_lcont ? "lcont" : "quote"));
 		}
 	    }
 

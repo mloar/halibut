@@ -226,12 +226,20 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     /* Do the main document */
     for (p = sourceform; p; p = p->next) switch (p->type) {
 
+      case para_QuotePush:
+	nesting += 2;
+	break;
+      case para_QuotePop:
+	nesting -= 2;
+	assert(nesting >= 0);
+	break;
+
       case para_LcontPush:
-	nesting++;
+	nesting += nestindent;
 	break;
       case para_LcontPop:
-	assert(nesting > 0);
-	nesting--;
+	nesting -= nestindent;
+	assert(nesting >= 0);
 	break;
 
 	/*
@@ -266,8 +274,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Rule:
-	text_rule(fp, conf.indent + nestindent*nesting,
-		  conf.width - nestindent*nesting);
+	text_rule(fp, conf.indent + nesting, conf.width - nesting);
 	break;
 
       case para_Normal:
@@ -309,8 +316,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	    body = p->words;
 	}
 	text_para(fp, prefix, prefixextra, body,
-		  conf.indent + nestindent*nesting + indentb, indenta,
-		  conf.width - nestindent*nesting - indentb - indenta);
+		  conf.indent + nesting + indentb, indenta,
+		  conf.width - nesting - indentb - indenta);
 	if (wp) {
 	    wp->next = NULL;
 	    free_word_list(body);
@@ -319,8 +326,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 
       case para_Code:
 	text_codepara(fp, p->words,
-		      conf.indent + nestindent*nesting + conf.indent_code,
-		      conf.width - nestindent*nesting - 2 * conf.indent_code);
+		      conf.indent + nesting + conf.indent_code,
+		      conf.width - nesting - 2 * conf.indent_code);
 	break;
     }
 

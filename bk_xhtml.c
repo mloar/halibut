@@ -1142,6 +1142,12 @@ static void xhtml_do_paras(FILE *fp, paragraph *p)
 	    goto closeofflist;	       /* ick */
 	}
 	break;
+      case para_QuotePush:
+	fprintf(fp, "<blockquote>\n");
+	break;
+      case para_QuotePop:
+	fprintf(fp, "</blockquote>\n");
+	break;
 
       case para_Bullet:
       case para_NumberedList:
