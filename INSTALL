@@ -1,0 +1,61 @@
+Installation guide for Halibut
+==============================
+
+This file is a guide to building and installing the documentation
+utility `Halibut' from its source archive.
+
+If you are reading this, then you have probably already unpacked the
+source archive somewhere.
+
+Building Halibut
+----------------
+
+If you have GNU make and gcc, you should simply be able to type
+`make'. The Makefile will generate a `build' subdirectory, and will
+put all the object files and binaries in there.
+
+Halibut unfortunately does not yet come with an autoconf-generated
+makefile, so if you do not have these utilities then you will have
+to do the build manually. Look in the master `Makefile' to find the
+list of source modules (they will be listed on the line starting
+`MODULES :=', and continued on lines starting `MODULES +='), compile
+those files with the C compiler of your choice, and link them
+together into a binary. In addition to the modules on that list, you
+will also need to compile `version.c', and if you wish your Halibut
+binary to identify itself with a version number then you will have
+to define the preprocessor symbol `VERSION' to the required version
+number string. On Unix this can be done with a command such as
+
+  cc -c -DVERSION=\"0.9\" version.c
+
+Halibut's source files are intended to be almost entirely portable
+ANSI C. If they fail to compile and run correctly on your compiler,
+this might very well be considered a bug.
+
+Building the Halibut manual
+---------------------------
+
+Once you have built Halibut itself, you might well want to build its
+manual. If you're using GNU make, you can do this just by changing
+into the `doc' subdirectory and typing `make'. (This relies on the
+Halibut binary you built in the previous step being present in the
+`build' subdirectory.)
+
+Failing that, you will need to read the Makefile and run a manual
+Halibut command, of the form
+
+  halibut --text=halibut.txt --html blurb.but intro.but [...] index.but
+
+(The precise list of .but files is given at the top of doc/Makefile.)
+
+This will build plain text documentation in `halibut.txt', and a set
+of HTML files (*.html). It will also build a short man page
+`halibut.1', although this is by no means a replacement for the full
+manual.
+
+Installing Halibut
+------------------
+
+Halibut requires no additional data files. Simply install the
+binary, man page and full documentation in appropriate places for
+your system.

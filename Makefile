@@ -1,6 +1,14 @@
 # Halibut master makefile
 
-# Requires a compiler with -MD support, currently
+# Currently depends on gcc, because:
+#  - the dependency tracking uses -MD in order to avoid needing an
+#    explicit `make depend' step
+#  - the definition of CFLAGS includes the gcc-specific flag
+#    `-Wall'
+#
+# Currently depends on GNU make, because:
+#  - the Makefile uses GNU ifdef / ifndef commands and GNU make `%'
+#    pattern rules
 
 # `make' from top level will build in directory `build'
 # `make BUILDDIR=foo' from top level will build in directory foo
