@@ -10,9 +10,6 @@
  *    sensible. Perhaps for the topmost section in the file, no
  *    fragment should be used? (Though it should probably still be
  *    _there_ even if unused.)
- * 
- *  - free up all the data we have allocated while running this
- *    backend.
  */
 
 #include <stdio.h>
@@ -465,7 +462,8 @@ paragraph *html_config_filename(char *filename)
 }
 
 void html_backend(paragraph *sourceform, keywordlist *keywords,
-		  indexdata *idx, void *unused) {
+		  indexdata *idx, void *unused)
+{
     paragraph *p;
     htmlconfig conf;
     htmlfilelist files = { NULL, NULL, NULL, NULL, NULL };
@@ -1401,8 +1399,73 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     /*
-     * FIXME: Free all the working data.
+     * Free all the working data.
      */
+    sfree(conf.asect);
+    sfree(conf.single_filename);
+    sfree(conf.contents_filename);
+    sfree(conf.index_filename);
+    sfree(conf.template_filename);
+    sfree(conf.template_fragment);
+    {
+	htmlfragment *frag;
+	while ( (frag = (htmlfragment *)delpos234(files.frags, 0)) != NULL ) {
+	    /*
+	     * frag->fragment is dynamically allocated, but will be
+	     * freed when we process the htmlsect structure which
+	     * it is attached to.
+	     */
+	    sfree(frag);
+	}
+	freetree234(files.frags);
+    }
+    {
+	htmlsect *sect, *tmp;
+	sect = sects.head;
+	while (sect) {
+	    tmp = sect->next;
+	    sfree(sect->fragment);
+	    sfree(sect);
+	    sect = tmp;
+	}
+	sect = nonsects.head;
+	while (sect) {
+	    tmp = sect->next;
+	    sfree(sect->fragment);
+	    sfree(sect);
+	    sect = tmp;
+	}
+    }
+    {
+	htmlfile *file, *tmp;
+	file = files.head;
+	while (file) {
+	    tmp = file->next;
+	    sfree(file->filename);
+	    sfree(file);
+	    file = tmp;
+	}
+    }
+    {
+	int i;
+	indexentry *entry;
+	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
+	    htmlindex *hi = (htmlindex *)entry->backend_data;
+	    sfree(hi);
+	}
+    }
+    {
+	paragraph *p;
+	word *w;
+	for (p = sourceform; p; p = p->next)
+	    for (w = p->words; w; w = w->next)
+		if (w->type == word_IndexRef) {
+		    htmlindexref *hr = (htmlindexref *)w->private_data;
+		    assert(hr != NULL);
+		    sfree(hr->fragment);
+		    sfree(hr);
+		}
+    }
 }
 
 static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
