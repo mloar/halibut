@@ -579,78 +579,19 @@ static int pdf_convert(wchar_t *s, char **result) {
     return ok;
 }
 
-static void pdf_rdaddwc(rdstringc *rs, word *text) {
-    char *c;
-
-    for (; text; text = text->next) switch (text->type) {
-      case word_HyperLink:
-      case word_HyperEnd:
-      case word_UpperXref:
-      case word_LowerXref:
-      case word_XrefEnd:
-      case word_IndexRef:
-	break;
-
-      case word_Normal:
-      case word_Emph:
-      case word_Code:
-      case word_WeakCode:
-      case word_WhiteSpace:
-      case word_EmphSpace:
-      case word_CodeSpace:
-      case word_WkCodeSpace:
-      case word_Quote:
-      case word_EmphQuote:
-      case word_CodeQuote:
-      case word_WkCodeQuote:
-	assert(text->type != word_CodeQuote &&
-	       text->type != word_WkCodeQuote);
-	if (towordstyle(text->type) == word_Emph &&
-	    (attraux(text->aux) == attr_First ||
-	     attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (towordstyle(text->type) == word_Code &&
-		 (attraux(text->aux) == attr_First ||
-		  attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '\'');	       /* FIXME: configurability */
-	if (removeattr(text->type) == word_Normal) {
-	    if (pdf_convert(text->text, &c))
-		rdaddsc(rs, c);
-	    else
-		pdf_rdaddwc(rs, text->alt);
-	    sfree(c);
-	} else if (removeattr(text->type) == word_WhiteSpace) {
-	    rdaddc(rs, ' ');
-	} else if (removeattr(text->type) == word_Quote) {
-	    rdaddc(rs, '\''); /* FIXME: configurability */
-	}
-	if (towordstyle(text->type) == word_Emph &&
-	    (attraux(text->aux) == attr_Last ||
-	     attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '_');	       /* FIXME: configurability */
-	else if (towordstyle(text->type) == word_Code &&
-		 (attraux(text->aux) == attr_Last ||
-		  attraux(text->aux) == attr_Only))
-	    rdaddc(rs, '\'');	       /* FIXME: configurability */
-	break;
-    }
-}
-
 static int make_outline(object *parent, outline_element *items, int n,
 			int open)
 {
     int level, totalcount = 0;
     outline_element *itemp;
     object *curr, *prev = NULL, *first = NULL, *last = NULL;
-    para_data *pdata;
 
     assert(n > 0);
 
     level = items->level;
 
     while (n > 0) {
-	rdstringc rs = {0, 0, NULL};
-	char *p;
+	char *title, *p;
 
 	/*
 	 * Here we expect to be sitting on an item at the given
@@ -659,21 +600,14 @@ static int make_outline(object *parent, outline_element *items, int n,
 	 */
 	assert(items->level == level);
 
-	if (level == 1 && items->para->kwtext) {
-	    pdf_rdaddwc(&rs, items->para->kwtext);
-	    rdaddsc(&rs, ": ");
-	} else if (level > 1 && items->para->kwtext2) {
-	    pdf_rdaddwc(&rs, items->para->kwtext2);
-	    rdaddsc(&rs, " ");
-	}
-	pdf_rdaddwc(&rs, items->para->words);
+	pdf_convert(items->pdata->outline_title, &title);
 
 	totalcount++;
 	curr = new_object(parent->list);
 	if (!first) first = curr;
 	last = curr;
 	objtext(curr, "<<\n/Title (");
-	for (p = rs.text; p < rs.text+rs.pos; p++) {
+	for (p = title; *p; p++) {
 	    char c[2];
 	    if (*p == '\\' || *p == '(' || *p == ')')
 		objtext(curr, "\\");
@@ -684,8 +618,7 @@ static int make_outline(object *parent, outline_element *items, int n,
 	objtext(curr, ")\n/Parent ");
 	objref(curr, parent);
 	objtext(curr, "\n/Dest [");
-	pdata = (para_data *)items->para->private_data;
-	objref(curr, (object *)pdata->first->page->spare);
+	objref(curr, (object *)items->pdata->first->page->spare);
 	objtext(curr, " /XYZ null null null]\n");
 	if (prev) {
 	    objtext(curr, "/Prev ");

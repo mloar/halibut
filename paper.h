@@ -123,6 +123,7 @@ enum {
  */
 
 struct para_data_Tag {
+    para_data *next;
     /*
      * Data about the fonts used in this paragraph. Indices are the
      * FONT_* constants defined above.
@@ -140,6 +141,18 @@ struct para_data_Tag {
      */
     line_data *first;		       /* first line in paragraph */
     line_data *last;		       /* last line in paragraph */
+    /*
+     * Some paragraphs have associated graphics; currently this is
+     * nothing more complex than a single black rectangle.
+     */
+    enum {
+	RECT_NONE, RECT_CHAPTER_UNDERLINE, RECT_RULE
+    } rect_type;
+    /*
+     * For constructing the page outline.
+     */
+    int outline_level;		       /* 0=title 1=C 2=H 3=S 4=S2... */
+    wchar_t *outline_title;
 };
 
 struct line_data_Tag {
@@ -269,7 +282,7 @@ struct rect_Tag {
 
 struct outline_element_Tag {
     int level;			       /* 0=title 1=C 2=H 3=S 4=S2... */
-    paragraph *para;
+    para_data *pdata;
 };
 
 /*
