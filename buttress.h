@@ -375,7 +375,7 @@ void index_debug(index *);
  */
 numberstate *number_init(void);
 void number_cfg(numberstate *, paragraph *);
-word *number_mktext(numberstate *, int, int, int, word **, filepos);
+word *number_mktext(numberstate *, int, int, int, word **, filepos, int *);
 void number_free(numberstate *);
 
 /*

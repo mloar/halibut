@@ -116,7 +116,7 @@ void number_cfg(numberstate *state, paragraph *source) {
 }
 
 word *number_mktext(numberstate *state, int para, int aux, int prev,
-		    word **auxret, filepos fpos) {
+		    word **auxret, filepos fpos, int *errflag) {
     word *ret = NULL;
     word **ret2 = &ret;
     word **pret = &ret;
@@ -139,6 +139,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	level = (para == para_Heading ? 0 : aux);
 	if (level > state->oklevel) {
 	    error(err_sectjump, &fpos);
+	    *errflag = TRUE;
 	    return NULL;
 	}
 	state->oklevel = level+1;

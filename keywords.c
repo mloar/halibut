@@ -104,14 +104,7 @@ keywordlist *get_keywords(paragraph *source) {
 	 */
 	source->kwtext = number_mktext(n, source->type, source->aux,
 				       prevpara, &source->kwtext2,
-				       source->fpos);
-	if (!source->kwtext) {
-	    /* There was an error collecting the section numbers.
-	     * number_mktext has reported it; we record it and bail
-	     * out at the end. */
-	    errors = TRUE;
-	    continue;
-	}
+				       source->fpos, &errors);
 	prevpara = source->type;
 
 	if (source->keyword && *source->keyword) {
