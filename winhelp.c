@@ -10,7 +10,6 @@
 /*
  * Still to do:
  * 
- *  - nonbreaking spaces and hyphens will be needed.
  *  - tabs, and tab stop settings in the paragraphinfo.
  * 
  * Potential future features:
@@ -47,6 +46,11 @@
  *    specify their own font descriptors and then just pass a font
  *    descriptor number in to whlp_set_font. This will also mean
  *    removing the WHLP_FONT_* enum in winhelp.h.
+ * 
+ *  - sort out begin_topic. Ideally we should have a separate
+ *    topic_macro function that adds to the existing linkdata for
+ *    the topic, because that's more flexible than a variadic
+ *    function.
  * 
  *  - find out what should happen if a single topiclink crosses
  *    _two_ topicblock boundaries.
@@ -1851,25 +1855,6 @@ int main(void)
     whlp_set_font(h, WHLP_FONT_NORMAL);
     whlp_text(h, "This third topic is almost as boring as the first. Woo!");
     whlp_end_para(h);
-
-#if 0
-    {
-	int i;
-	for (i = 0; i < count234(h->text); i++) {
-	    struct topiclink *link = index234(h->text, i);
-	    FILE *p;
-	    printf("record type %d\n", link->recordtype);
-	    printf("linkdata1: %p\n", link->data1);
-	    p = popen("dump -f", "w");
-	    fwrite(link->data1, 1, link->len1, p);
-	    fclose(p);
-	    printf("linkdata2: %p\n", link->data2);
-	    p = popen("dump -f", "w");
-	    fwrite(link->data2, 1, link->len2, p);
-	    fclose(p);
-	}
-    }
-    #endif
 
     /*
      * Browse sequence.
