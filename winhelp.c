@@ -8,10 +8,6 @@
  */
 
 /*
- * Still to do:
- * 
- *  - tabs, and tab stop settings in the paragraphinfo.
- * 
  * Potential future features:
  * 
  *  - perhaps LZ77 compression? This appears to cause a phase order
@@ -24,6 +20,12 @@
  *    compressor that can guarantee to leave particular bytes in
  *    the stream as literals, and then go back and fix the offsets
  *    up later. Not pleasant.
+ *  
+ *  - It would be good to find out what relation (if any) the LCID
+ *    record in the |SYSTEM section bears to the codepage used in
+ *    the actual help text, so as to be able to vary that if the
+ *    user needs it. For the moment I suspect we're stuck with
+ *    Win1252.
  * 
  *  - tables might be nice.
  * 
@@ -50,7 +52,10 @@
  *  - sort out begin_topic. Ideally we should have a separate
  *    topic_macro function that adds to the existing linkdata for
  *    the topic, because that's more flexible than a variadic
- *    function.
+ *    function. This will be fiddly, though: if it's called before
+ *    whlp_begin_topic then we must buffer macros, and if it's
+ *    called afterwards then we must be able to go back and modify
+ *    the linkdata2 of the topic start block. Foo.
  * 
  *  - find out what should happen if a single topiclink crosses
  *    _two_ topicblock boundaries.
@@ -153,6 +158,7 @@ struct WHLP_tag {
     tree234 *titles;		       /* _also_ stores `context' */
     tree234 *text;		       /* stores `struct topiclink' */
     tree234 *index;		       /* stores `struct indexrec' */
+    tree234 *tabstops;                 /* stores `int' */
     struct file *systemfile;	       /* the |SYSTEM internal file */
     context *ptopic;		       /* primary topic */
     struct topiclink *prevtopic;       /* to link type-2 records together */
@@ -304,6 +310,22 @@ static int idxleaf(const void *av, unsigned char *outbuf)
     PUT_16BIT_LSB_FIRST(outbuf+len, a->count);
     PUT_32BIT_LSB_FIRST(outbuf+len+2, a->offset);
     return len+6;
+}
+
+/*
+ * The internal `tabstops' B-tree stores pointers-to-int. Sorting
+ * is by the low 16 bits of the number (above that is flags).
+ */
+
+static int tabcmp(void *av, void *bv)
+{
+    const int *a = (const int *)av;
+    const int *b = (const int *)bv;
+    if ((*a & 0xFFFF) < (*b & 0xFFFF))
+	return -1;
+    if ((*a & 0xFFFF) > (*b & 0xFFFF))
+	return +1;
+    return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -560,7 +582,14 @@ static void whlp_linkdata_cslong(WHLP h, int which, int data)
 
 static void whlp_para_reset(WHLP h)
 {
+    int *p;
+
     h->para_flags = 0;
+
+    while ( (p = index234(h->tabstops, 0)) != NULL) {
+        delpos234(h->tabstops, 0);
+        sfree(p);
+    }
 }
 
 void whlp_para_attr(WHLP h, int attr_id, int attr_param)
@@ -576,6 +605,21 @@ void whlp_para_attr(WHLP h, int attr_id, int attr_param)
 	else if (attr_param == WHLP_ALIGN_CENTRE)
 	    h->para_flags |= 0x800;
     }
+}
+
+void whlp_set_tabstop(WHLP h, int tabstop, int alignment)
+{
+    int *p;
+
+    if (alignment == WHLP_ALIGN_CENTRE)
+        tabstop |= 0x20000;
+    if (alignment == WHLP_ALIGN_RIGHT)
+        tabstop |= 0x10000;
+
+    p = mknew(int);
+    *p = tabstop;
+    add234(h->tabstops, p);
+    h->para_flags |= 0x0200;
 }
 
 void whlp_begin_para(WHLP h, int para_type)
@@ -620,6 +664,24 @@ void whlp_begin_para(WHLP h, int para_type)
     for (i = WHLP_PARA_SPACEABOVE; i <= WHLP_PARA_FIRSTLINEINDENT; i++) {
 	if (h->para_flags & (1<<i))
 	    whlp_linkdata_csshort(h, 1, h->para_attrs[i]);
+    }
+    if (h->para_flags & 0x0200) {
+        int ntabs;
+        /*
+         * Write out tab stop data.
+         */
+        ntabs = count234(h->tabstops);
+        whlp_linkdata_csshort(h, 1, ntabs);
+        for (i = 0; i < ntabs; i++) {
+            int tab, *tabp;
+            tabp = index234(h->tabstops, i);
+            tab = *tabp;
+            if (tab & 0x30000)
+                tab |= 0x4000;
+            whlp_linkdata_cushort(h, 1, tab & 0xFFFF);
+            if (tab & 0x4000)
+                whlp_linkdata_cushort(h, 1, tab >> 16);
+        }
     }
 
     /*
@@ -668,6 +730,18 @@ void whlp_end_hyperlink(WHLP h)
     whlp_linkdata(h, 1, 0x89);
 }
 
+void whlp_tab(WHLP h)
+{
+    /*
+     * Write a NUL into linkdata2.
+     */
+    whlp_linkdata(h, 2, 0);
+    /*
+     * Now the formatting command is 0x83.
+     */
+    whlp_linkdata(h, 1, 0x83);
+}
+
 void whlp_text(WHLP h, char *text)
 {
     while (*text) {
@@ -710,6 +784,8 @@ void whlp_end_para(WHLP h)
     /* Hack: accumulate the `blocksize' parameter in the topic header. */
     if (h->prevtopic)
 	h->prevtopic->block_size += 21 + h->link->len1 + h->link->len2;
+
+    h->link = NULL;		       /* this is now in the tree */
 
     whlp_para_reset(h);
 }
@@ -1000,11 +1076,9 @@ static void whlp_standard_systemsection(struct file *f)
     whlp_file_add_short(f, 0);	       /* flags=0 means no compression */
 
     /*
-     * Add some magic locale identifier information. FIXME: it
-     * would be good to find out what relation (if any) this stuff
-     * bears to the codepage used in the actual help text, so as to
-     * be able to vary that if the user needs it. For the moment I
-     * suspect we're stuck with Win1252.
+     * Add some magic locale identifier information. (We ought to
+     * find out something about what all this means; see the TODO
+     * list at the top of the file.)
      */
     whlp_system_record(f, 9, lcid, sizeof(lcid));
     whlp_system_record(f, 11, charset, sizeof(charset));
@@ -1068,14 +1142,6 @@ static void whlp_standard_fontsection(struct file *f)
 	{ FLAG_ITALIC, 24, FAM_ROMAN, 0},
 	/* Code text face: 12-point Courier */
 	{ 0, 24, FAM_MODERN, 1},
-	/* FIXME: dunno what this is for */
-	{ 0, 24, FAM_DECOR, 3},
-	/* FIXME: dunno what this is for */
-	{ 0, 24, FAM_DECOR, 3},
-	/* FIXME: dunno what this is for */
-	{ 0, 24, FAM_DECOR, 3},
-	/* FIXME: dunno what this is for */
-	{ 0, 24, FAM_DECOR, 3},
     };
 
     int i;
@@ -1330,6 +1396,9 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
 
     /* Just for tidiness, seek to the end of the file :-) */
     whlp_file_seek(f, 0, 2);
+
+    /* Clean up. */
+    sfree(page_elements);
 }
 			    
 
@@ -1355,7 +1424,7 @@ static struct file *whlp_new_file(WHLP h, char *name)
 static void whlp_free_file(struct file *f)
 {
     sfree(f->data);
-    sfree(f->name);
+    sfree(f->name);		       /* may be NULL */
     sfree(f);
 }
 
@@ -1434,6 +1503,7 @@ WHLP whlp_new(void)
     ret->titles = newtree234(ttlcmp);
     ret->text = newtree234(NULL);
     ret->index = newtree234(idxcmp);
+    ret->tabstops = newtree234(tabcmp);
 
     /*
      * Some standard files.
@@ -1451,6 +1521,7 @@ WHLP whlp_new(void)
      */
     ret->prevtopic = NULL;
     ret->ncontexts = 0;
+    ret->link = NULL;
 
     return ret;
 }
@@ -1578,6 +1649,62 @@ void whlp_close(WHLP h, char *filename)
 void whlp_abandon(WHLP h)
 {
     struct file *f;
+    struct indexrec *idx;
+    struct topiclink *link;
+    context *ctx;
+
+    /* Get rid of any lingering tab stops. */
+    whlp_para_reset(h);
+
+    /* Delete the (now empty) tabstops tree. */
+    freetree234(h->tabstops);
+
+    /* Delete the index tree and all its entries. */
+    while ( (idx = index234(h->index, 0)) != NULL) {
+	delpos234(h->index, 0);
+	sfree(idx->term);
+	sfree(idx);
+    }
+    freetree234(h->index);
+
+    /* Delete the text tree and all its topiclinks. */
+    while ( (link = index234(h->text, 0)) != NULL) {
+	delpos234(h->text, 0);
+	sfree(link->data1);	       /* may be NULL */
+	sfree(link->data2);	       /* may be NULL */
+	sfree(link);
+    }
+    freetree234(h->text);
+
+    /* There might be an unclosed paragraph in h->link. */
+    if (h->link)
+	sfree(h->link);		       /* if so it won't have data1 or data2 */
+
+    /*
+     * `titles' contains copies of the `contexts' entries, so we
+     * don't need to free them here.
+     */
+    freetree234(h->titles);
+
+    /*
+     * `contexts' and `pre_contexts' _both_ contain contexts that
+     * need freeing. (pre_contexts shouldn't contain any, unless
+     * the help generation was abandoned half-way through.)
+     */
+    while ( (ctx = index234(h->pre_contexts, 0)) != NULL) {
+	delpos234(h->index, 0);
+	sfree(ctx->name);
+	sfree(ctx->title);
+	sfree(ctx);
+    }
+    freetree234(h->pre_contexts);
+    while ( (ctx = index234(h->contexts, 0)) != NULL) {
+	delpos234(h->contexts, 0);
+	sfree(ctx->name);
+	sfree(ctx->title);
+	sfree(ctx);
+    }
+    freetree234(h->contexts);
 
     /*
      * Free all the internal files.
@@ -1844,6 +1971,41 @@ int main(void)
 	      " illustrate this with a ludicrously long paragraph, but that"
 	      " would get very tedious very quickly. Instead I'll just waffle"
 	      " on pointlessly for a little bit and then shut up.");
+    whlp_end_para(h);
+
+    whlp_set_tabstop(h, 36, WHLP_ALIGN_LEFT);
+    whlp_para_attr(h, WHLP_PARA_LEFTINDENT, 36);
+    whlp_para_attr(h, WHLP_PARA_FIRSTLINEINDENT, -36);
+    whlp_para_attr(h, WHLP_PARA_SPACEABOVE, 12);
+    whlp_begin_para(h, WHLP_PARA_SCROLL);
+    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_text(h, "\225");              /* bullet */
+    whlp_tab(h);
+    whlp_text(h, "This is a paragraph with a bullet. With any luck it should"
+              " work exactly like it used to in the old NASM help file.");
+    whlp_end_para(h);
+
+    whlp_set_tabstop(h, 128, WHLP_ALIGN_RIGHT);
+    whlp_set_tabstop(h, 256, WHLP_ALIGN_CENTRE);
+    whlp_set_tabstop(h, 384, WHLP_ALIGN_LEFT);
+    whlp_para_attr(h, WHLP_PARA_SPACEABOVE, 12);
+    whlp_begin_para(h, WHLP_PARA_SCROLL);
+    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_text(h, "Ooh:"); whlp_tab(h);
+    whlp_text(h, "Right?"); whlp_tab(h);
+    whlp_text(h, "Centre?"); whlp_tab(h);
+    whlp_text(h, "Left?");
+    whlp_end_para(h);
+
+    whlp_set_tabstop(h, 128, WHLP_ALIGN_RIGHT);
+    whlp_set_tabstop(h, 256, WHLP_ALIGN_CENTRE);
+    whlp_set_tabstop(h, 384, WHLP_ALIGN_LEFT);
+    whlp_begin_para(h, WHLP_PARA_SCROLL);
+    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_text(h, "Aah:"); whlp_tab(h);
+    whlp_text(h, "R?"); whlp_tab(h);
+    whlp_text(h, "C?"); whlp_tab(h);
+    whlp_text(h, "L?");
     whlp_end_para(h);
 
     sprintf(mymacro, "CBB(\"btn_up\",\"JI(`',`%s')\");EB(\"btn_up\")",
