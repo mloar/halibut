@@ -11,8 +11,6 @@
  *    fragment should be used? (Though it should probably still be
  *    _there_ even if unused.)
  * 
- *  - nonbreaking spaces.
- * 
  *  - free up all the data we have allocated while running this
  *    backend.
  */
@@ -174,9 +172,10 @@ static void element_attr(htmloutput *ho, char const *name, char const *value);
 static void element_attr_w(htmloutput *ho, char const *name,
 			   wchar_t const *value);
 static void html_text(htmloutput *ho, wchar_t const *str);
+static void html_text_nbsp(htmloutput *ho, wchar_t const *str);
 static void html_text_limit(htmloutput *ho, wchar_t const *str, int maxlen);
 static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
-				     int maxlen, int quote_quotes);
+				     int maxlen, int quote_quotes, int nbsp);
 static void html_nl(htmloutput *ho);
 static void html_raw(htmloutput *ho, char *text);
 static void html_raw_as_attr(htmloutput *ho, char *text);
@@ -1593,8 +1592,8 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	    else
 		html_text(ho, cfg->rquote);
 	} else {
-	    if (cvt_ok(ho->restrict_charset, w->text) || !w->alt)
-		html_text(ho, w->text);
+	    if (!w->alt || cvt_ok(ho->restrict_charset, w->text))
+		html_text_nbsp(ho, w->text);
 	    else
 		html_words(ho, w->alt, flags, file, keywords, cfg);
 	}
@@ -1669,17 +1668,24 @@ static void html_charset_cleanup(htmloutput *ho)
 	fwrite(outbuf, 1, bytes, ho->fp);
 }
 
-static void return_to_neutral(htmloutput *ho)
+static void return_mostly_to_neutral(htmloutput *ho)
 {
-    if (ho->state == HO_IN_TEXT) {
-	html_charset_cleanup(ho);
-    } else if (ho->state == HO_IN_EMPTY_TAG && is_xhtml(ho->ver)) {
+    if (ho->state == HO_IN_EMPTY_TAG && is_xhtml(ho->ver)) {
 	fprintf(ho->fp, " />");
     } else if (ho->state == HO_IN_EMPTY_TAG || ho->state == HO_IN_TAG) {
 	fprintf(ho->fp, ">");
     }
 
     ho->state = HO_NEUTRAL;
+}
+
+static void return_to_neutral(htmloutput *ho)
+{
+    if (ho->state == HO_IN_TEXT) {
+	html_charset_cleanup(ho);
+    }
+
+    return_mostly_to_neutral(ho);
 }
 
 static void element_open(htmloutput *ho, char const *name)
@@ -1734,24 +1740,31 @@ static void element_attr_w(htmloutput *ho, char const *name,
 {
     html_charset_cleanup(ho);
     fprintf(ho->fp, " %s=\"", name);
-    html_text_limit_internal(ho, value, 0, TRUE);
+    html_text_limit_internal(ho, value, 0, TRUE, FALSE);
     html_charset_cleanup(ho);
     fputc('"', ho->fp);
 }
 
 static void html_text(htmloutput *ho, wchar_t const *text)
 {
-    html_text_limit(ho, text, 0);
+    return_mostly_to_neutral(ho);
+    html_text_limit_internal(ho, text, 0, FALSE, FALSE);
+}
+
+static void html_text_nbsp(htmloutput *ho, wchar_t const *text)
+{
+    return_mostly_to_neutral(ho);
+    html_text_limit_internal(ho, text, 0, FALSE, TRUE);
 }
 
 static void html_text_limit(htmloutput *ho, wchar_t const *text, int maxlen)
 {
-    return_to_neutral(ho);
-    html_text_limit_internal(ho, text, maxlen, FALSE);
+    return_mostly_to_neutral(ho);
+    html_text_limit_internal(ho, text, maxlen, FALSE, FALSE);
 }
 
 static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
-				     int maxlen, int quote_quotes)
+				     int maxlen, int quote_quotes, int nbsp)
 {
     int textlen = ustrlen(text);
     char outbuf[256];
@@ -1767,7 +1780,8 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 	    if (text[lenbefore] == L'<' ||
 		text[lenbefore] == L'>' ||
 		text[lenbefore] == L'&' ||
-		(text[lenbefore] == L'"' && quote_quotes))
+		(text[lenbefore] == L'"' && quote_quotes) ||
+		(text[lenbefore] == L' ' && nbsp))
 		break;
 	lenafter = lenbefore;
 	bytes = charset_from_unicode(&text, &lenafter, outbuf, lenof(outbuf),
@@ -1797,7 +1811,10 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 		fprintf(ho->fp, "&amp;");
 	    else if (*text == L'"')
 		fprintf(ho->fp, "&quot;");
-	    else
+	    else if (*text == L' ') {
+		assert(nbsp);
+		fprintf(ho->fp, "&nbsp;");
+	    } else
 		assert(!"Can't happen");
 	    text++, textlen--;
 	}
