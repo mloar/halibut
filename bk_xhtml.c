@@ -68,7 +68,7 @@ typedef struct {
   int leaf_smallest_contents;
   int include_version_id;
   wchar_t *author, *description;
-  wchar_t *head_end, *body, *body_start, *body_end, *address_start, *address_end;
+  wchar_t *head_end, *body, *body_start, *body_end, *address_start, *address_end, *nav_attrs;
   int suppress_address;
 } xhtmlconfig;
 
@@ -132,6 +132,7 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   ret.body_end = NULL;
   ret.address_start = NULL;
   ret.address_end = NULL;
+  ret.nav_attrs = NULL;
   ret.suppress_address = FALSE;
 
   for (; source; source = source->next)
@@ -179,6 +180,8 @@ static xhtmlconfig xhtml_configure(paragraph *source)
         ret.address_start = uadv(source->keyword);
       } else if (!ustricmp(source->keyword, L"xhtml-address-end")) {
         ret.address_end = uadv(source->keyword);
+      } else if (!ustricmp(source->keyword, L"xhtml-navigation-attributes")) {
+        ret.nav_attrs = uadv(source->keyword);
       }
     }
   }
@@ -649,10 +652,16 @@ static char* xhtml_index_filename = "Index.html";
 static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
 {
   xhtmlfile *xhtml_next_file = NULL;
-  if (xhtml_last_file==NULL) {
-    fprintf(fp, "<p>Previous | ");
+  fprintf(fp, "<p");
+  if (conf.nav_attrs!=NULL) {
+    fprintf(fp, " %ls>", conf.nav_attrs);
   } else {
-    fprintf(fp, "<p><a href='%s'>Previous</a> | ", xhtml_last_file->filename);
+    fprintf(fp, ">");
+  }
+  if (xhtml_last_file==NULL) {
+    fprintf(fp, "Previous | ");
+  } else {
+    fprintf(fp, "<a href='%s'>Previous</a> | ", xhtml_last_file->filename);
   }
   fprintf(fp, "<a href='Contents.html'>Contents</a> | ");
   if (file != NULL) { /* otherwise we're doing nav links for the index */
@@ -941,9 +950,13 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
     fprintf(fp, "<ul>\n");
   }
   fprintf(fp, "<li><a href=\"%s#%s\">", section->file->filename, section->fragment);
-/*  if (section->para->kwtext) {
+  if (section->para->kwtext) {
     xhtml_para(fp, section->para->kwtext);
-  } else */if (section->para->words) {
+    if (section->para->words) {
+      fprintf(fp, ": ");
+    }
+  }
+  if (section->para->words) {
     xhtml_para(fp, section->para->words);
   }
   fprintf(fp, "</a></li>\n");
