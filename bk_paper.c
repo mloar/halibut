@@ -12,9 +12,6 @@
 /*
  * To be done:
  * 
- *  - set up contents section now we know what sections begin on
- *    which pages
- * 
  *  - index
  * 
  *  - header/footer? Page numbers at least would be handy. Fully
@@ -1553,7 +1550,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
      */
     pdata->fonts[FONT_NORMAL] = conf->cb;
     pdata->fonts[FONT_EMPH] = conf->co;
-    pdata->fonts[FONT_CODE] = conf->cb;
+    pdata->fonts[FONT_CODE] = conf->cr;
     pdata->sizes[FONT_NORMAL] =
 	pdata->sizes[FONT_EMPH] =
 	pdata->sizes[FONT_CODE] = 12;
