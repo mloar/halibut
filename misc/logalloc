@@ -27,15 +27,23 @@ while (<>) {
       if /^(\S+) (\S+) free\((\S+)\)$/;
   $null = $1, next if /^null pointer is (\S+)$/;
   if ($in ne "") {
-    $bad = &null($in) ? "null" : "bad";
-    $errors=1, print "($.) $file:$line: attempt to $call() $bad pointer\n"
+    if (&null($in)) {
+      $bad = "null pointer";
+    } elsif (defined $lastalloc{$in}) {
+      $bad = "already-freed pointer (last alloc $lastalloc{$in}, last free $lastfree{$in})";
+    } else {
+      $bad = "bad pointer";
+    }
+    $errors=1, print "($.) $file:$line: $call() $bad\n"
       if $record{$in} eq "";
+    $lastfree{$in}="($.) $file:$line";
     $record{$in}="";
   }
   if ($out ne "" && !&null($out)) {
     $errors=1, print "($.) $file:$line: $call() returned already ".
       "allocated pointer\n" if $record{$out} ne "";
     $record{$out}="($.) $file:$line: $call()";
+    $lastalloc{$out}="($.) $file:$line";
   }
 }
 
