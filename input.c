@@ -999,8 +999,16 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		    }
 		    if (sitem->type & stack_idx) {
 			indexword->text = ustrdup(indexstr.text);
-			if (index_downcase)
+			if (index_downcase) {
+			    word *w;
+
 			    ustrlow(indexword->text);
+			    ustrlow(indexstr.text);
+
+			    for (w = idxwordlist; w; w = w->next)
+				if (w->text)
+				    ustrlow(w->text);
+			}
 			indexing = FALSE;
 			rdadd(&indexstr, L'\0');
 			index_merge(idx, FALSE, indexstr.text, idxwordlist);
