@@ -55,7 +55,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     int i;
     int nesting;
     indexentry *ie;
-    int done_contents_topic;
+    int done_contents_topic = FALSE;
 
     filename = "output.hlp";	       /* FIXME: configurability */
     cntname = "output.cnt";	       /* corresponding contents file */
