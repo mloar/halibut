@@ -6,167 +6,200 @@
 #include <stdlib.h>
 #include "buttress.h"
 
-#if 0
-typedef struct tag_node23 node23;
-typedef struct tag_tree23 tree23;
-typedef struct tag_elem23 elem23;
+typedef struct indextag_Tag indextag;
+typedef struct indexentry_Tag indexentry;
 
-int cmp23(elem23 *, elem23 *);
-
-struct tag_elem23 {
-    char *string;
+struct index_Tag {
+    tree23 *tags;		       /* holds type `indextag' */
+    tree23 *entries;		       /* holds type `indexentry' */
 };
 
-struct tag_tree23 {
-    node23 *root;
+struct indextag_Tag {
+    wchar_t *name;
+    word *implicit_text;
+    word **explicit_texts;
+    int nexplicit, explicit_size;
+    int nrefs;
+    indexentry **refs;		       /* array of entries referenced by tag */
 };
 
-struct tag_node23 {
-    node23 *parent;
-    node23 *kids[3];
-    elem23 *elems[2];
+struct indexentry_Tag {
+    word *text;
+    void *backend_data;		       /* private to back end */
+};
+
+index *make_index(void) {
+    index *ret = mknew(index);
+    ret->tags = newtree23();
+    ret->entries = newtree23();
+    return ret;
 }
 
-int cmp23(elem23 *a, elem23 *b) {
-    return strcmp(a->string, b->string);
+static indextag *make_indextag(void) {
+    indextag *ret = mknew(indextag);
+    ret->name = NULL;
+    ret->implicit_text = NULL;
+    ret->explicit_texts = NULL;
+    ret->nexplicit = ret->explicit_size = ret->nrefs = 0;
+    ret->refs = NULL;
+    return ret;
 }
 
-void add23(tree23 *t, elem23 *e) {
-    node23 *n, *left, *right;
-    int c;
+static int compare_tags(void *av, void *bv) {
+    indextag *a = (indextag *)av, *b = (indextag *)bv;
+    return ustricmp(a->name, b->name);
+}
 
-    if (t->root == NULL) {
-	t->root = mknew(node23);
-	t->root->elems[1] = NULL;
-	t->root->kids[0] = t->root->kids[1] = t->root->kids[2] = NULL;
-	t->root->parent = NULL;
-	t->root->elems[0] = e;
-	return;
-    }
+static int compare_entries(void *av, void *bv) {
+    indexentry *a = (indexentry *)av, *b = (indexentry *)bv;
+    return compare_wordlists(a->text, b->text);    
+}
 
-    np = &t->root;
-    while (*np) {
-	n = *np;
-	c = cmp32(e, n->elems[0]);
-	if (c == 0) {
-	    printf("present already\n");
-	    return;
-	} else if (c < 0) {
-	    np = &n->kids[0];
+/*
+ * Add a \IM. `tags' points to a zero-terminated chain of
+ * zero-terminated strings ("first\0second\0thirdandlast\0\0").
+ * `text' points to a word list.
+ *
+ * Guarantee on calling sequence: all implicit merges are given
+ * before the explicit ones.
+ */
+void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
+    indextag *t, *existing;
+
+    /*
+     * FIXME: want to warn on overlapping source sets.
+     */
+    for (; *tags; tags += 1+ustrlen(tags)) {
+	t = make_indextag();
+	t->name = tags;
+	existing = add23(idx->tags, t, compare_tags);
+	if (existing == t) {
+	    /*
+	     * Every tag has an implicit \IM. So if this tag
+	     * doesn't exist and we're explicit, then we should
+	     * warn (and drop it, since it won't be referenced).
+	     */
+	    if (is_explicit) {
+		error(err_nosuchidxtag, tags);
+		continue;
+	    }
+	    /*
+	     * Otherwise, this is a new tag with an implicit \IM.
+	     */
+	    t->name = ustrdup(tags);
+	    t->implicit_text = text;
 	} else {
-	    if (n->elems[1] == NULL || (c = cmp32(e, n->elems[1])) < 0)
-		np = &n->kids[1];
-	    else if (c > 0)
-		np = &n->kids[2];
-	    else {
-		printf("present already\n");
-		return;
+	    sfree(t);
+	    t = existing;
+	    if (!is_explicit) {
+ 		/*
+		 * An implicit \IM for a tag that's had an implicit
+		 * \IM before. FIXME: we should check the text
+		 * against the existing text and warn on
+		 * differences. And check the tag for case match
+		 * against the existing tag, likewise.
+		 */
+	    } else {
+		/*
+		 * An explicit \IM added to a valid tag. In
+		 * particular, this removes the implicit \IM if
+		 * present.
+		 */
+		if (t->implicit_text) {
+		    free_word_list(t->implicit_text);
+		    t->implicit_text = NULL;
+		}
+		if (t->nexplicit >= t->explicit_size) {
+		    t->explicit_size = t->nexplicit + 8;
+		    t->explicit_texts = resize(t->explicit_texts,
+					       t->explicit_size);
+		}
+		t->explicit_texts[t->nexplicit++] = text;
 	    }
 	}
     }
+}
 
-    /*
-     * We need to insert the new element in n at position np.
-     */
-    left = NULL;
-    right = NULL;
-    while (n) {
-	if (n->elems[1] == NULL) {
-	    /*
-	     * Insert in a 2-node; simple.
-	     */
-	    if (np == &n->kids[0]) {
-		n->kids[2] = n->kids[1];
-		n->elems[1] = n->elems[0];
-		n->kids[1] = right;
-		n->elems[0] = e;
-		n->kids[0] = left;
-	    } else { /* np == &n->kids[1] */
-		n->kids[2] = right;
-		n->elems[1] = e;
-		n->kids[1] = left;
-	    }
-	    break;
+/*
+ * Build the final-form index. We now have every tag, with every
+ * \IM, set up in a 2-3 tree indexed by tag. We now want to collate
+ * the RHSes of the \IMs, and sort by final form, and decorate the
+ * entries in the original 2-3 tree with pointers to the RHS
+ * entries.
+ */
+void build_index(index *i) {
+    indextag *t, **ta;
+    enum23 e;
+    int j;
+
+    for (t = (indextag *)first23(i->tags, &e); t;
+	 t = (indextag *)next23(i->tags, &e)) {
+	if (t->implicit_text) {
+	    t->nrefs = 1;
+	    ta = &t->implicit_text;
 	} else {
-	    node23 *m = mknew(node23);
-	    /*
-	     * Insert in a 3-node; split into two 2-nodes and move
-	     * focus up a level.
-	     */
-	    if (np == &n->kids[0]) {
-		m->kids[0] = left;
-		m->elems[0] = e;
-		m->kids[1] = right;
-		e = n->elems[0];
-		n->kids[0] = n->kids[1];
-		n->elems[1] = n->elems[0];
-		n->kids[1] = n->kids[2];
-	    } else if (np == &n->kids[1]) {
-		m->kids[0] = n->kids[0];
-		m->elems[0] = n->elems[0];
-		m->kids[1] = left;
-		/* e = e; */
-		n->kids[0] = right;
-		n->elems[0] = n->elems[1];
-		n->kids[1] = n->kids[2];
-	    } else { /* np == &n->kids[2] */
-		m->kids[0] = n->kids[0];
-		m->elems[0] = n->elems[0];
-		m->kids[1] = n->kids[1];
-		e = n->elems[1];
-		n->kids[0] = left;
-		n->elems[0] = e;
-		n->kids[1] = right;
-	    }
-	    m->kids[2] = n->kids[2] = NULL;
-	    m->elems[1] = n->elems[1] = NULL;
-	    left = m;
-	    right = n;
+	    t->nrefs = t->nexplicit;
+	    ta = t->explicit_texts;
 	}
-	n = n->parent;
-    }
-
-    /*
-     * If we've come out of here by `break', n will still be
-     * non-NULL and we've finished. If we've come here because n is
-     * NULL, we need to create a new root for the tree because the
-     * old one has just split into two.
-     */
-    if (!n) {
-	t->root = mknew(node23);
-	t->root->kids[0] = left;
-	t->root->elems[0] = e;
-	t->root->kids[1] = right;
-	t->root->elems[1] = NULL;
-	t->root->kids[2] = NULL;
+	t->refs = mknewa(indexentry *, t->nrefs);
+	for (j = 0; j < t->nrefs; j++) {
+	    indexentry *ent = mknew(indexentry);
+	    ent->text = *ta++;
+	    t->refs[j] = add23(i->entries, ent, compare_entries);
+	    if (t->refs[j] != ent)     /* duplicate */
+		sfree(ent);
+	}
     }
 }
 
-void find23(tree23 *t, elem23 *e) {
-}
-#endif
+void cleanup_index(index *i) {
+    indextag *t;
+    indexentry *ent;
+    enum23 e;
+    int j;
 
+    for (t = (indextag *)first23(i->tags, &e); t;
+	 t = (indextag *)next23(i->tags, &e)) {
+	sfree(t->name);
+	free_word_list(t->implicit_text);
+	sfree(t->explicit_texts);
+	sfree(t->refs);
+	sfree(t);
+    }
+    freetree23(i->tags);
+    for (ent = (indexentry *)first23(i->entries, &e); ent;
+	 ent = (indexentry *)next23(i->entries, &e)) {
+	sfree(ent);
+    }
+    freetree23(i->entries);
+    sfree(i);
+}
+
+void index_debug(index *i) {
+    indextag *t;
+    enum23 e;
+    int j;
+
+    for (t = (indextag *)first23(i->tags, &e); t;
+	 t = (indextag *)next23(i->tags, &e)) {
+	if (t->implicit_text)
+	    dbg_prtmerge(0, t->name, t->implicit_text);
+	for (j = 0; j < t->nexplicit; j++)
+	    dbg_prtmerge(1, t->name, t->explicit_texts[j]);
+    }
+}
+#define DEBUG
+
+#ifdef DEBUG
 static void dbg_prtwordlist(int level, word *w);
 
-void index_merge(int is_explicit, wchar_t *tags, word *text) {
-    wchar_t *wp;
-    printf("\\IM: %splicit: ", is_explicit ? "ex" : "im");
-    if (tags) {
-	wp = tags;
-	while (*wp) {
-	    putchar('\"');
-	    for (; *wp; wp++)
-		putchar(*wp);
-	    putchar('\"');
-	    if (*++wp)
-		printf(", ");
-	}
-    } else
-	printf("(no keyword)");
-    printf(" {\n");
+static void dbg_prtmerge(int is_explicit, wchar_t *tag, word *text) {
+    printf("\\IM: %splicit: \"", is_explicit ? "ex" : "im");
+    for (; *tag; tag++)
+	putchar(*tag);
+    printf("\" {\n");
     dbg_prtwordlist(1, text);
     printf("}\n");
-    free_word_list(text);
 }
 
 static void dbg_prtwordlist(int level, word *w) {
@@ -188,3 +221,4 @@ static void dbg_prtwordlist(int level, word *w) {
 	printf("\n");
     }
 }
+#endif

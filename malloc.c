@@ -9,6 +9,8 @@
 #ifdef LOGALLOC
 #define LOGPARAMS char *file, int line,
 static FILE *logallocfp = NULL;
+static int logline = 2;		       /* off by 1: `null pointer is' */
+static void loginc(void) { }
 static void logallocinit(void) {
     if (!logallocfp) {
 	logallocfp = fopen("malloc.log", "w");
@@ -27,9 +29,11 @@ static void logprintf(char *fmt, ...) {
     va_end(ap);
 }
 #define LOGPRINT(x) ( logallocinit(), logprintf x )
+#define LOGINC do { loginc(); logline++; } while (0)
 #else
 #define LOGPARAMS
 #define LOGPRINT(x)
+#define LOGINC ((void)0)
 #endif
 
 /*
@@ -37,11 +41,14 @@ static void logprintf(char *fmt, ...) {
  * can do nothing except die when it's out of memory anyway
  */
 void *(smalloc)(LOGPARAMS int size) {
-    void *p = malloc(size);
+    void *p;
+    LOGINC;
+    LOGPRINT(("%s %d malloc(%ld)",
+	      file, line, (long)size));
+    p = malloc(size);
     if (!p)
 	fatal(err_nomemory);
-    LOGPRINT(("%s %d malloc(%ld) returns %p\n",
-	      file, line, (long)size, p));
+    LOGPRINT((" returns %p\n", p));
     return p;
 }
 
@@ -50,9 +57,10 @@ void *(smalloc)(LOGPARAMS int size) {
  */
 void (sfree)(LOGPARAMS void *p) {
     if (p) {
-	free(p);
+	LOGINC;
 	LOGPRINT(("%s %d free(%p)\n",
 		  file, line, p));
+	free(p);
     }
 }
 
@@ -62,13 +70,17 @@ void (sfree)(LOGPARAMS void *p) {
 void *(srealloc)(LOGPARAMS void *p, int size) {
     void *q;
     if (p) {
+	LOGINC;
+	LOGPRINT(("%s %d realloc(%p,%ld)",
+		  file, line, p, (long)size));
 	q = realloc(p, size);
-	LOGPRINT(("%s %d realloc(%p,%ld) returns %p\n",
-		  file, line, p, (long)size, q));
+	LOGPRINT((" returns %p\n", q));
     } else {
+	LOGINC;
+	LOGPRINT(("%s %d malloc(%ld)",
+		  file, line, (long)size));
 	q = malloc(size);
-	LOGPRINT(("%s %d malloc(%ld) returns %p\n",
-		  file, line, (long)size, q));
+	LOGPRINT((" returns %p\n", q));
     }
     if (!q)
 	fatal(err_nomemory);

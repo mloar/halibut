@@ -27,6 +27,7 @@ typedef struct keywordlist_Tag keywordlist;
 typedef struct keyword_Tag keyword;
 typedef struct userstyle_Tag userstyle;
 typedef struct numberstate_Tag numberstate;
+typedef struct index_Tag index;
 
 /*
  * Data structure to hold a file name and index, a line and a
@@ -138,7 +139,8 @@ enum {
     err_nestedstyles,		       /* unable to nest text styles */
     err_nestedindex,		       /* unable to nest `\i' thingys */
     err_nosuchkw,		       /* unresolved cross-reference */
-    err_multiBR			       /* multiple \BRs on same keyword */
+    err_multiBR,		       /* multiple \BRs on same keyword */
+    err_nosuchidxtag		       /* \IM on unknown index tag (warning) */
 };
 
 /*
@@ -172,7 +174,9 @@ wchar_t *ustrdup(wchar_t *s);
 char *ustrtoa(wchar_t *s, char *outbuf, int size);
 int ustrlen(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
+wchar_t utolower(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);
+int ustricmp(wchar_t *lhs, wchar_t *rhs);
 wchar_t *ustrlow(wchar_t *s);
 wchar_t *ustrftime(wchar_t *fmt, struct tm *timespec);
 
@@ -201,11 +205,12 @@ stack stk_new(void);
 void stk_free(stack);
 void stk_push(stack, void *);
 void *stk_pop(stack);
+int compare_wordlists(word *a, word *b);
 
 /*
  * input.c
  */
-paragraph *read_input(input *in);
+paragraph *read_input(input *in, index *idx);
 
 /*
  * keywords.c
@@ -232,8 +237,12 @@ void subst_keywords(paragraph *, keywordlist *);
 /*
  * index.c
  */
-/* index_merge takes responsibility for freeing arg 3 but not arg 2 */
-void index_merge(int is_explicit, wchar_t *, word *);
+index *make_index(void);
+void cleanup_index(index *);
+/* index_merge takes responsibility for freeing arg 3 iff implicit; never
+ * takes responsibility for arg 2 */
+void index_merge(index *, int is_explicit, wchar_t *, word *);
+void build_index(index *);
 
 /*
  * contents.c
@@ -252,5 +261,20 @@ void gen_citations(paragraph *, keywordlist *);
  */
 struct userstyle_Tag {
 };
+
+/*
+ * tree23.c
+ */
+typedef struct tree23_Tag tree23;
+typedef struct enum23_Tag {
+    void *node;
+    int posn;
+} enum23;
+tree23 *newtree23(void);
+void freetree23(tree23 *);
+void *add23(tree23 *, void *, int (*cmp)(void *, void *));
+void *find23(tree23 *, void *, int (*cmp)(void *, void *));
+void *first23(tree23 *, enum23 *);
+void *next23(tree23 *, enum23 *);
 
 #endif

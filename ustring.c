@@ -57,12 +57,31 @@ int ustrcmp(wchar_t *lhs, wchar_t *rhs) {
     return 0;
 }
 
+wchar_t utolower(wchar_t c) {
+    if (c == L'\0')
+	return c;		       /* this property needed by ustricmp */
+    /* FIXME: this doesn't even come close */
+    if (c >= 'A' && c <= 'Z')
+	c += 'a'-'A';
+    return c;
+}
+
+int ustricmp(wchar_t *lhs, wchar_t *rhs) {
+    wchar_t lc, rc;
+    while ((lc = utolower(*lhs)) == (rc = utolower(*rhs)) && lc && rc)
+	lhs++, rhs++;
+    if (!lc && !rc)
+	return 0;
+    if (lc < rc)
+	return -1;
+    else
+	return 1;
+}
+
 wchar_t *ustrlow(wchar_t *s) {
     wchar_t *p = s;
     while (*p) {
-	/* FIXME: this doesn't even come close */
-	if (*p >= 'A' && *p <= 'Z')
-	    *p += 'a'-'A';
+	*p = utolower(*p);
 	p++;
     }
     return s;

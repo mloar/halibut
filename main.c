@@ -166,6 +166,7 @@ int main(int argc, char **argv) {
     {
 	input in;
 	paragraph *sourceform, *p;
+	index *idx;
 	keywordlist *keywords;
 
 	in.filenames = infiles;
@@ -175,7 +176,9 @@ int main(int argc, char **argv) {
 	in.npushback = 0;
 	in.reportcols = reportcols;
 
-	sourceform = read_input(&in);
+	idx = make_index();
+
+	sourceform = read_input(&in, idx);
 	if (!sourceform)
 	    exit(EXIT_FAILURE);
 
@@ -185,18 +188,19 @@ int main(int argc, char **argv) {
 	gen_citations(sourceform, keywords);
 	subst_keywords(sourceform, keywords);
 
-	for (p = sourceform; p; p = p->next) {
-	    if (p->type == para_IM) {
-		index_merge(TRUE, p->keyword, p->words);
-		p->words = NULL;       /* this has now been freed */
-	    }
-	}
+	for (p = sourceform; p; p = p->next)
+	    if (p->type == para_IM)
+		index_merge(idx, TRUE, p->keyword, p->words);
+
+	build_index(idx);
+	index_debug(idx);
 
 	dbg_prtkws(keywords);
 	dbg_prtsource(sourceform);
 
 	free_para_list(sourceform);
 	free_keywords(keywords);
+	cleanup_index(idx);
     }
 
     return 0;

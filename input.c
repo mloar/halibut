@@ -442,7 +442,7 @@ static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
 /*
  * Reads a single file (ie until get() returns EOF)
  */
-static void read_file(paragraph ***ret, input *in) {
+static void read_file(paragraph ***ret, input *in, index *idx) {
     token t;
     paragraph par;
     word wd, **whptr, **idximplicit;
@@ -707,7 +707,7 @@ static void read_file(paragraph ***ret, input *in) {
 			    ustrlow(indexword->text);
 			indexing = FALSE;
 			rdadd(&indexstr, L'\0');
-			index_merge(FALSE, indexstr.text, idxwordlist);
+			index_merge(idx, FALSE, indexstr.text, idxwordlist);
 			sfree(indexstr.text);
 		    }
 		    if (sitem->type & stack_hyper) {
@@ -986,7 +986,7 @@ static void read_file(paragraph ***ret, input *in) {
     dtor(t);
 }
 
-paragraph *read_input(input *in) {
+paragraph *read_input(input *in, index *idx) {
     paragraph *head = NULL;
     paragraph **hptr = &head;
 
@@ -994,7 +994,7 @@ paragraph *read_input(input *in) {
 	in->currfp = fopen(in->filenames[in->currindex], "r");
 	if (in->currfp) {
 	    setpos(in, in->filenames[in->currindex]);
-	    read_file(&hptr, in);
+	    read_file(&hptr, in, idx);
 	}
 	in->currindex++;
     }

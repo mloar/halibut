@@ -135,6 +135,13 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "multiple `\\BR' entries given for `%.200s'", sp);
 	flags = FILEPOS;
 	break;
+      case err_nosuchidxtag:
+	wsp = va_arg(ap, wchar_t *);
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sprintf(error, "`\\IM' on unknown index tag `%.200s'", sp);
+	flags = 0;
+	/* FIXME: need to get a filepos to here somehow */
+	break;
     }
 
     if (flags & PREFIX)

@@ -117,7 +117,7 @@ keywordlist *get_keywords(paragraph *source) {
 	    }
 	} else {
 	    if (kl->nlooseends >= kl->looseendssize) {
-		kl->looseendssize += 32;
+		kl->looseendssize = kl->nlooseends + 32;
 		kl->looseends = resize(kl->looseends, kl->looseendssize);
 	    }
 	    kl->looseends[kl->nlooseends++] = source->kwtext;
