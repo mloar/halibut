@@ -182,6 +182,10 @@ struct line_data_Tag {
     int space_after;
     int line_height;
     /*
+     * Penalties for page breaking before or after this line.
+     */
+    int penalty_before, penalty_after;
+    /*
      * These fields are used in the page breaking algorithm.
      */
     int bestcost;

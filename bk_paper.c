@@ -12,16 +12,6 @@
 /*
  * To be done:
  * 
- *  - tune the page breaking algorithm to impose penalties on
- *    various things
- *     * breaking in the middle of a code paragraph
- *     * breaking one line from the start or end of a paragraph
- *     * breaking immediately after a heading of any kind (or
- * 	 indeed within one)
- *     * we may also need to impose a limit on the amount by which
- * 	 we can _stretch_ a page; after a certain point we may
- * 	 prefer just to unapologetically leave space at the bottom.
- * 
  *  - implement some simple graphics
  *     * I had an underline below chapter headings in the original
  * 	 Perl version, and I thought it looked rather nice
@@ -164,6 +154,10 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	    pdata = mknew(para_data);
 	    code_paragraph(pdata, cr, co, cb, 12, indent, p->words);
 	    p->private_data = pdata;
+	    if (pdata->first != pdata->last) {
+		pdata->first->penalty_after += 100000;
+		pdata->last->penalty_before += 100000;
+	    }
 	    break;
 
 	    /*
@@ -361,6 +355,51 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	    pdata->first->aux_text = aux;
 	    pdata->first->aux_text_2 = aux2;
 	    pdata->first->aux_left_indent = aux_indent;
+
+	    /*
+	     * Line breaking penalties.
+	     */
+	    switch (p->type) {
+	      case para_Chapter:
+	      case para_Appendix:
+	      case para_Heading:
+	      case para_Subsect:
+	      case para_UnnumberedChapter:
+		/*
+		 * Fixed and large penalty for breaking straight
+		 * after a heading; corresponding bonus for
+		 * breaking straight before.
+		 */
+		pdata->first->penalty_before = -500000;
+		pdata->last->penalty_after = 500000;
+		for (ldata = pdata->first; ldata; ldata = ldata->next)
+		    ldata->penalty_after = 500000;
+		break;
+
+	      case para_DescribedThing:
+		/*
+		 * This is treated a bit like a small heading:
+		 * there's a penalty for breaking after it (i.e.
+		 * between it and its description), and a bonus for
+		 * breaking before it (actually _between_ list
+		 * items).
+		 */
+		pdata->first->penalty_before = -200000;
+		pdata->last->penalty_after = 200000;
+		break;
+
+	      default:
+		/*
+		 * Most paragraph types: widow/orphan control by
+		 * discouraging breaking one line from the end of
+		 * any paragraph.
+		 */
+		if (pdata->first != pdata->last) {
+		    pdata->first->penalty_after = 100000;
+		    pdata->last->penalty_before = 100000;
+		}
+		break;
+	    }
 
 	    break;
 	}
@@ -729,6 +768,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	ldata->aux_text = NULL;
 	ldata->aux_text_2 = NULL;
 	ldata->aux_left_indent = 0;
+	ldata->penalty_before = ldata->penalty_after = 0;
     }
 
 }
@@ -793,16 +833,13 @@ static page_data *page_breaks(line_data *first, line_data *last,
 	    } else
 		cost = 0;
 
-	    /*
-	     * FIXME: here I should introduce penalties for
-	     * breaking in mid-paragraph, particularly very close
-	     * to one end of a paragraph and particularly in code
-	     * paragraphs.
-	     */
+	    if (m->next && !m->next->page_break) {
+		cost += m->penalty_after;
+		cost += m->next->penalty_before;
+	    }
 
 	    if (m->next && !m->next->page_break)
 		cost += m->next->bestcost;
-
 	    if (l->bestcost == -1 || l->bestcost > cost) {
 		/*
 		 * This is the best option yet for this starting
@@ -1248,6 +1285,7 @@ static void code_paragraph(para_data *pdata,
 	ldata->aux_text = NULL;
 	ldata->aux_text_2 = NULL;
 	ldata->aux_left_indent = 0;
-
+	/* General opprobrium for breaking in a code paragraph. */
+	ldata->penalty_before = ldata->penalty_after = 50000;
     }
 }
