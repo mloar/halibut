@@ -1,3 +1,5 @@
+\versionid $Id$
+
 \C{output} Halibut output formats
 
 This chapter describes each of Halibut's current \i{output formats}.
