@@ -33,6 +33,21 @@ char *ustrtoa(wchar_t *s, char *outbuf, int size) {
     return outbuf;
 }
 
+char *utoa_dup(wchar_t *s) {
+    int len;
+    char *buf = NULL;
+
+    len = ustrlen(s) + 1;
+    do {
+	buf = resize(buf, len);
+	ustrtoa(s, buf, len);
+	len = (3 * len) / 2 + 1;       /* this guarantees a strict increase */
+    } while ((int)strlen(buf) >= len-1);
+
+    buf = resize(buf, strlen(buf)+1);
+    return buf;
+}
+
 int ustrlen(wchar_t *s) {
     int len = 0;
     while (*s++) len++;

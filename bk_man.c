@@ -16,6 +16,7 @@ typedef struct {
     wchar_t *th;
     int headnumbers;
     int mindepth;
+    char *filename;
 } manconfig;
 
 static manconfig man_configure(paragraph *source) {
@@ -27,6 +28,7 @@ static manconfig man_configure(paragraph *source) {
     ret.th = NULL;
     ret.headnumbers = FALSE;
     ret.mindepth = 0;
+    ret.filename = dupstr("output.1");
 
     for (; source; source = source->next) {
 	if (source->type == para_Config) {
@@ -37,12 +39,16 @@ static manconfig man_configure(paragraph *source) {
 		ep = wp;
 		while (*ep)
 		    ep = uadv(ep);
+		sfree(ret.th);
 		ret.th = mknewa(wchar_t, ep - wp + 1);
 		memcpy(ret.th, wp, (ep - wp + 1) * sizeof(wchar_t));
 	    } else if (!ustricmp(source->keyword, L"man-headnumbers")) {
 		ret.headnumbers = utob(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"man-mindepth")) {
 		ret.mindepth = utoi(uadv(source->keyword));
+	    } else if (!ustricmp(source->keyword, L"man-filename")) {
+		sfree(ret.filename);
+		ret.filename = utoa_dup(uadv(source->keyword));
 	    }
 	}
     }
@@ -53,6 +59,7 @@ static manconfig man_configure(paragraph *source) {
 static void man_conf_cleanup(manconfig cf)
 {
     sfree(cf.th);
+    sfree(cf.filename);
 }
 
 #define QUOTE_INITCTRL 1 /* quote initial . and ' on a line */
@@ -70,14 +77,11 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     conf = man_configure(sourceform);
 
     /*
-     * Determine the output file name, and open the output file
-     *
-     * FIXME: want configurable output file names here. For the
-     * moment, we'll just call it `output.1'.
+     * Open the output file.
      */
-    fp = fopen("output.1", "w");
+    fp = fopen(conf.filename, "w");
     if (!fp) {
-	error(err_cantopenw, "output.1");
+	error(err_cantopenw, conf.filename);
 	return;
     }
 

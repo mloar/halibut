@@ -1,12 +1,10 @@
 /*
  * Windows Help backend for Halibut
- * 
- * TODO:
- *  - allow user to specify section contexts.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "halibut.h"
@@ -57,12 +55,6 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     indexentry *ie;
     int done_contents_topic = FALSE;
 
-    filename = "output.hlp";	       /* FIXME: configurability */
-    cntname = "output.cnt";	       /* corresponding contents file */
-
-    state.cntfp = fopen(cntname, "wb");
-    state.cnt_last_level = -1; state.cnt_workaround = 0;
-
     h = state.h = whlp_new();
     state.keywords = keywords;
     state.idx = idx;
@@ -92,8 +84,10 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 
     /*
      * Loop over the source form finding out whether the user has
-     * specified particular help topic names for anything.
+     * specified particular help topic names for anything. Also
+     * pick out the output file name at this stage.
      */
+    filename = dupstr("output.hlp");
     for (p = sourceform; p; p = p->next) {
 	p->private_data = NULL;
 	if (p->type == para_Config && p->parent) {
@@ -103,9 +97,37 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		/* Store the topic name in the private_data field of the
 		 * containing section. */
 		p->parent->private_data = topicname;
+	    } else if (!ustricmp(p->keyword, L"winhelp-filename")) {
+		sfree(filename);
+		filename = utoa_dup(uadv(p->keyword));
 	    }
 	}
     }
+
+    /*
+     * Ensure the output file name has a .hlp extension. This is
+     * required since we must create the .cnt file in parallel with
+     * it.
+     */
+    {
+	int len = strlen(filename);
+	if (len < 4 || filename[len-4] != '.' ||
+	    tolower(filename[len-3] != 'h') ||
+	    tolower(filename[len-2] != 'l') ||
+	    tolower(filename[len-1] != 'p')) {
+	    char *newf;
+	    newf = mknewa(char, len + 5);
+	    sprintf(newf, "%s.hlp", filename);
+	    sfree(filename);
+	    filename = newf;
+	    len = strlen(newf);
+	}
+	cntname = mknewa(char, len);
+	sprintf(cntname, "%.*s.cnt", len-4, filename);
+    }
+
+    state.cntfp = fopen(cntname, "wb");
+    state.cnt_last_level = -1; state.cnt_workaround = 0;
 
     /*
      * Loop over the source form registering WHLP_TOPICs for
@@ -449,6 +471,9 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
 	sfree(ie->backend_data);
     }
+
+    sfree(filename);
+    sfree(cntname);
 }
 
 static void whlp_contents_write(struct bk_whlp_state *state,

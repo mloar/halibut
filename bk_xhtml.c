@@ -32,6 +32,28 @@
 #include <assert.h>
 #include "halibut.h"
 
+/*
+ * FILENAME_TEMPLATE (overridable in config of course) allows you
+ * to choose the general form for your HTML file names. It is
+ * slightly printf-styled (% followed by a single character is a
+ * formatting directive, %% is a literal %). Formatting directives
+ * are:
+ * 
+ *  - %n is the section number, minus whitespace (`Chapter1.2').
+ *  - %b is the section number on its own (`1.2').
+ *  - %k is the section's _internal_ keyword.
+ *  - %N is the section's visible title in the output, again minus
+ *    whitespace.
+ * 
+ * %n, %b and %k will all default to %N if the section is
+ * unnumbered (`Bibliography' is often a good example).
+ */
+
+#define FILENAME_SINGLE "Manual.html"
+#define FILENAME_CONTENTS "Contents.html"
+#define FILENAME_INDEX "IndexPage.html"
+#define FILENAME_TEMPLATE "%n.html"
+
 struct xhtmlsection_Struct {
     struct xhtmlsection_Struct *next; /* next sibling (NULL if split across files) */
     struct xhtmlsection_Struct *child; /* NULL if split across files */
@@ -78,6 +100,8 @@ typedef struct {
   int suppress_address;
   xhtmlheadfmt fchapter, *fsect;
   int nfsect;
+  char *contents_filename, *index_filename;
+  char *single_filename, *template_filename;
 } xhtmlconfig;
 
 /*static void xhtml_level(paragraph *, int);
@@ -151,12 +175,28 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   ret.fsect[0].number_suffix = L": ";
   ret.fsect[1].just_numbers = TRUE;
   ret.fsect[1].number_suffix = L" ";
+  ret.contents_filename = strdup(FILENAME_CONTENTS);
+  ret.single_filename = strdup(FILENAME_SINGLE);
+  ret.index_filename = strdup(FILENAME_INDEX);
+  ret.template_filename = strdup(FILENAME_TEMPLATE);
 
   for (; source; source = source->next)
   {
     if (source->type == para_Config)
     {
-             if (!ustricmp(source->keyword, L"xhtml-contents-depth-0")) {
+      if (!ustricmp(source->keyword, L"xhtml-contents-filename")) {
+	sfree(ret.contents_filename);
+	ret.contents_filename = utoa_dup(uadv(source->keyword));
+      } else if (!ustricmp(source->keyword, L"xhtml-single-filename")) {
+	sfree(ret.single_filename);
+	ret.single_filename = utoa_dup(uadv(source->keyword));
+      } else if (!ustricmp(source->keyword, L"xhtml-index-filename")) {
+	sfree(ret.index_filename);
+	ret.index_filename = utoa_dup(uadv(source->keyword));
+      } else if (!ustricmp(source->keyword, L"xhtml-template-filename")) {
+	sfree(ret.template_filename);
+	ret.template_filename = utoa_dup(uadv(source->keyword));
+      } else if (!ustricmp(source->keyword, L"xhtml-contents-depth-0")) {
         ret.contents_depth[0] = utoi(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-contents-depth-1")) {
         ret.contents_depth[1] = utoi(uadv(source->keyword));
@@ -299,34 +339,68 @@ static xhtmlfile *xhtml_new_file(xhtmlsection *sect)
   ret->is_leaf=(sect!=NULL && sect->level==conf.leaf_level);
   if (sect==NULL) {
     if (conf.leaf_level==0) { /* currently unused */
-#define FILENAME_MANUAL "Manual.html"
-#define FILENAME_CONTENTS "Contents.html"
-      ret->filename = smalloc(strlen(FILENAME_MANUAL)+1);
-      sprintf(ret->filename, FILENAME_MANUAL);
+      ret->filename = smalloc(strlen(conf.single_filename)+1);
+      sprintf(ret->filename, conf.single_filename);
     } else {
-      ret->filename = smalloc(strlen(FILENAME_CONTENTS)+1);
-      sprintf(ret->filename, FILENAME_CONTENTS);
+      ret->filename = smalloc(strlen(conf.contents_filename)+1);
+      sprintf(ret->filename, conf.contents_filename);
     }
   } else {
     paragraph *p = sect->para;
     rdstringc fname_c = { 0, 0, NULL };
-    char *c;
+    char *c, *t;
     word *w;
-    for (w=(p->kwtext)?(p->kwtext):(p->words); w; w=w->next)
-    {
-      switch (removeattr(w->type))
-      {
-      case word_Normal:
-        /*case word_Emph:
-        case word_Code:
-        case word_WeakCode:*/
-        xhtml_utostr(w->text, &c);
-        rdaddsc(&fname_c,c);
-        sfree(c);
-        break;
+    wchar_t *ws;
+
+    t = conf.template_filename;
+    while (*t) {
+      if (*t == '%' && t[1]) {
+	int fmt;
+
+	t++;
+	fmt = *t++;
+
+	if (fmt == '%') {
+	  rdaddc(&fname_c, fmt);
+	  continue;
+	}
+
+	w = NULL;
+	ws = NULL;
+
+	if (p->kwtext && fmt == 'n')
+	  w = p->kwtext;
+	else if (p->kwtext2 && fmt == 'b')
+	  w = p->kwtext2;
+	else if (p->keyword && *p->keyword && fmt == 'k')
+	  ws = p->keyword;
+	else
+	  w = p->words;
+
+	while (w) {
+	  switch (removeattr(w->type))
+	  {
+	   case word_Normal:
+	    /*case word_Emph:
+	     case word_Code:
+	     case word_WeakCode:*/
+	    xhtml_utostr(w->text, &c);
+	    rdaddsc(&fname_c,c);
+	    sfree(c);
+	    break;
+	  }
+	  w = w->next;
+	}
+	if (ws) {
+	  xhtml_utostr(ws, &c);
+	  rdaddsc(&fname_c,c);
+	  sfree(c);
+	}
+      } else {
+	rdaddc(&fname_c, *t++);
       }
     }
-    rdaddsc(&fname_c, ".html");
+
     ret->filename = rdtrimc(&fname_c);
   }
   /*  printf(" ! new file '%s', is_leaf == %s\n", ret->filename, (ret->is_leaf)?("true"):("false"));*/
@@ -704,8 +778,6 @@ static int xhtml_para_level(paragraph *p)
   }
 }
 
-static char* xhtml_index_filename = "IndexPage.html";
-
 /* Output the nav links for the current file.
  * file == NULL means we're doing the index
  */
@@ -723,11 +795,11 @@ static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
   } else {
     fprintf(fp, "<a href='%s'>Previous</a> | ", xhtml_last_file->filename);
   }
-  fprintf(fp, "<a href='Contents.html'>Contents</a> | ");
+  fprintf(fp, "<a href='%s'>Contents</a> | ", conf.contents_filename);
   if (file == NULL) {
     fprintf(fp, "Index | ");
   } else {
-    fprintf(fp, "<a href='%s'>Index</a> | ", xhtml_index_filename);
+    fprintf(fp, "<a href='%s'>Index</a> | ", conf.index_filename);
   }
   if (file != NULL) { /* otherwise we're doing nav links for the index */
     if (xhtml_next_file==NULL)
@@ -741,7 +813,7 @@ static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
     if (file==NULL) { /* index, so no next file */
       fprintf(fp, "Next	");
     } else {
-      fprintf(fp, "<a href='%s'>Next</a>", xhtml_index_filename);
+      fprintf(fp, "<a href='%s'>Next</a>", conf.index_filename);
     }
   } else {
     fprintf(fp, "<a href='%s'>Next</a>", xhtml_next_file->filename);
@@ -793,10 +865,10 @@ static void xhtml_do_index_body(FILE *fp)
 static void xhtml_do_index()
 {
   word temp_word = { NULL, NULL, word_Normal, 0, 0, L"Index", { NULL, 0, 0} };
-  FILE *fp = fopen(xhtml_index_filename, "w");
+  FILE *fp = fopen(conf.index_filename, "w");
 
   if (fp==NULL)
-    fatal(err_cantopenw, xhtml_index_filename);
+    fatal(err_cantopenw, conf.index_filename);
   xhtml_doheader(fp, &temp_word);
   xhtml_donavlinks(fp, NULL);
 

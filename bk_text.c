@@ -24,6 +24,7 @@ typedef struct {
     int include_version_id;
     int indent_preambles;
     word bullet;
+    char *filename;
 } textconfig;
 
 static int text_convert(wchar_t *, char **);
@@ -76,11 +77,15 @@ static textconfig text_configure(paragraph *source) {
     ret.include_version_id = TRUE;
     ret.indent_preambles = FALSE;
     ret.bullet.text = L"-";
+    ret.filename = dupstr("output.txt");
 
     for (; source; source = source->next) {
 	if (source->type == para_Config) {
 	    if (!ustricmp(source->keyword, L"text-indent")) {
 		ret.indent = utoi(uadv(source->keyword));
+	    } else if (!ustricmp(source->keyword, L"text-filename")) {
+		sfree(ret.filename);
+		ret.filename = utoa_dup(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-indent-code")) {
 		ret.indent_code = utoi(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-width")) {
@@ -192,14 +197,11 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     conf = text_configure(sourceform);
 
     /*
-     * Determine the output file name, and open the output file
-     *
-     * FIXME: want configurable output file names here. For the
-     * moment, we'll just call it `output.txt'.
+     * Open the output file.
      */
-    fp = fopen("output.txt", "w");
+    fp = fopen(conf.filename, "w");
     if (!fp) {
-	error(err_cantopenw, "output.txt");
+	error(err_cantopenw, conf.filename);
 	return;
     }
 
@@ -332,6 +334,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
      */
     fclose(fp);
     sfree(conf.asect);
+    sfree(conf.filename);
 }
 
 /*

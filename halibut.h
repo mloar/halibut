@@ -248,6 +248,7 @@ char *dupstr(char *s);
  */
 wchar_t *ustrdup(wchar_t *s);
 char *ustrtoa(wchar_t *s, char *outbuf, int size);
+char *utoa_dup(wchar_t *s);
 int ustrlen(wchar_t *s);
 wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
