@@ -7,22 +7,24 @@
 #include <assert.h>
 #include "halibut.h"
 
-static void man_text(FILE *, word *,
-		     int newline, int quote_props, int charset);
-static void man_codepara(FILE *, word *, int charset);
-static int man_convert(wchar_t const *s, int maxlen,
-		       char **result, int quote_props,
-		       int charset, charset_state *state);
-
 typedef struct {
     wchar_t *th;
     int headnumbers;
     int mindepth;
     char *filename;
     int charset;
+    wchar_t *bullet, *lquote, *rquote;
 } manconfig;
 
+static void man_text(FILE *, word *,
+		     int newline, int quote_props, manconfig *conf);
+static void man_codepara(FILE *, word *, int charset);
+static int man_convert(wchar_t const *s, int maxlen,
+		       char **result, int quote_props,
+		       int charset, charset_state *state);
+
 static manconfig man_configure(paragraph *source) {
+    paragraph *p;
     manconfig ret;
 
     /*
@@ -33,33 +35,74 @@ static manconfig man_configure(paragraph *source) {
     ret.mindepth = 0;
     ret.filename = dupstr("output.1");
     ret.charset = CS_ASCII;
+    ret.bullet = L"\x2022\0o\0\0";
+    ret.lquote = L"\x2018\0\x2019\0\"\0\"\0\0";
+    ret.rquote = uadv(ret.lquote);
 
-    for (; source; source = source->next) {
-	if (source->type == para_Config) {
-	    if (!ustricmp(source->keyword, L"man-identity")) {
+    /*
+     * Two-pass configuration so that we can pick up global config
+     * (e.g. `quotes') before having it overridden by specific
+     * config (`text-quotes'), irrespective of the order in which
+     * they occur.
+     */
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    }
+	}
+    }
+
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"man-identity")) {
 		wchar_t *wp, *ep;
 
-		wp = uadv(source->keyword);
+		wp = uadv(p->keyword);
 		ep = wp;
 		while (*ep)
 		    ep = uadv(ep);
 		sfree(ret.th);
 		ret.th = mknewa(wchar_t, ep - wp + 1);
 		memcpy(ret.th, wp, (ep - wp + 1) * sizeof(wchar_t));
-	    } else if (!ustricmp(source->keyword, L"man-charset")) {
-		char *csname = utoa_dup(uadv(source->keyword), CS_ASCII);
+	    } else if (!ustricmp(p->keyword, L"man-charset")) {
+		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
 		ret.charset = charset_from_localenc(csname);
 		sfree(csname);
-	    } else if (!ustricmp(source->keyword, L"man-headnumbers")) {
-		ret.headnumbers = utob(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"man-mindepth")) {
-		ret.mindepth = utoi(uadv(source->keyword));
-	    } else if (!ustricmp(source->keyword, L"man-filename")) {
+	    } else if (!ustricmp(p->keyword, L"man-headnumbers")) {
+		ret.headnumbers = utob(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"man-mindepth")) {
+		ret.mindepth = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"man-filename")) {
 		sfree(ret.filename);
-		ret.filename = dupstr(adv(source->origkeyword));
+		ret.filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(p->keyword, L"man-bullet")) {
+		ret.bullet = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"text-quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
 	    }
 	}
     }
+
+    /*
+     * Now process fallbacks on quote characters and bullets.
+     */
+    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
+	   (!cvt_ok(ret.charset, ret.lquote) ||
+	    !cvt_ok(ret.charset, ret.rquote))) {
+	ret.lquote = uadv(ret.rquote);
+	ret.rquote = uadv(ret.lquote);
+    }
+
+    while (*ret.bullet && *uadv(ret.bullet) &&
+	   !cvt_ok(ret.charset, ret.bullet))
+	ret.bullet = uadv(ret.bullet);
 
     return ret;
 }
@@ -103,7 +146,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_VersionID) {
 	    fprintf(fp, ".\\\" ");
-	    man_text(fp, p->words, TRUE, 0, conf.charset);
+	    man_text(fp, p->words, TRUE, 0, &conf);
 	}
 
     /* .TH name-of-program manual-section */
@@ -157,10 +200,10 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	    if (depth >= conf.mindepth) {
 		fprintf(fp, ".SH \"");
 		if (conf.headnumbers && p->kwtext) {
-		    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, conf.charset);
+		    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, &conf);
 		    fprintf(fp, " ");
 		}
-		man_text(fp, p->words, FALSE, QUOTE_QUOTES, conf.charset);
+		man_text(fp, p->words, FALSE, QUOTE_QUOTES, &conf);
 		fprintf(fp, "\"\n");
 	    }
 	    break;
@@ -180,7 +223,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Normal:
       case para_Copyright:
 	fprintf(fp, ".PP\n");
-	man_text(fp, p->words, TRUE, 0, conf.charset);
+	man_text(fp, p->words, TRUE, 0, &conf);
 	break;
 
 	/*
@@ -191,10 +234,14 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Bullet:
       case para_NumberedList:
 	if (p->type == para_Bullet) {
-	    fprintf(fp, ".IP \"\\fBo\\fP\"\n");   /* FIXME: configurable? */
+	    char *bullettext;
+	    man_convert(conf.bullet, -1, &bullettext, QUOTE_QUOTES,
+			conf.charset, NULL);
+	    fprintf(fp, ".IP \"\\fB%s\\fP\"\n", bullettext);
+	    sfree(bullettext);
 	} else if (p->type == para_NumberedList) {
 	    fprintf(fp, ".IP \"");
-	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, conf.charset);
+	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, &conf);
 	    fprintf(fp, "\"\n");
 	} else if (p->type == para_Description) {
 	    /*
@@ -203,15 +250,15 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	     */
 	} else if (p->type == para_BiblioCited) {
 	    fprintf(fp, ".IP \"");
-	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, conf.charset);
+	    man_text(fp, p->kwtext, FALSE, QUOTE_QUOTES, &conf);
 	    fprintf(fp, "\"\n");
 	}
-	man_text(fp, p->words, TRUE, 0, conf.charset);
+	man_text(fp, p->words, TRUE, 0, &conf);
 	break;
 
       case para_DescribedThing:
 	fprintf(fp, ".IP \"");
-	man_text(fp, p->words, FALSE, QUOTE_QUOTES, conf.charset);
+	man_text(fp, p->words, FALSE, QUOTE_QUOTES, &conf);
 	fprintf(fp, "\"\n");
 	break;
 
@@ -332,7 +379,8 @@ static int man_convert(wchar_t const *s, int maxlen,
 }
 
 static void man_rdaddwc(rdstringc *rs, word *text, word *end,
-			int quote_props, int charset, charset_state *state) {
+			int quote_props, manconfig *conf,
+			charset_state *state) {
     char *c;
 
     for (; text && text != end; text = text->next) switch (text->type) {
@@ -364,7 +412,7 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	     attraux(text->aux) == attr_Only)) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    man_convert(NULL, 0, &c, quote_props, charset, state);
+	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
 	    sfree(c);
 	    *state = charset_init_state;
@@ -375,7 +423,7 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 		    attraux(text->aux) == attr_Only)) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    man_convert(NULL, 0, &c, quote_props, charset, state);
+	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
 	    sfree(c);
 	    *state = charset_init_state;
@@ -387,24 +435,26 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    if (man_convert(text->text, 0, &c, quote_props, charset, &s2) ||
+	    if (man_convert(text->text, 0, &c, quote_props, conf->charset, &s2) ||
 		!text->alt) {
 		rdaddsc(rs, c);
 		*state = s2;
 	    } else {
-		man_rdaddwc(rs, text->alt, NULL, quote_props, charset, state);
+		man_rdaddwc(rs, text->alt, NULL, quote_props, conf, state);
 	    }
 	    sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    man_convert(L" ", 1, &c, quote_props, charset, state);
+	    man_convert(L" ", 1, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
 	    sfree(c);
 	} else if (removeattr(text->type) == word_Quote) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    man_convert(L"\"", 1, &c, quote_props, charset, state);
+	    man_convert(quoteaux(text->aux) == quote_Open ?
+			conf->lquote : conf->rquote, 0,
+			&c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
 	    sfree(c);
 	}
@@ -413,7 +463,7 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	     attraux(text->aux) == attr_Only)) {
 	    if (rs->pos > 0)
 		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    man_convert(NULL, 0, &c, quote_props, charset, state);
+	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
 	    rdaddsc(rs, c);
 	    sfree(c);
 	    *state = charset_init_state;
@@ -421,17 +471,17 @@ static void man_rdaddwc(rdstringc *rs, word *text, word *end,
 	}
 	break;
     }
-    man_convert(NULL, 0, &c, quote_props, charset, state);
+    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
     rdaddsc(rs, c);
     sfree(c);
 }
 
 static void man_text(FILE *fp, word *text, int newline,
-		     int quote_props, int charset) {
+		     int quote_props, manconfig *conf) {
     rdstringc t = { 0, 0, NULL };
     charset_state state = CHARSET_INIT_STATE;
 
-    man_rdaddwc(&t, text, NULL, quote_props | QUOTE_INITCTRL, charset, &state);
+    man_rdaddwc(&t, text, NULL, quote_props | QUOTE_INITCTRL, conf, &state);
     fprintf(fp, "%s", t.text);
     sfree(t.text);
     if (newline)
