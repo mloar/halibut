@@ -15,8 +15,6 @@
  *  - set up contents section now we know what sections begin on
  *    which pages
  * 
- *  - do PDF outline
- * 
  *  - index
  * 
  *  - header/footer? Page numbers at least would be handy. Fully
@@ -513,11 +511,69 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	}
     }
 
+    /*
+     * Start putting together the overall document structure we're
+     * going to return.
+     */
     doc = mknew(document);
     doc->fonts = fontlist;
     doc->pages = pages;
     doc->paper_width = paper_width;
     doc->paper_height = paper_height;
+
+    /*
+     * Collect the section heading paragraphs into a document
+     * outline. This is slightly fiddly because the Title paragraph
+     * isn't required to be at the start, although all the others
+     * must be in order.
+     */
+    {
+	int osize = 20;
+
+	doc->outline_elements = mknewa(outline_element, osize);
+	doc->n_outline_elements = 0;
+
+	/* First find the title. */
+	for (p = sourceform; p; p = p->next) {
+	    switch (p->type) {
+	      case para_Title:
+		doc->outline_elements[0].level = 0;
+		doc->outline_elements[0].para = p;
+		doc->n_outline_elements++;
+		break;
+	    }
+	}
+
+	/* Then collect the rest. */
+	for (p = sourceform; p; p = p->next) {
+	    switch (p->type) {
+	      case para_Chapter:
+	      case para_UnnumberedChapter:
+	      case para_Appendix:
+	      case para_Heading:
+	      case para_Subsect:
+
+		if (doc->n_outline_elements >= osize) {
+		    osize += 20;
+		    doc->outline_elements =
+			resize(doc->outline_elements, osize);
+		}
+
+		if (p->type == para_Heading) {
+		    doc->outline_elements[doc->n_outline_elements].level = 2;
+		} else if (p->type == para_Subsect) {
+		    doc->outline_elements[doc->n_outline_elements].level =
+			3 + p->aux;
+		} else
+		    doc->outline_elements[doc->n_outline_elements].level = 1;
+
+		doc->outline_elements[doc->n_outline_elements].para = p;
+		doc->n_outline_elements++;
+		break;
+	    }
+	}
+    }
+
     return doc;
 }
 

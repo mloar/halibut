@@ -20,6 +20,7 @@ typedef struct text_fragment_Tag text_fragment;
 typedef struct xref_Tag xref;
 typedef struct xref_dest_Tag xref_dest;
 typedef struct rect_Tag rect;
+typedef struct outline_element_Tag outline_element;
 
 /*
  * This data structure represents the overall document, in the form
@@ -29,6 +30,8 @@ struct document_Tag {
     int paper_width, paper_height;
     font_list *fonts;
     page_data *pages;
+    outline_element *outline_elements;
+    int n_outline_elements;
 };
 
 /*
@@ -262,6 +265,11 @@ struct xref_Tag {
 struct rect_Tag {
     rect *next;
     int x, y, w, h;
+};
+
+struct outline_element_Tag {
+    int level;			       /* 0=title 1=C 2=H 3=S 4=S2... */
+    paragraph *para;
 };
 
 /*

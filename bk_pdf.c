@@ -60,6 +60,8 @@ static void objref(object *o, object *dest);
 
 static void make_pages_node(object *node, object *parent, page_data *first,
 			    page_data *last, object *resources);
+static int make_outline(object *parent, outline_element *start, int n,
+			int open);
 
 void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		 indexdata *idx, void *vdoc) {
@@ -80,7 +82,6 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
     filename = dupstr("output.pdf");
     for (p = sourceform; p; p = p->next) {
-	p->private_data = NULL;
 	if (p->type == para_Config && p->parent) {
 	    if (!ustricmp(p->keyword, L"pdf-filename")) {
 		sfree(filename);
@@ -98,12 +99,6 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     resources = new_object(&olist);
 
     /*
-     * We currently don't support outlines, so here's a null
-     * outlines dictionary.
-     */
-    objtext(outlines, "<<\n/Type Outlines\n/Count 0\n>>\n");
-
-    /*
      * The catalogue just contains references to the outlines and
      * pages objects.
      */
@@ -111,7 +106,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     objref(cat, outlines);
     objtext(cat, "\n/Pages ");
     objref(cat, pages);
-    objtext(cat, "\n>>\n");
+    objtext(cat, "\n/PageMode /UseOutlines\n>>\n");
 
     /*
      * Set up the resources dictionary, which mostly means
@@ -310,6 +305,20 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 
 	objtext(opage, ">>\n");
+    }
+
+    /*
+     * Set up the outlines dictionary.
+     */
+    {
+	int topcount;
+	char buf[80];
+
+	objtext(outlines, "<<\n/Type /Outlines\n");
+	topcount = make_outline(outlines, doc->outline_elements,
+				doc->n_outline_elements, TRUE);
+	sprintf(buf, "/Count %d\n>>\n", topcount);
+	objtext(outlines, buf);
     }
 
     /*
@@ -523,4 +532,198 @@ static void make_pages_node(object *node, object *parent, page_data *first,
     }
 
     objtext(node, ">>\n");
+}
+
+/*
+ * In text on the page, PDF uses the PostScript font model, which
+ * means that glyphs are identified by PS strings and hence font
+ * encoding can be managed independently of the supplied encoding
+ * of the font. However, in the document outline, the PDF spec
+ * simply asks for ordinary text strings without mentioning what
+ * character set they are supposed to be interpreted in.
+ * 
+ * Therefore, for the moment, I'm going to assume they're US-ASCII
+ * only. If anyone knows better, they should let me know :-/
+ */
+static int pdf_convert(wchar_t *s, char **result) {
+    int doing = (result != 0);
+    int ok = TRUE;
+    char *p = NULL;
+    int plen = 0, psize = 0;
+
+    for (; *s; s++) {
+	wchar_t c = *s;
+	char outc;
+
+	if (c >= 32 && c <= 126) {
+	    /* Char is OK. */
+	    outc = (char)c;
+	} else {
+	    /* Char is not OK. */
+	    ok = FALSE;
+	    outc = 0xBF;	       /* approximate the good old DEC `uh?' */
+	}
+	if (doing) {
+	    if (plen >= psize) {
+		psize = plen + 256;
+		p = resize(p, psize);
+	    }
+	    p[plen++] = outc;
+	}
+    }
+    if (doing) {
+	p = resize(p, plen+1);
+	p[plen] = '\0';
+	*result = p;
+    }
+    return ok;
+}
+
+static void pdf_rdaddwc(rdstringc *rs, word *text) {
+    char *c;
+
+    for (; text; text = text->next) switch (text->type) {
+      case word_HyperLink:
+      case word_HyperEnd:
+      case word_UpperXref:
+      case word_LowerXref:
+      case word_XrefEnd:
+      case word_IndexRef:
+	break;
+
+      case word_Normal:
+      case word_Emph:
+      case word_Code:
+      case word_WeakCode:
+      case word_WhiteSpace:
+      case word_EmphSpace:
+      case word_CodeSpace:
+      case word_WkCodeSpace:
+      case word_Quote:
+      case word_EmphQuote:
+      case word_CodeQuote:
+      case word_WkCodeQuote:
+	assert(text->type != word_CodeQuote &&
+	       text->type != word_WkCodeQuote);
+	if (towordstyle(text->type) == word_Emph &&
+	    (attraux(text->aux) == attr_First ||
+	     attraux(text->aux) == attr_Only))
+	    rdaddc(rs, '_');	       /* FIXME: configurability */
+	else if (towordstyle(text->type) == word_Code &&
+		 (attraux(text->aux) == attr_First ||
+		  attraux(text->aux) == attr_Only))
+	    rdaddc(rs, '\'');	       /* FIXME: configurability */
+	if (removeattr(text->type) == word_Normal) {
+	    if (pdf_convert(text->text, &c))
+		rdaddsc(rs, c);
+	    else
+		pdf_rdaddwc(rs, text->alt);
+	    sfree(c);
+	} else if (removeattr(text->type) == word_WhiteSpace) {
+	    rdaddc(rs, ' ');
+	} else if (removeattr(text->type) == word_Quote) {
+	    rdaddc(rs, '\''); /* FIXME: configurability */
+	}
+	if (towordstyle(text->type) == word_Emph &&
+	    (attraux(text->aux) == attr_Last ||
+	     attraux(text->aux) == attr_Only))
+	    rdaddc(rs, '_');	       /* FIXME: configurability */
+	else if (towordstyle(text->type) == word_Code &&
+		 (attraux(text->aux) == attr_Last ||
+		  attraux(text->aux) == attr_Only))
+	    rdaddc(rs, '\'');	       /* FIXME: configurability */
+	break;
+    }
+}
+
+static int make_outline(object *parent, outline_element *items, int n,
+			int open)
+{
+    int level, totalcount = 0;
+    outline_element *itemp;
+    object *curr, *prev = NULL, *first = NULL, *last = NULL;
+    para_data *pdata;
+
+    assert(n > 0);
+
+    level = items->level;
+
+    while (n > 0) {
+	rdstringc rs = {0, 0, NULL};
+	char *p;
+
+	/*
+	 * Here we expect to be sitting on an item at the given
+	 * level. So we start by constructing an outline entry for
+	 * that item.
+	 */
+	assert(items->level == level);
+
+	if (level == 1 && items->para->kwtext) {
+	    pdf_rdaddwc(&rs, items->para->kwtext);
+	    rdaddsc(&rs, ": ");
+	} else if (level > 1 && items->para->kwtext2) {
+	    pdf_rdaddwc(&rs, items->para->kwtext2);
+	    rdaddsc(&rs, " ");
+	}
+	pdf_rdaddwc(&rs, items->para->words);
+
+	totalcount++;
+	curr = new_object(parent->list);
+	if (!first) first = curr;
+	last = curr;
+	objtext(curr, "<<\n/Title (");
+	for (p = rs.text; p < rs.text+rs.pos; p++) {
+	    char c[2];
+	    if (*p == '\\' || *p == '(' || *p == ')')
+		objtext(curr, "\\");
+	    c[0] = *p;
+	    c[1] = '\0';
+	    objtext(curr, c);
+	}
+	objtext(curr, ")\n/Parent ");
+	objref(curr, parent);
+	objtext(curr, "\n/Dest [");
+	pdata = (para_data *)items->para->private_data;
+	objref(curr, (object *)pdata->first->page->spare);
+	objtext(curr, " /XYZ null null null]\n");
+	if (prev) {
+	    objtext(curr, "/Prev ");
+	    objref(curr, prev);
+	    objtext(curr, "\n");
+
+	    objtext(prev, "/Next ");
+	    objref(prev, curr);
+	    objtext(prev, "\n>>\n");
+	}
+	prev = curr;
+
+	items++, n--;
+	for (itemp = items; itemp < items+n && itemp->level > level;
+	     itemp++);
+
+	if (itemp > items) {
+	    char buf[80];
+	    int count = make_outline(curr, items, itemp - items, FALSE);
+	    if (!open)
+		count = -count;
+	    else
+		totalcount += count;
+	    sprintf(buf, "/Count %d\n", count);
+	    objtext(curr, buf);
+	}
+
+	n -= itemp - items;
+	items = itemp;
+    }
+    objtext(prev, ">>\n");
+
+    assert(first && last);
+    objtext(parent, "/First ");
+    objref(parent, first);
+    objtext(parent, "\n/Last ");
+    objref(parent, last);
+    objtext(parent, "\n");
+
+    return totalcount;
 }

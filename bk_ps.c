@@ -50,7 +50,6 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
     filename = dupstr("output.ps");
     for (p = sourceform; p; p = p->next) {
-	p->private_data = NULL;
 	if (p->type == para_Config && p->parent) {
 	    if (!ustricmp(p->keyword, L"ps-filename")) {
 		sfree(filename);
