@@ -239,7 +239,7 @@ enum {
     err_multikw,		       /* keyword clash in sections */
     err_misplacedlcont,		       /* \lcont not after a list item */
     err_sectmarkerinblock,	       /* section marker appeared in block */
-    err_infodirentry,		       /* \cfg{info-dir-entry} missing param */
+    err_cfginsufarg,		       /* \cfg{%s} insufficient args (<%d) */
     err_infonodechar,		       /* colon/comma in node name in info */
     err_text_codeline,		       /* \c line too long in text backend */
     err_htmlver,		       /* unrecognised HTML version keyword */

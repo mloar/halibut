@@ -316,12 +316,12 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    char *s;
 
 	    section = uadv(p->keyword);
-	    shortname = *section ? uadv(section) : NULL;
-	    longname = *shortname ? uadv(shortname) : NULL;
-	    kw = *longname ? uadv(longname) : NULL;
+	    shortname = *section ? uadv(section) : L"";
+	    longname = *shortname ? uadv(shortname) : L"";
+	    kw = *longname ? uadv(longname) : L"";
 
 	    if (!*longname) {
-		error(err_infodirentry, &p->fpos);
+		error(err_cfginsufarg, &p->fpos, p->origkeyword, 3);
 		continue;
 	    }
 

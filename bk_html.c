@@ -45,7 +45,8 @@ typedef struct {
     char *index_filename;
     char *template_filename;
     char *single_filename;
-    char *template_fragment;
+    char **template_fragments;
+    int ntfragments;
     char *head_end, *body_start, *body_end, *addr_start, *addr_end;
     char *body_tag, *nav_attr;
     wchar_t *author, *description;
@@ -84,7 +85,7 @@ struct htmlsect {
     paragraph *title, *text;
     enum { NORMAL, TOP, INDEX } type;
     int contents_depth;
-    char *fragment;
+    char **fragments;
 };
 
 typedef struct {
@@ -150,7 +151,8 @@ static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
 			      htmlsect *sect, int depth);
 
 static htmlfile *html_new_file(htmlfilelist *list, char *filename);
-static htmlsect *html_new_sect(htmlsectlist *list, paragraph *title);
+static htmlsect *html_new_sect(htmlsectlist *list, paragraph *title,
+			       htmlconfig *cfg);
 
 /* Flags for html_words() flags parameter */
 #define NOTHING 0x00
@@ -217,7 +219,9 @@ static htmlconfig html_configure(paragraph *source) {
     ret.contents_filename = dupstr("Contents.html");
     ret.index_filename = dupstr("IndexPage.html");
     ret.template_filename = dupstr("%n.html");
-    ret.template_fragment = dupstr("%b");
+    ret.ntfragments = 1;
+    ret.template_fragments = snewn(ret.ntfragments, char *);
+    ret.template_fragments[0] = dupstr("%b");
     ret.head_end = ret.body_tag = ret.body_start = ret.body_end =
 	ret.addr_start = ret.addr_end = ret.nav_attr = NULL;
     ret.author = ret.description = NULL;
@@ -305,8 +309,24 @@ static htmlconfig html_configure(paragraph *source) {
 		sfree(ret.template_filename);
 		ret.template_filename = dupstr(adv(p->origkeyword));
 	    } else if (!ustricmp(k, L"html-template-fragment")) {
-		sfree(ret.template_fragment);
-		ret.template_fragment = dupstr(adv(p->origkeyword));
+		char *frag = adv(p->origkeyword);
+		if (*frag) {
+		    while (ret.ntfragments--)
+			sfree(ret.template_fragments[ret.ntfragments]);
+		    sfree(ret.template_fragments);
+		    ret.template_fragments = NULL;
+		    ret.ntfragments = 0;
+		    while (*frag) {
+			ret.ntfragments++;
+			ret.template_fragments =
+			    sresize(ret.template_fragments,
+				    ret.ntfragments, char *);
+			ret.template_fragments[ret.ntfragments-1] =
+			    dupstr(frag);
+			frag = adv(frag);
+		    }
+		} else
+		    error(err_cfginsufarg, &p->fpos, p->origkeyword, 1);
 	    } else if (!ustricmp(k, L"html-chapter-numeric")) {
 		ret.achapter.just_numbers = utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-chapter-suffix")) {
@@ -490,20 +510,19 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
      * source form but needs to be consistently mentioned in
      * contents links.
      * 
-     * While we're here, we'll also invent the HTML fragment name
+     * While we're here, we'll also invent the HTML fragment name(s)
      * for each section.
      */
     {
 	htmlsect *topsect, *sect;
 	int d;
 
-	topsect = html_new_sect(&sects, NULL);
+	topsect = html_new_sect(&sects, NULL, &conf);
 	topsect->type = TOP;
 	topsect->title = NULL;
 	topsect->text = sourceform;
 	topsect->contents_depth = contents_depth(conf, 0);
 	html_file_section(&conf, &files, topsect, -1);
-	topsect->fragment = NULL;
 
 	for (p = sourceform; p; p = p->next)
 	    if (is_heading_type(p->type)) {
@@ -514,7 +533,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    continue;
 		}
 
-		sect = html_new_sect(&sects, p);
+		sect = html_new_sect(&sects, p, &conf);
 		sect->text = p->next;
 
 		sect->contents_depth = contents_depth(conf, d+1) - (d+1);
@@ -528,23 +547,30 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 		html_file_section(&conf, &files, sect, d);
 
-		sect->fragment = html_format(p, conf.template_fragment);
-		sect->fragment = html_sanitise_fragment(&files, sect->file,
-							sect->fragment);
+		{
+		    int i;
+		    for (i=0; i < conf.ntfragments; i++) {
+			sect->fragments[i] =
+			    html_format(p, conf.template_fragments[i]);
+			sect->fragments[i] =
+			    html_sanitise_fragment(&files, sect->file,
+						   sect->fragments[i]);
+		    }
+		}
 	    }
 
 	/* And the index, if we have one. */
 	has_index = (count234(idx->entries) > 0);
 	if (has_index) {
-	    sect = html_new_sect(&sects, NULL);
+	    sect = html_new_sect(&sects, NULL, &conf);
 	    sect->text = NULL;
 	    sect->type = INDEX;
 	    sect->parent = topsect;
             sect->contents_depth = 0;
 	    html_file_section(&conf, &files, sect, 0);   /* peer of chapters */
-	    sect->fragment = utoa_dup(conf.index_text, CS_ASCII);
-	    sect->fragment = html_sanitise_fragment(&files, sect->file,
-						    sect->fragment);
+	    sect->fragments[0] = utoa_dup(conf.index_text, CS_ASCII);
+	    sect->fragments[0] = html_sanitise_fragment(&files, sect->file,
+							sect->fragments[0]);
 	    files.index = sect->file;
 	}
     }
@@ -591,7 +617,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		 * won't attempt to add it to the contents or
 		 * anything weird like that).
 		 */
-		sect = html_new_sect(&nonsects, p);
+		sect = html_new_sect(&nonsects, p, &conf);
 		sect->file = parent->file;
 		sect->parent = parent;
 		p->private_data = sect;
@@ -600,11 +626,11 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		 * Fragment IDs for these paragraphs will simply be
 		 * `p' followed by an integer.
 		 */
-		sect->fragment = snewn(40, char);
-		sprintf(sect->fragment, "p%d",
+		sect->fragments[0] = snewn(40, char);
+		sprintf(sect->fragments[0], "p%d",
 			sect->file->last_fragment_number++);
-		sect->fragment = html_sanitise_fragment(&files, sect->file,
-							sect->fragment);
+		sect->fragments[0] = html_sanitise_fragment(&files, sect->file,
+							    sect->fragments[0]);
 	    }
 	}
     }
@@ -1060,14 +1086,18 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    element_open(&ho, htag);
 
 		    /*
-		     * Provide anchor for cross-links to target.
+		     * Provide anchor(s) for cross-links to target.
 		     * 
 		     * (Also we'll have to do this separately in
 		     * other paragraph types - NumberedList and
 		     * BiblioCited.)
 		     */
-		    if (s->fragment)
-			html_fragment(&ho, s->fragment);
+		    {
+			int i;
+			for (i=0; i < conf.ntfragments; i++)
+			    if (s->fragments[i])
+				html_fragment(&ho, s->fragments[i]);
+		    }
 
 		    html_section_title(&ho, s, f, keywords, &conf, TRUE);
 
@@ -1199,7 +1229,10 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				element_open(&ho, "p");
 				if (p->private_data) {
 				    htmlsect *s = (htmlsect *)p->private_data;
-				    html_fragment(&ho, s->fragment);
+				    int i;
+				    for (i=0; i < conf.ntfragments; i++)
+					if (s->fragments[i])
+					    html_fragment(&ho, s->fragments[i]);
 				}
 				html_nl(&ho);
 				html_words(&ho, p->kwtext, ALL,
@@ -1215,7 +1248,10 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				element_open(&ho, "li");
 				if (p->private_data) {
 				    htmlsect *s = (htmlsect *)p->private_data;
-				    html_fragment(&ho, s->fragment);
+				    int i;
+				    for (i=0; i < conf.ntfragments; i++)
+					if (s->fragments[i])
+					    html_fragment(&ho, s->fragments[i]);
 				}
 				html_nl(&ho);
 				stackhead->itemtype = LI;
@@ -1429,12 +1465,6 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Free all the working data.
      */
-    sfree(conf.asect);
-    sfree(conf.single_filename);
-    sfree(conf.contents_filename);
-    sfree(conf.index_filename);
-    sfree(conf.template_filename);
-    sfree(conf.template_fragment);
     {
 	htmlfragment *frag;
 	while ( (frag = (htmlfragment *)delpos234(files.frags, 0)) != NULL ) {
@@ -1451,15 +1481,21 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	htmlsect *sect, *tmp;
 	sect = sects.head;
 	while (sect) {
+	    int i;
 	    tmp = sect->next;
-	    sfree(sect->fragment);
+	    for (i=0; i < conf.ntfragments; i++)
+		sfree(sect->fragments[i]);
+	    sfree(sect->fragments);
 	    sfree(sect);
 	    sect = tmp;
 	}
 	sect = nonsects.head;
 	while (sect) {
+	    int i;
 	    tmp = sect->next;
-	    sfree(sect->fragment);
+	    for (i=0; i < conf.ntfragments; i++)
+		sfree(sect->fragments[i]);
+	    sfree(sect->fragments);
 	    sfree(sect);
 	    sect = tmp;
 	}
@@ -1494,6 +1530,14 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    sfree(hr);
 		}
     }
+    sfree(conf.asect);
+    sfree(conf.single_filename);
+    sfree(conf.contents_filename);
+    sfree(conf.index_filename);
+    sfree(conf.template_filename);
+    while (conf.ntfragments--)
+	sfree(conf.template_fragments[conf.ntfragments]);
+    sfree(conf.template_fragments);
 }
 
 static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
@@ -1591,7 +1635,8 @@ static htmlfile *html_new_file(htmlfilelist *list, char *filename)
     return ret;
 }
 
-static htmlsect *html_new_sect(htmlsectlist *list, paragraph *title)
+static htmlsect *html_new_sect(htmlsectlist *list, paragraph *title,
+			       htmlconfig *cfg)
 {
     htmlsect *ret = snew(htmlsect);
 
@@ -1606,6 +1651,13 @@ static htmlsect *html_new_sect(htmlsectlist *list, paragraph *title)
     ret->file = NULL;
     ret->parent = NULL;
     ret->type = NORMAL;
+
+    ret->fragments = snewn(cfg->ntfragments, char *);
+    {
+	int i;
+	for (i=0; i < cfg->ntfragments; i++)
+	    ret->fragments[i] = NULL;
+    }
 
     return ret;
 }
@@ -1639,7 +1691,7 @@ static void html_words(htmloutput *ho, word *words, int flags,
 
 	    assert(s);
 
-	    html_href(ho, file, s->file, s->fragment);
+	    html_href(ho, file, s->file, s->fragments[0]);
 	}
 	break;
       case word_HyperEnd:
@@ -2047,6 +2099,13 @@ static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
 	*q = '\0';
     }
 
+    /* If there's nothing left, make something valid up */
+    if (!*text) {
+	static const char *anonfrag = "anon";
+	text = sresize(text, lenof(anonfrag), char);
+	strcpy(text, anonfrag);
+    }
+
     /*
      * Now we check for clashes with other fragment names, and
      * adjust this one if necessary by appending a hyphen followed
@@ -2102,7 +2161,7 @@ static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
 	return;
 
     element_open(ho, "li");
-    html_href(ho, thisfile, s->file, s->fragment);
+    html_href(ho, thisfile, s->file, s->fragments[0]);
     html_section_title(ho, s, thisfile, keywords, cfg, FALSE);
     element_close(ho, "a");
     /* <li> will be closed by a later invocation */

@@ -711,12 +711,12 @@ available variants are:
 
 }
 
-\dt \I{\cw{\\cfg\{html-template-fragment\}}}\cw{\\cfg\{html-template-fragment\}\{}\e{template}\cw{\}}
+\dt \I{\cw{\\cfg\{html-template-fragment\}}}\cw{\\cfg\{html-template-fragment\}\{}\e{template}\cw{\}}[\cw{\{}\e{template}\cw{\}\{}...\cw{\}}]
 
 \dd This directive lets you specify a \i{template}, with exactly the
 same syntax used in \cw{\\cfg\{html-template-filename\}} (see
-\k{output-html-file}), to be used for the anchor names (\i\cw{<A
-NAME="...">}) used to allow URLs to refer to specific sections
+\k{output-html-file}), to be used for the anchor names (\i\cw{<a
+name="...">}) used to allow URLs to refer to specific sections
 within a particular HTML file. So if you set this to \cq{%k},
 for example, then each individual section in your document will be
 addressable by means of a URL ending in a \c{#} followed by your
@@ -724,9 +724,16 @@ internal section keyword.
 
 \lcont{
 
-Note that no checking is done that the anchor name is valid HTML. So
-if you use \cq{%k}, for example, you may need to restrict your use of
-keyword names.
+If more than one template is specified, anchors are generated in all
+the specified formats; Halibut's own cross-references are generated
+with the first template.
+
+Characters that are not permitted in anchor names are stripped. If
+there are no valid characters left, or a fragment is non-unique,
+Halibut starts inventing fragment names and suffixes as appropriate.
+
+Note that there are potentially fragment names that are not controlled
+by this mechanism, such as index references.
 
 }
 

@@ -239,10 +239,12 @@ static void do_error(int code, va_list ap) {
 		sp);
 	flags = FILEPOS;
 	break;
-      case err_infodirentry:
+      case err_cfginsufarg:
 	fpos = *va_arg(ap, filepos *);
-	sprintf(error, "\\cfg{info-dir-entry} expects at least three"
-		" parameters");
+	sp = va_arg(ap, char *);
+	i = va_arg(ap, int);
+	sprintf(error, "\\cfg{%s} expects at least %d parameter%s", sp,
+		i, (i==1)?"":"s");
 	flags = FILEPOS;
 	break;
       case err_infonodechar:
