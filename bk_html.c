@@ -207,7 +207,7 @@ static htmlconfig html_configure(paragraph *source) {
     ret.achapter.just_numbers = FALSE;
     ret.achapter.number_suffix = L": ";
     ret.nasect = 1;
-    ret.asect = mknewa(sectlevel, ret.nasect);
+    ret.asect = snewn(ret.nasect, sectlevel);
     ret.asect[0].just_numbers = TRUE;
     ret.asect[0].number_suffix = L" ";
     ret.ncdepths = 0;
@@ -293,7 +293,7 @@ static htmlconfig html_configure(paragraph *source) {
 		}
 		if (n >= ret.nasect) {
 		    int i;
-		    ret.asect = resize(ret.asect, n+1);
+		    ret.asect = sresize(ret.asect, n+1, sectlevel);
 		    for (i = ret.nasect; i <= n; i++)
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
@@ -308,7 +308,7 @@ static htmlconfig html_configure(paragraph *source) {
 		}
 		if (n >= ret.nasect) {
 		    int i;
-		    ret.asect = resize(ret.asect, n+1);
+		    ret.asect = sresize(ret.asect, n+1, sectlevel);
 		    for (i = ret.nasect; i <= n; i++) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    }
@@ -332,7 +332,8 @@ static htmlconfig html_configure(paragraph *source) {
 		}
 		if (n >= ret.ncdepths) {
 		    int i;
-		    ret.contents_depths = resize(ret.contents_depths, n+1);
+		    ret.contents_depths =
+			sresize(ret.contents_depths, n+1, int);
 		    for (i = ret.ncdepths; i <= n; i++) {
 			ret.contents_depths[i] = i+2;
 		    }
@@ -540,7 +541,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		 * configuration template. For the moment I'll just
 		 * invent something completely stupid.
 		 */
-		sect->fragment = mknewa(char, 40);
+		sect->fragment = snewn(40, char);
 		sprintf(sect->fragment, "frag%p", sect);
 	    }
 	}
@@ -571,7 +572,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	 */
 
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
-	    htmlindex *hi = mknew(htmlindex);
+	    htmlindex *hi = snew(htmlindex);
 
 	    hi->nrefs = hi->refsize = 0;
 	    hi->refs = NULL;
@@ -595,7 +596,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 	    for (w = p->words; w; w = w->next)
 		if (w->type == word_IndexRef) {
-		    htmlindexref *hr = mknew(htmlindexref);
+		    htmlindexref *hr = snew(htmlindexref);
 		    indextag *tag;
 		    int i;
 
@@ -619,7 +620,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 			if (hi->nrefs >= hi->refsize) {
 			    hi->refsize += 32;
-			    hi->refs = resize(hi->refs, hi->refsize);
+			    hi->refs = sresize(hi->refs, hi->refsize, word *);
 			}
 
 			hi->refs[hi->nrefs++] = w;
@@ -858,7 +859,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 			if (adepth <= a->contents_depth) {
 			    if (ntoc >= tocsize) {
 				tocsize += 64;
-				toc = resize(toc, tocsize);
+				toc = sresize(toc, tocsize, htmlsect *);
 			    }
 			    toc[ntoc++] = s;
 			}
@@ -978,7 +979,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		     * Now display the section text.
 		     */
 		    if (s->text) {
-			stackhead = mknew(struct stackelement);
+			stackhead = snew(struct stackelement);
 			stackhead->next = NULL;
 			stackhead->listtype = NOLIST;
 			stackhead->itemtype = NOITEM;
@@ -1027,7 +1028,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 				break;
 
 			      case para_LcontPush:
-				se = mknew(struct stackelement);
+				se = snew(struct stackelement);
 				se->next = stackhead;
 				se->listtype = NOLIST;
 				se->itemtype = NOITEM;
@@ -1373,7 +1374,7 @@ static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
 
 static htmlfile *html_new_file(htmlfilelist *list, char *filename)
 {
-    htmlfile *ret = mknew(htmlfile);
+    htmlfile *ret = snew(htmlfile);
 
     ret->next = NULL;
     if (list->tail)
@@ -1392,7 +1393,7 @@ static htmlfile *html_new_file(htmlfilelist *list, char *filename)
 
 static htmlsect *html_new_sect(htmlsectlist *list, paragraph *title)
 {
-    htmlsect *ret = mknew(htmlsect);
+    htmlsect *ret = snew(htmlsect);
 
     ret->next = NULL;
     if (list->tail)

@@ -66,7 +66,7 @@ static manconfig man_configure(paragraph *source) {
 		while (*ep)
 		    ep = uadv(ep);
 		sfree(ret.th);
-		ret.th = mknewa(wchar_t, ep - wp + 1);
+		ret.th = snewn(ep - wp + 1, wchar_t);
 		memcpy(ret.th, wp, (ep - wp + 1) * sizeof(wchar_t));
 	    } else if (!ustricmp(p->keyword, L"man-charset")) {
 		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
@@ -321,7 +321,7 @@ static int man_convert(wchar_t const *s, int maxlen,
 
     psize = 384;
     plen = 0;
-    p = mknewa(char, psize);
+    p = snewn(psize, char);
     err = 0;
 
     while (slen > 0) {
@@ -331,7 +331,7 @@ static int man_convert(wchar_t const *s, int maxlen,
        	    plen += ret;
 	    if (psize - plen < 256) {
 		psize = plen + 256;
-		p = resize(p, psize);
+		p = sresize(p, psize, char);
 	    }
 	}
     }

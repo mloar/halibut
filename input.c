@@ -18,7 +18,7 @@ static void setpos(input *in, char *fname) {
 static void unget(input *in, int c, filepos *pos) {
     if (in->npushback >= in->pushbacksize) {
 	in->pushbacksize = in->npushback + 16;
-	in->pushback = resize(in->pushback, in->pushbacksize);
+	in->pushback = sresize(in->pushback, in->pushbacksize, pushback);
     }
     in->pushback[in->npushback].chr = c;
     in->pushback[in->npushback].pos = *pos;   /* structure copy */
@@ -45,7 +45,7 @@ static int macrocmp(void *av, void *bv) {
 }
 static void macrodef(tree234 *macros, wchar_t *name, wchar_t *text,
 		     filepos fpos) {
-    macro *m = mknew(macro);
+    macro *m = snew(macro);
     m->name = name;
     m->text = text;
     if (add234(macros, m) != m) {
@@ -60,7 +60,7 @@ static int macrolookup(tree234 *macros, input *in, wchar_t *name,
     m.name = name;
     gotit = find234(macros, &m, NULL);
     if (gotit) {
-	macrostack *expansion = mknew(macrostack);
+	macrostack *expansion = snew(macrostack);
 	expansion->next = in->stack;
 	expansion->text = gotit->text;
 	expansion->pos = *pos;	       /* structure copy */
@@ -560,7 +560,7 @@ static word *addword(word newword, word ***hptrptr) {
     word *mnewword;
     if (!hptrptr)
 	return NULL;
-    mnewword = mknew(word);
+    mnewword = snew(word);
     *mnewword = newword;	       /* structure copy */
     mnewword->next = NULL;
     **hptrptr = mnewword;
@@ -572,7 +572,7 @@ static word *addword(word newword, word ***hptrptr) {
  * Adds a new paragraph to a linked list
  */
 static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
-    paragraph *mnewpara = mknew(paragraph);
+    paragraph *mnewpara = snew(paragraph);
     *mnewpara = newpara;	       /* structure copy */
     mnewpara->next = NULL;
     **hptrptr = mnewpara;
@@ -739,7 +739,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		 * nested lists, code paras etc). Hence, the previous
 		 * paragraph must be of a list type.
 		 */
-		sitem = mknew(struct crossparaitem);
+		sitem = snew(struct crossparaitem);
 		stop = (struct crossparaitem *)stk_top(crossparastk);
 		if (stop)
 		    *sitem = *stop;
@@ -769,7 +769,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		 * block-quoted (typically they will be indented a
 		 * bit).
 		 */
-		sitem = mknew(struct crossparaitem);
+		sitem = snew(struct crossparaitem);
 		stop = (struct crossparaitem *)stk_top(crossparastk);
 		if (stop)
 		    *sitem = *stop;
@@ -1088,7 +1088,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	      case tok_lbrace:
 		error(err_unexbrace, &t.pos);
 		/* Error recovery: push nop */
-		sitem = mknew(struct stack_item);
+		sitem = snew(struct stack_item);
 		sitem->type = stack_nop;
 		sitem->fpos = t.pos;
 		stk_push(parsestk, sitem);
@@ -1213,7 +1213,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			    rdadd(&indexstr, L'"');
 			    addword(wd, &idximplicit);
 			}
-			sitem = mknew(struct stack_item);
+			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
 			sitem->type = stack_quote;
 			stk_push(parsestk, sitem);
@@ -1290,7 +1290,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			 * delimiting the text marked by the link.
 			 */
 			dtor(t), t = get_token(in);
-			sitem = mknew(struct stack_item);
+			sitem = snew(struct stack_item);
 			sitem->fpos = wd.fpos;
 			sitem->type = stack_hyper;
 			/*
@@ -1356,7 +1356,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			error(err_nestedstyles, &t.pos);
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
-			sitem = mknew(struct stack_item);
+			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
@@ -1369,7 +1369,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 				 type == c_cw ? word_WeakCode :
 				 word_Emph);
 			spcstyle = tospacestyle(style);
-			sitem = mknew(struct stack_item);
+			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
 			sitem->type = stack_style;
 			stk_push(parsestk, sitem);
@@ -1383,12 +1383,12 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			error(err_nestedindex, &t.pos);
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
-			sitem = mknew(struct stack_item);
+			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
 			sitem->type = stack_nop;
 			stk_push(parsestk, sitem);
 		    }
-		    sitem = mknew(struct stack_item);
+		    sitem = snew(struct stack_item);
 		    sitem->fpos = t.pos;
 		    sitem->type = stack_idx;
 		    dtor(t), t = get_token(in);
@@ -1458,7 +1458,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			 * sidetrack from the main thread of the
 			 * paragraph.
 			 */
-			sitem = mknew(struct stack_item);
+			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
 			sitem->type = stack_ualt;
 			sitem->whptr = whptr;

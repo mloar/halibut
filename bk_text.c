@@ -83,7 +83,7 @@ static textconfig text_configure(paragraph *source) {
     ret.achapter.number_suffix = L": ";
     ret.achapter.underline = L"\x203E\0-\0\0";
     ret.nasect = 1;
-    ret.asect = mknewa(alignstruct, ret.nasect);
+    ret.asect = snewn(ret.nasect, alignstruct);
     ret.asect[0].align = LEFTPLUS;
     ret.asect[0].just_numbers = TRUE;
     ret.asect[0].number_suffix = L" ";
@@ -157,7 +157,7 @@ static textconfig text_configure(paragraph *source) {
 		}
 		if (n >= ret.nasect) {
 		    int i;
-		    ret.asect = resize(ret.asect, n+1);
+		    ret.asect = sresize(ret.asect, n+1, alignstruct);
 		    for (i = ret.nasect; i <= n; i++)
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
@@ -172,7 +172,7 @@ static textconfig text_configure(paragraph *source) {
 		}
 		if (n >= ret.nasect) {
 		    int i;
-		    ret.asect = resize(ret.asect, n+1);
+		    ret.asect = sresize(ret.asect, n+1, alignstruct);
 		    for (i = ret.nasect; i <= n; i++)
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
@@ -187,7 +187,7 @@ static textconfig text_configure(paragraph *source) {
 		}
 		if (n >= ret.nasect) {
 		    int i;
-		    ret.asect = resize(ret.asect, n+1);
+		    ret.asect = sresize(ret.asect, n+1, alignstruct);
 		    for (i = ret.nasect; i <= n; i++)
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
@@ -202,7 +202,7 @@ static textconfig text_configure(paragraph *source) {
 		}
 		if (n >= ret.nasect) {
 		    int i;
-		    ret.asect = resize(ret.asect, n+1);
+		    ret.asect = sresize(ret.asect, n+1, alignstruct);
 		    for (i = ret.nasect; i <= n; i++) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    }

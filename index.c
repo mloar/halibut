@@ -10,14 +10,14 @@ static int compare_tags(void *av, void *bv);
 static int compare_entries(void *av, void *bv);
 
 indexdata *make_index(void) {
-    indexdata *ret = mknew(indexdata);
+    indexdata *ret = snew(indexdata);
     ret->tags = newtree234(compare_tags);
     ret->entries = newtree234(compare_entries);
     return ret;
 }
 
 static indextag *make_indextag(void) {
-    indextag *ret = mknew(indextag);
+    indextag *ret = snew(indextag);
     ret->name = NULL;
     ret->implicit_text = NULL;
     ret->explicit_texts = NULL;
@@ -131,10 +131,10 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 		}
 		if (t->nexplicit >= t->explicit_size) {
 		    t->explicit_size = t->nexplicit + 8;
-		    t->explicit_texts = resize(t->explicit_texts,
-					       t->explicit_size);
-		    t->explicit_fpos = resize(t->explicit_fpos,
-					      t->explicit_size);
+		    t->explicit_texts = sresize(t->explicit_texts,
+						t->explicit_size, word *);
+		    t->explicit_fpos = sresize(t->explicit_fpos,
+					       t->explicit_size, filepos);
 		}
 		t->explicit_texts[t->nexplicit] = text;
 		t->explicit_fpos[t->nexplicit] = *fpos;
@@ -169,9 +169,9 @@ void build_index(indexdata *i) {
 	    fa = t->explicit_fpos;
 	}
 	if (t->nrefs) {
-	    t->refs = mknewa(indexentry *, t->nrefs);
+	    t->refs = snewn(t->nrefs, indexentry *);
 	    for (j = 0; j < t->nrefs; j++) {
-		indexentry *ent = mknew(indexentry);
+		indexentry *ent = snew(indexentry);
 		ent->text = *ta++;
 		ent->fpos = *fa++;
 		t->refs[j] = add234(i->entries, ent);

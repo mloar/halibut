@@ -18,7 +18,7 @@ struct stackTag {
 stack stk_new(void) {
     stack s;
 
-    s = mknew(struct stackTag);
+    s = snew(struct stackTag);
     s->sp = 0;
     s->size = 0;
     s->data = NULL;
@@ -34,7 +34,7 @@ void stk_free(stack s) {
 void stk_push(stack s, void *item) {
     if (s->size <= s->sp) {
 	s->size = s->sp + 32;
-	s->data = resize(s->data, s->size);
+	s->data = sresize(s->data, s->size, void *);
     }
     s->data[s->sp++] = item;
 }
@@ -62,7 +62,7 @@ const rdstringc empty_rdstringc = {0, 0, NULL};
 void rdadd(rdstring *rs, wchar_t c) {
     if (rs->pos >= rs->size-1) {
 	rs->size = rs->pos + 128;
-	rs->text = resize(rs->text, rs->size);
+	rs->text = sresize(rs->text, rs->size, wchar_t);
     }
     rs->text[rs->pos++] = c;
     rs->text[rs->pos] = 0;
@@ -71,20 +71,20 @@ void rdadds(rdstring *rs, wchar_t const *p) {
     int len = ustrlen(p);
     if (rs->pos >= rs->size - len) {
 	rs->size = rs->pos + len + 128;
-	rs->text = resize(rs->text, rs->size);
+	rs->text = sresize(rs->text, rs->size, wchar_t);
     }
     ustrcpy(rs->text + rs->pos, p);
     rs->pos += len;
 }
 wchar_t *rdtrim(rdstring *rs) {
-    rs->text = resize(rs->text, rs->pos + 1);
+    rs->text = sresize(rs->text, rs->pos + 1, wchar_t);
     return rs->text;
 }
 
 void rdaddc(rdstringc *rs, char c) {
     if (rs->pos >= rs->size-1) {
 	rs->size = rs->pos + 128;
-	rs->text = resize(rs->text, rs->size);
+	rs->text = sresize(rs->text, rs->size, char);
     }
     rs->text[rs->pos++] = c;
     rs->text[rs->pos] = 0;
@@ -93,13 +93,13 @@ void rdaddsc(rdstringc *rs, char const *p) {
     int len = strlen(p);
     if (rs->pos >= rs->size - len) {
 	rs->size = rs->pos + len + 128;
-	rs->text = resize(rs->text, rs->size);
+	rs->text = sresize(rs->text, rs->size, char);
     }
     strcpy(rs->text + rs->pos, p);
     rs->pos += len;
 }
 char *rdtrimc(rdstringc *rs) {
-    rs->text = resize(rs->text, rs->pos + 1);
+    rs->text = sresize(rs->text, rs->pos + 1, char);
     return rs->text;
 }
 
@@ -462,7 +462,7 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
      */
     i = 0;
     while (i < nwords) {
-	wrappedline *w = mknew(wrappedline);
+	wrappedline *w = snew(wrappedline);
 	*ptr = w;
 	ptr = &w->next;
 	w->next = NULL;
@@ -515,13 +515,13 @@ void cmdline_cfg_add(paragraph *cfg, char *string)
 
     upos = ulen;
     ulen += 2 + ustrlen(ustring);
-    cfg->keyword = resize(cfg->keyword, ulen);
+    cfg->keyword = sresize(cfg->keyword, ulen, wchar_t);
     ustrcpy(cfg->keyword+upos, ustring);
     cfg->keyword[ulen-1] = L'\0';
 
     pos = len;
     len += 2 + strlen(string);
-    cfg->origkeyword = resize(cfg->origkeyword, len);
+    cfg->origkeyword = sresize(cfg->origkeyword, len, char);
     strcpy(cfg->origkeyword+pos, string);
     cfg->origkeyword[len-1] = '\0';
 
@@ -532,7 +532,7 @@ paragraph *cmdline_cfg_new(void)
 {
     paragraph *p;
 
-    p = mknew(paragraph);
+    p = snew(paragraph);
     memset(p, 0, sizeof(*p));
     p->type = para_Config;
     p->next = NULL;

@@ -279,7 +279,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	indexentry *entry;
 
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
-	    info_idx *ii = mknew(info_idx);
+	    info_idx *ii = snew(info_idx);
 	    info_data id = EMPTY_INFO_DATA;
 
 	    id.charset = conf.charset;
@@ -631,7 +631,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 
 		if (fp)
 		    fclose(fp);
-		fname = mknewa(char, strlen(conf.filename) + 40);
+		fname = snewn(strlen(conf.filename) + 40, char);
 		sprintf(fname, "%s-%d", conf.filename, filenum);
 		fp = fopen(fname, "w");
 		if (!fp) {
@@ -678,7 +678,7 @@ static int info_check_index(word *w, node *n, indexdata *idx)
 
 		if (ii->nnodes >= ii->nodesize) {
 		    ii->nodesize += 32;
-		    ii->nodes = resize(ii->nodes, ii->nodesize);
+		    ii->nodes = sresize(ii->nodes, ii->nodesize, node *);
 		}
 
 		ii->nodes[ii->nnodes++] = n;
@@ -1024,7 +1024,7 @@ static node *info_node_new(char *name, int charset)
 {
     node *n;
 
-    n = mknew(node);
+    n = snew(node);
     n->text = empty_info_data;
     n->text.charset = charset;
     n->up = n->next = n->prev = n->lastchild = n->listnext = NULL;

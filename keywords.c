@@ -33,7 +33,7 @@ keyword *kw_lookup(keywordlist *kl, wchar_t *str) {
  */
 keywordlist *get_keywords(paragraph *source) {
     int errors = FALSE;
-    keywordlist *kl = mknew(keywordlist);
+    keywordlist *kl = snew(keywordlist);
     numberstate *n = number_init();
     int prevpara = para_NotParaType;
 
@@ -68,7 +68,7 @@ keywordlist *get_keywords(paragraph *source) {
 	    if (source->kwtext || source->type == para_Biblio) {
 		keyword *kw, *ret;
 
-		kw = mknew(keyword);
+		kw = snew(keyword);
 		kw->key = p;
 		kw->text = source->kwtext;
 		kw->para = source;
@@ -82,7 +82,8 @@ keywordlist *get_keywords(paragraph *source) {
 	} else {
 	    if (kl->nlooseends >= kl->looseendssize) {
 		kl->looseendssize = kl->nlooseends + 32;
-		kl->looseends = resize(kl->looseends, kl->looseendssize);
+		kl->looseends = sresize(kl->looseends, kl->looseendssize,
+					word *);
 	    }
 	    kl->looseends[kl->nlooseends++] = source->kwtext;
 	}
@@ -133,7 +134,7 @@ void subst_keywords(paragraph *source, keywordlist *kl) {
 		    kw->para->type != para_BiblioCited)
 		    ustrlow(subst->text);
 
-		close = mknew(word);
+		close = snew(word);
 		close->text = NULL;
 		close->alt = NULL;
 		close->type = word_XrefEnd;

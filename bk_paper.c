@@ -399,7 +399,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     paragraph index_placeholder_para;
     page_data *first_index_page;
 
-    fontlist = mknew(font_list);
+    fontlist = snew(font_list);
     fontlist->head = fontlist->tail = NULL;
 
     ourconf = paper_configure(sourceform, fontlist);
@@ -416,7 +416,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	has_index = FALSE;
 
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
-	    paper_idx *pi = mknew(paper_idx);
+	    paper_idx *pi = snew(paper_idx);
 
 	    has_index = TRUE;
 
@@ -682,7 +682,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 
 	if (has_index) {
-	    first_index_page = mknew(page_data);
+	    first_index_page = snew(page_data);
 	    first_index_page->next = first_index_page->prev = NULL;
 	    first_index_page->first_line = NULL;
 	    first_index_page->last_line = NULL;
@@ -910,7 +910,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
      * Start putting together the overall document structure we're
      * going to return.
      */
-    doc = mknew(document);
+    doc = snew(document);
     doc->fonts = fontlist;
     doc->pages = pages;
     doc->paper_width = conf->paper_width;
@@ -925,7 +925,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     {
 	int osize = 20;
 
-	doc->outline_elements = mknewa(outline_element, osize);
+	doc->outline_elements = snewn(osize, outline_element);
 	doc->n_outline_elements = 0;
 
 	/* First find the title. */
@@ -944,7 +944,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 		if (doc->n_outline_elements >= osize) {
 		    osize += 20;
 		    doc->outline_elements =
-			resize(doc->outline_elements, osize);
+			sresize(doc->outline_elements, osize, outline_element);
 		}
 
 		doc->outline_elements[doc->n_outline_elements].level =
@@ -967,7 +967,7 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
     int extra_indent, firstline_indent, aux_indent;
     word *aux, *aux2;
 
-    pdata = mknew(para_data);
+    pdata = snew(para_data);
     pdata->outline_level = -1;
     pdata->outline_title = NULL;
     pdata->rect_type = RECT_NONE;
@@ -1227,7 +1227,7 @@ static font_encoding *new_font_encoding(font_data *font)
     font_encoding *fe;
     int i;
 
-    fe = mknew(font_encoding);
+    fe = snew(font_encoding);
     fe->next = NULL;
 
     if (font->list->tail)
@@ -1262,14 +1262,14 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
 
     for (nglyphs = 0; ps_std_glyphs[nglyphs] != NULL; nglyphs++);
 
-    f = mknew(font_data);
+    f = snew(font_data);
 
     f->list = fontlist;
     f->name = name;
     f->nglyphs = nglyphs;
     f->glyphs = ps_std_glyphs;
     f->widths = widths;
-    f->subfont_map = mknewa(subfont_map_entry, nglyphs);
+    f->subfont_map = snewn(nglyphs, subfont_map_entry);
 
     /*
      * Our first subfont will contain all of US-ASCII. This isn't
@@ -1466,7 +1466,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	word *wd;
 	int len, wid, spaces;
 
-	ldata = mknew(line_data);
+	ldata = snew(line_data);
 
 	ldata->pdata = pdata;
 	ldata->first = p->begin;
@@ -1546,11 +1546,11 @@ static page_data *page_breaks(line_data *first, line_data *last,
      */
 
     for (l = last; l; l = l->prev) {
-	l->bestcost = mknewa(int, ncols+1);
-	l->vshortfall = mknewa(int, ncols+1);
-	l->text = mknewa(int, ncols+1);
-	l->space = mknewa(int, ncols+1);
-	l->page_last = mknewa(line_data *, ncols+1);
+	l->bestcost = snewn(ncols+1, int);
+	l->vshortfall = snewn(ncols+1, int);
+	l->text = snewn(ncols+1, int);
+	l->space = snewn(ncols+1, int);
+	l->page_last = snewn(ncols+1, line_data *);
 
 	for (n = 0; n <= ncols; n++) {
 	    int minheight, text = 0, space = 0;
@@ -1654,7 +1654,7 @@ static page_data *page_breaks(line_data *first, line_data *last,
 	page_data *page;
 	int text, space, head;
 
-	page = mknew(page_data);
+	page = snew(page_data);
 	page->next = NULL;
 	page->prev = pt;
 	if (pt)
@@ -1712,7 +1712,7 @@ static page_data *page_breaks(line_data *first, line_data *last,
 
 static void add_rect_to_page(page_data *page, int x, int y, int w, int h)
 {
-    rect *r = mknew(rect);
+    rect *r = snew(rect);
 
     r->next = NULL;
     if (page->last_rect)
@@ -1733,7 +1733,7 @@ static void add_string_to_page(page_data *page, int x, int y,
 {
     text_fragment *frag;
 
-    frag = mknew(text_fragment);
+    frag = snew(text_fragment);
     frag->next = NULL;
 
     if (page->last_text)
@@ -1760,7 +1760,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
     int textpos, textwid, glyph;
     font_encoding *subfont = NULL, *sf;
 
-    text = mknewa(char, 1 + ustrlen(str));
+    text = snewn(1 + ustrlen(str), char);
     textpos = textwid = 0;
 
     while (*str) {
@@ -1876,7 +1876,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		}
 	    }
 	    if (dest.type != NONE) {
-		*xr = mknew(xref);
+		*xr = snew(xref);
 		(*xr)->dest = dest;    /* structure copy */
 		if (page->last_xref)
 		    page->last_xref->next = *xr;
@@ -2036,7 +2036,7 @@ static int render_line(line_data *ldata, int left_x, int top_y,
 	 * previous line.
 	 */
 	if (dest->type != NONE) {
-	    xr = mknew(xref);
+	    xr = snew(xref);
 	    xr->next = NULL;
 	    xr->dest = *dest;    /* structure copy */
 	    if (ldata->page->last_xref)
@@ -2118,7 +2118,7 @@ static void render_para(para_data *pdata, paper_conf *conf,
 	 */
 	if (pdata->contents_entry && ldata->page != cxref_page) {
 	    cxref_page = ldata->page;
-	    cxref = mknew(xref);
+	    cxref = snew(xref);
 	    cxref->next = NULL;
 	    cxref->dest.type = PAGE;
 	    if (pdata->contents_entry == index_placeholder) {
@@ -2222,7 +2222,7 @@ static void render_para(para_data *pdata, paper_conf *conf,
 
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
 {
-    para_data *pdata = mknew(para_data);
+    para_data *pdata = snew(para_data);
 
     /*
      * For code paragraphs, I'm going to hack grievously and
@@ -2284,12 +2284,12 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
 	     * which has the same emphasis. Form it into a word
 	     * structure.
 	     */
-	    w = mknew(word);
+	    w = snew(word);
 	    w->next = NULL;
 	    w->alt = NULL;
 	    w->type = (prev == 0 ? word_WeakCode :
 		      prev == 1 ? word_Emph : word_Normal);
-	    w->text = mknewa(wchar_t, t-start+1);
+	    w->text = snewn(t-start+1, wchar_t);
 	    memcpy(w->text, start, (t-start) * sizeof(wchar_t));
 	    w->text[t-start] = '\0';
 	    w->breaks = FALSE;
@@ -2304,7 +2304,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
 	    prev = -1;
 	}
 
-	ldata = mknew(line_data);
+	ldata = snew(line_data);
 
 	ldata->pdata = pdata;
 	ldata->first = lhead;
@@ -2339,10 +2339,10 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
 
 static para_data *rule_paragraph(int indent, paper_conf *conf)
 {
-    para_data *pdata = mknew(para_data);
+    para_data *pdata = snew(para_data);
     line_data *ldata;
 
-    ldata = mknew(line_data);
+    ldata = snew(line_data);
 
     ldata->pdata = pdata;
     ldata->first = NULL;
@@ -2448,7 +2448,7 @@ static wchar_t *prepare_outline_title(word *first, wchar_t *separator,
 
 static word *fake_word(wchar_t *text)
 {
-    word *ret = mknew(word);
+    word *ret = snew(word);
     ret->next = NULL;
     ret->alt = NULL;
     ret->type = word_Normal;
@@ -2460,7 +2460,7 @@ static word *fake_word(wchar_t *text)
 
 static word *fake_space_word(void)
 {
-    word *ret = mknew(word);
+    word *ret = snew(word);
     ret->next = NULL;
     ret->alt = NULL;
     ret->type = word_WhiteSpace;
@@ -2472,7 +2472,7 @@ static word *fake_space_word(void)
 
 static word *fake_page_ref(page_data *page)
 {
-    word *ret = mknew(word);
+    word *ret = snew(word);
     ret->next = NULL;
     ret->alt = NULL;
     ret->type = word_PageXref;
@@ -2485,7 +2485,7 @@ static word *fake_page_ref(page_data *page)
 
 static word *fake_end_ref(void)
 {
-    word *ret = mknew(word);
+    word *ret = snew(word);
     ret->next = NULL;
     ret->alt = NULL;
     ret->type = word_XrefEnd;

@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     /*
      * Set up initial (default) parameters.
      */
-    infiles = mknewa(char *, argc);
+    infiles = snewn(argc, char *);
     nfiles = 0;
     nogo = errs = FALSE;
     reportcols = 0;

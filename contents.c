@@ -25,14 +25,14 @@ struct numberstate_Tag {
 };
 
 numberstate *number_init(void) {
-    numberstate *ret = mknew(numberstate);
+    numberstate *ret = snew(numberstate);
     ret->chapternum = 0;
     ret->appendixnum = -1;
     ret->ischapter = 1;
     ret->oklevel = -1;		       /* not even in a chapter yet */
     ret->maxsectlevel = 32;
-    ret->sectionlevels = mknewa(int, ret->maxsectlevel);
-    ret->currentsects = mknewa(paragraph *, ret->maxsectlevel+1);
+    ret->sectionlevels = snewn(ret->maxsectlevel, int);
+    ret->currentsects = snewn(ret->maxsectlevel+1, paragraph *);
     memset(ret->currentsects, 0, (ret->maxsectlevel+1)*sizeof(paragraph *));
     ret->lastsect = NULL;
     ret->listitem = -1;
@@ -48,7 +48,7 @@ void number_free(numberstate *state) {
 }
 
 static void dotext(word ***wret, wchar_t *text) {
-    word *mnewword = mknew(word);
+    word *mnewword = snew(word);
     mnewword->text = ustrdup(text);
     mnewword->type = word_Normal;
     mnewword->alt = NULL;
@@ -58,7 +58,7 @@ static void dotext(word ***wret, wchar_t *text) {
 }
 
 static void dospace(word ***wret) {
-    word *mnewword = mknew(word);
+    word *mnewword = snew(word);
     mnewword->text = NULL;
     mnewword->type = word_WhiteSpace;
     mnewword->alt = NULL;
@@ -162,8 +162,8 @@ word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
 	state->oklevel = level+1;
 	if (state->maxsectlevel <= level) {
 	    state->maxsectlevel = level + 32;
-	    state->sectionlevels = resize(state->sectionlevels,
-					  state->maxsectlevel);
+	    state->sectionlevels = sresize(state->sectionlevels,
+					   state->maxsectlevel, int);
 	}
 	state->sectionlevels[level]++;
 	for (i = level+1; i < state->maxsectlevel; i++)
@@ -205,7 +205,7 @@ word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
 	donumber(&pret, state->listitem);
 	break;
       case para_LcontPush:
-	lse = mknew(struct listitem_stack_entry);
+	lse = snew(struct listitem_stack_entry);
 	lse->listitem = state->listitem;
 	lse->prev = *prev;
 	stk_push(state->listitem_stack, lse);

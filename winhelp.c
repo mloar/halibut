@@ -83,12 +83,13 @@
 #define smalloc malloc
 #define srealloc realloc
 #define sfree free
-#define mknew(type) ( (type *) smalloc (sizeof (type)) )
-#define mknewa(type, number) ( (type *) smalloc ((number) * sizeof (type)) )
-#define resize(array, len) ( srealloc ((array), (len) * sizeof (*(array))) )
+#define snew(type) ( (type *) smalloc (sizeof (type)) )
+#define snewn(number, type) ( (type *) smalloc ((number) * sizeof (type)) )
+#define sresize(array, len, type) \
+		( (type *) srealloc ((array), (len) * sizeof (type)) )
 #define lenof(array) ( sizeof(array) / sizeof(*(array)) )
 char *dupstr(char *s) {
-    char *r = mknewa(char, 1+strlen(s)); strcpy(r,s); return r;
+    char *r = snewn(1+strlen(s), char); strcpy(r,s); return r;
 }
 #endif
 
@@ -403,7 +404,7 @@ static unsigned long context_hash(char *context)
 
 WHLP_TOPIC whlp_register_topic(WHLP h, char *context_name, char **clash)
 {
-    context *ctx = mknew(context);
+    context *ctx = snew(context);
     context *otherctx;
 
     /*
@@ -463,7 +464,7 @@ void whlp_prepare(WHLP h)
 
     while ( (ctx = index234(h->pre_contexts, 0)) != NULL ) {
 	delpos234(h->pre_contexts, 0);
-	ctx->name = mknewa(char, 20);
+	ctx->name = snewn(20, char);
 	do {
 	    sprintf(ctx->name, "t%08d", ctx_num++);
 	    ctx->hash = context_hash(ctx->name);
@@ -485,7 +486,7 @@ char *whlp_topic_id(WHLP_TOPIC topic)
 
 void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...)
 {
-    struct topiclink *link = mknew(struct topiclink);
+    struct topiclink *link = snew(struct topiclink);
     int len, slen;
     char *macro;
     va_list ap;
@@ -501,7 +502,7 @@ void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...)
 
     link->recordtype = 2;	       /* topic header */
     link->len1 = 4*7;		       /* standard linkdata1 size */
-    link->data1 = mknewa(unsigned char, link->len1);
+    link->data1 = snewn(link->len1, unsigned char);
     
     slen = strlen(title);
     assert(slen+1 <= TOPIC_BLKSIZE);
@@ -519,7 +520,7 @@ void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...)
     len--;			       /* lose the last \0 on the last macro */
 
     link->len2 = len;
-    link->data2 = mknewa(unsigned char, link->len2);
+    link->data2 = snewn(link->len2, unsigned char);
     memcpy(link->data2, h->linkdata2, link->len2);
 
     topic->title = dupstr(title);
@@ -643,7 +644,7 @@ void whlp_set_tabstop(WHLP h, int tabstop, int alignment)
     if (alignment == WHLP_ALIGN_RIGHT)
         tabstop |= 0x10000;
 
-    p = mknew(int);
+    p = snew(int);
     *p = tabstop;
     add234(h->tabstops, p);
     h->para_flags |= 0x0200;
@@ -651,7 +652,7 @@ void whlp_set_tabstop(WHLP h, int tabstop, int alignment)
 
 void whlp_begin_para(WHLP h, int para_type)
 {
-    struct topiclink *link = mknew(struct topiclink);
+    struct topiclink *link = snew(struct topiclink);
     int i;
 
     /*
@@ -800,10 +801,10 @@ void whlp_end_para(WHLP h)
     whlp_linkdata_cslong(h, 1, data1cut);
     whlp_linkdata_cushort(h, 1, h->link->len2);
 
-    h->link->data1 = mknewa(unsigned char, h->link->len1);
+    h->link->data1 = snewn(h->link->len1, unsigned char);
     memcpy(h->link->data1, h->linkdata1 + data1cut, h->link->len1 - data1cut);
     memcpy(h->link->data1 + h->link->len1 - data1cut, h->linkdata1, data1cut);
-    h->link->data2 = mknewa(unsigned char, h->link->len2);
+    h->link->data2 = snewn(h->link->len2, unsigned char);
     memcpy(h->link->data2, h->linkdata2, h->link->len2);
 
     addpos234(h->text, h->link, count234(h->text));
@@ -870,12 +871,12 @@ static void whlp_topic_layout(WHLP h)
     /*
      * Create a final TOPICLINK containing no usable data.
      */
-    link = mknew(struct topiclink);
+    link = snew(struct topiclink);
     link->nexttopic = NULL;
     if (h->prevtopic)
 	h->prevtopic->nexttopic = link;
     h->prevtopic = link;
-    link->data1 = mknewa(unsigned char, 0x1c);
+    link->data1 = snewn(0x1c, unsigned char);
     link->block_size = 0;
     link->data2 = NULL;
     link->len1 = 0x1c;
@@ -1043,7 +1044,7 @@ static void whlp_topic_layout(WHLP h)
 
 void whlp_index_term(WHLP h, char *index, WHLP_TOPIC topic)
 {
-    struct indexrec *idx = mknew(struct indexrec);
+    struct indexrec *idx = snew(struct indexrec);
 
     idx->term = dupstr(index);
     idx->topic = topic;
@@ -1168,7 +1169,7 @@ int whlp_create_font(WHLP h, char *font, int family, int halfpoints,
 	sfree(fontname);
     }
 
-    fontdesc = mknew(struct fontdesc);
+    fontdesc = snew(struct fontdesc);
     fontdesc->font = font;
     fontdesc->family = family;
     fontdesc->halfpoints = halfpoints;
@@ -1302,7 +1303,7 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
 	npages_this_level++;
 	if (npages >= pagessize) {
 	    pagessize = npages + 32;
-	    page_elements = resize(page_elements, pagessize);
+	    page_elements = sresize(page_elements, pagessize, void *);
 	}
 	page_elements[npages++] = element;
 
@@ -1388,7 +1389,7 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
 	    npages_this_level++;
 	    if (npages >= pagessize) {
 		pagessize = npages + 32;
-		page_elements = resize(page_elements, pagessize);
+		page_elements = sresize(page_elements, pagessize, void *);
 	    }
 	    page_elements[npages++] = page_elements[current];
 
@@ -1458,7 +1459,7 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
 static struct file *whlp_new_file(WHLP h, char *name)
 {
     struct file *f;
-    f = mknew(struct file);
+    f = snew(struct file);
     f->data = NULL;
     f->pos = f->len = f->size = 0;
     if (name) {
@@ -1481,7 +1482,7 @@ static void whlp_file_add(struct file *f, const void *data, int len)
 {
     if (f->pos + len > f->size) {
 	f->size = f->pos + len + 1024;
-	f->data = resize(f->data, f->size);
+	f->data = sresize(f->data, f->size, unsigned char);
     }
     memcpy(f->data + f->pos, data, len);
     f->pos += len;
@@ -1514,7 +1515,7 @@ static void whlp_file_fill(struct file *f, int len)
 {
     if (f->pos + len > f->size) {
 	f->size = f->pos + len + 1024;
-	f->data = resize(f->data, f->size);
+	f->data = sresize(f->data, f->size, unsigned char);
     }
     memset(f->data + f->pos, 0, len);
     f->pos += len;
@@ -1541,7 +1542,7 @@ WHLP whlp_new(void)
     WHLP ret;
     struct file *f;
 
-    ret = mknew(struct WHLP_tag);
+    ret = snew(struct WHLP_tag);
 
     /*
      * Internal B-trees.

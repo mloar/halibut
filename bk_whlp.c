@@ -201,13 +201,13 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    tolower(conf.filename[len-2] != 'l') ||
 	    tolower(conf.filename[len-1] != 'p')) {
 	    char *newf;
-	    newf = mknewa(char, len + 5);
+	    newf = snewn(len + 5, char);
 	    sprintf(newf, "%s.hlp", conf.filename);
 	    sfree(conf.filename);
 	    conf.filename = newf;
 	    len = strlen(newf);
 	}
-	cntname = mknewa(char, len+1);
+	cntname = snewn(len+1, char);
 	sprintf(cntname, "%.*s.cnt", len-4, conf.filename);
     }
 
@@ -552,7 +552,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 			whlp_set_font(h, FONT_BOLD_CODE);
 		    else
 			whlp_set_font(h, FONT_CODE);
-		    tmp = mknewa(wchar_t, n+1);
+		    tmp = snewn(n+1, wchar_t);
 		    ustrncpy(tmp, t, n);
 		    tmp[n] = L'\0';
 		    whlp_wtext(&state, tmp);

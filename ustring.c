@@ -11,10 +11,10 @@
 wchar_t *ustrdup(wchar_t const *s) {
     wchar_t *r;
     if (s) {
-	r = mknewa(wchar_t, 1+ustrlen(s));
+	r = snewn(1+ustrlen(s), wchar_t);
 	ustrcpy(r, s);
     } else {
-	r = mknew(wchar_t);
+	r = snew(wchar_t);
 	*r = 0;
     }
     return r;
@@ -100,7 +100,7 @@ char *utoa_internal_dup(wchar_t const *s, int charset, int *lenp, int careful)
     len = ustrlen(s);
 
     outlen = len + 10;
-    outbuf = mknewa(char, outlen);
+    outbuf = snewn(outlen, char);
 
     outpos = 0;
     outbuf[outpos] = '\0';
@@ -116,7 +116,7 @@ char *utoa_internal_dup(wchar_t const *s, int charset, int *lenp, int careful)
 	}
 	if (!ret) {
 	    outlen = outlen * 3 / 2;
-	    outbuf = resize(outbuf, outlen);
+	    outbuf = sresize(outbuf, outlen, char);
 	}
 	outpos += ret;
 	outbuf[outpos] = '\0';
@@ -125,7 +125,7 @@ char *utoa_internal_dup(wchar_t const *s, int charset, int *lenp, int careful)
      * Clean up
      */
     outlen = outpos + 32;
-    outbuf = resize(outbuf, outlen);
+    outbuf = sresize(outbuf, outlen, char);
     ret = charset_from_unicode(NULL, 0,
 			       outbuf + outpos, outlen - outpos + 1,
 			       charset, &state, NULL);
@@ -157,12 +157,12 @@ wchar_t *ufroma_dup(char const *s, int charset) {
 
     len = strlen(s) + 1;
     do {
-	buf = resize(buf, len);
+	buf = sresize(buf, len, wchar_t);
 	ustrfroma(s, buf, len, charset);
 	len = (3 * len) / 2 + 1;       /* this guarantees a strict increase */
     } while (ustrlen(buf) >= len-1);
 
-    buf = resize(buf, ustrlen(buf)+1);
+    buf = sresize(buf, ustrlen(buf)+1, wchar_t);
     return buf;
 }
 
@@ -177,14 +177,14 @@ char *utoa_locale_dup(wchar_t const *s)
 
     len = ustrlen(s);
 
-    ret = mknewa(char, 1 + MB_CUR_MAX * len);
+    ret = snewn(1 + MB_CUR_MAX * len, char);
 
     siz = wcstombs(ret, s, len);
 
     if (siz) {
 	assert(siz <= MB_CUR_MAX * len);
 	ret[siz] = '\0';
-	ret = resize(ret, siz+1);
+	ret = sresize(ret, siz+1, char);
 	return ret;
     }
 
@@ -208,14 +208,14 @@ wchar_t *ufroma_locale_dup(char const *s)
 
     len = strlen(s);
 
-    ret = mknewa(wchar_t, 1 + 2*len);  /* be conservative */
+    ret = snewn(1 + 2*len, wchar_t);  /* be conservative */
 
     siz = mbstowcs(ret, s, len);
 
     if (siz) {
 	assert(siz <= (size_t)(2 * len));
 	ret[siz] = L'\0';
-	ret = resize(ret, siz+1);
+	ret = sresize(ret, siz+1, wchar_t);
 	return ret;
     }
 
@@ -386,7 +386,7 @@ static void ustrftime_internal(rdstring *rs, char formatchr,
     size = 0;
     do {
 	size += USTRFTIME_DELTA;
-	buf = resize(buf, size);
+	buf = sresize(buf, size, wchar_t);
 	ret = (int) wcsftime(buf, size, fmt, timespec);
     } while (ret == 0);
 
@@ -406,7 +406,7 @@ static void ustrftime_internal(rdstring *rs, char formatchr,
     size = 0;
     do {
 	size += USTRFTIME_DELTA;
-	buf = resize(buf, size);
+	buf = sresize(buf, size, char);
 	ret = (int) strftime(buf, size, fmt, timespec);
     } while (ret == 0);
 

@@ -464,7 +464,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
 static object *new_object(objlist *list)
 {
-    object *obj = mknew(object);
+    object *obj = snew(object);
 
     obj->list = list;
 
