@@ -281,6 +281,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    whlp_para_attr(h, WHLP_PARA_FIRSTLINEINDENT, -36);
 	    whlp_set_tabstop(h, 72, WHLP_ALIGN_LEFT);
 	    whlp_begin_para(h, WHLP_PARA_SCROLL);
+	    whlp_set_font(h, FONT_NORMAL);
 	    if (p->type == para_Bullet) {
 		whlp_text(h, "\x95");
 	    } else {
