@@ -6,10 +6,13 @@
 #include <stdlib.h>
 #include "buttress.h"
 
+static int compare_tags(void *av, void *bv);
+static int compare_entries(void *av, void *bv);
+
 index *make_index(void) {
     index *ret = mknew(index);
-    ret->tags = newtree23();
-    ret->entries = newtree23();
+    ret->tags = newtree234(compare_tags);
+    ret->entries = newtree234(compare_entries);
     return ret;
 }
 
@@ -50,7 +53,7 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
     for (; *tags; tags = uadv(tags)) {
 	t = make_indextag();
 	t->name = tags;
-	existing = add23(idx->tags, t, compare_tags);
+	existing = add234(idx->tags, t);
 	if (existing == t) {
 	    /*
 	     * Duplicate this so we can free it independently.
@@ -113,11 +116,10 @@ void index_merge(index *idx, int is_explicit, wchar_t *tags, word *text) {
 void build_index(index *i) {
     indextag *t;
     word **ta;
-    enum23 e;
+    int ti;
     int j;
 
-    for (t = (indextag *)first23(i->tags, &e); t;
-	 t = (indextag *)next23(&e)) {
+    for (ti = 0; (t = (indextag *)index234(i->tags, ti)) != NULL; ti++) {
 	if (t->implicit_text) {
 	    t->nrefs = 1;
 	    ta = &t->implicit_text;
@@ -130,7 +132,7 @@ void build_index(index *i) {
 	    for (j = 0; j < t->nrefs; j++) {
 		indexentry *ent = mknew(indexentry);
 		ent->text = *ta++;
-		t->refs[j] = add23(i->entries, ent, compare_entries);
+		t->refs[j] = add234(i->entries, ent);
 		if (t->refs[j] != ent)     /* duplicate */
 		    sfree(ent);
 	    }
@@ -141,22 +143,20 @@ void build_index(index *i) {
 void cleanup_index(index *i) {
     indextag *t;
     indexentry *ent;
-    enum23 e;
+    int ti;
 
-    for (t = (indextag *)first23(i->tags, &e); t;
-	 t = (indextag *)next23(&e)) {
+    for (ti = 0; (t = (indextag *)index234(i->tags, ti)) != NULL; ti++) {
 	sfree(t->name);
 	free_word_list(t->implicit_text);
 	sfree(t->explicit_texts);
 	sfree(t->refs);
 	sfree(t);
     }
-    freetree23(i->tags);
-    for (ent = (indexentry *)first23(i->entries, &e); ent;
-	 ent = (indexentry *)next23(&e)) {
+    freetree234(i->tags);
+    for (ti = 0; (ent = (indexentry *)index234(i->entries, ti))!=NULL; ti++) {
 	sfree(ent);
     }
-    freetree23(i->entries);
+    freetree234(i->entries);
     sfree(i);
 }
 
@@ -166,12 +166,11 @@ static void dbg_prtmerge(int is_explicit, wchar_t *tag, word *text);
 void index_debug(index *i) {
     indextag *t;
     indexentry *y;
-    enum23 e;
+    int ti;
     int j;
 
     printf("\nINDEX TAGS\n==========\n\n");
-    for (t = (indextag *)first23(i->tags, &e); t;
-	 t = (indextag *)next23(&e)) {
+    for (ti = 0; (t = (indextag *)index234(i->tags, ti)) != NULL; ti++) {
         printf("\n");
 	if (t->implicit_text)
 	    dbg_prtmerge(0, t->name, t->implicit_text);
@@ -180,8 +179,7 @@ void index_debug(index *i) {
     }
 
     printf("\nINDEX ENTRIES\n=============\n\n");
-    for (y = (indexentry *)first23(i->entries, &e); y;
-	 y = (indexentry *)next23(&e)) {
+    for (ti = 0; (y = (indexentry *)index234(i->entries, ti)) != NULL; ti++) {
         printf("\n");
 	printf("{\n");
 	dbg_prtwordlist(1, y->text);

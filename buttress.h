@@ -21,6 +21,8 @@
 /* For suppressing unused-parameter warnings */
 #define IGNORE(x) ( (x) = (x) )
 
+#include "tree234.h"
+
 /*
  * Structure tags
  */
@@ -36,7 +38,6 @@ typedef struct index_Tag index;
 typedef struct indextag_Tag indextag;
 typedef struct indexentry_Tag indexentry;
 typedef struct macrostack_Tag macrostack;
-typedef struct tree23_Tag tree23;
 
 /*
  * Data structure to hold a file name and index, a line and a
@@ -338,8 +339,8 @@ void subst_keywords(paragraph *, keywordlist *);
  * Data structure to hold both sides of the index.
  */
 struct index_Tag {
-    tree23 *tags;		       /* holds type `indextag' */
-    tree23 *entries;		       /* holds type `indexentry' */
+    tree234 *tags;		       /* holds type `indextag' */
+    tree234 *entries;		       /* holds type `indexentry' */
 };
 
 /*
@@ -389,20 +390,6 @@ void gen_citations(paragraph *, keywordlist *);
  */
 struct userstyle_Tag {
 };
-
-/*
- * tree23.c
- */
-typedef struct enum23_Tag {
-    void *node;
-    int posn;
-} enum23;
-tree23 *newtree23(void);
-void freetree23(tree23 *);
-void *add23(tree23 *, void *, int (*cmp)(void *, void *));
-void *find23(tree23 *, void *, int (*cmp)(void *, void *));
-void *first23(tree23 *, enum23 *);
-void *next23(enum23 *);
 
 /*
  * bk_text.c

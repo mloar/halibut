@@ -43,22 +43,22 @@ static int macrocmp(void *av, void *bv) {
     macro *a = (macro *)av, *b = (macro *)bv;
     return ustrcmp(a->name, b->name);
 }
-static void macrodef(tree23 *macros, wchar_t *name, wchar_t *text,
+static void macrodef(tree234 *macros, wchar_t *name, wchar_t *text,
 		     filepos fpos) {
     macro *m = mknew(macro);
     m->name = name;
     m->text = text;
-    if (add23(macros, m, macrocmp) != m) {
+    if (add234(macros, m) != m) {
 	error(err_macroexists, &fpos, name);
 	sfree(name);
 	sfree(text);
     }
 }
-static int macrolookup(tree23 *macros, input *in, wchar_t *name,
+static int macrolookup(tree234 *macros, input *in, wchar_t *name,
 		       filepos *pos) {
     macro m, *gotit;
     m.name = name;
-    gotit = find23(macros, &m, macrocmp);
+    gotit = find234(macros, &m, NULL);
     if (gotit) {
 	macrostack *expansion = mknew(macrostack);
 	expansion->next = in->stack;
@@ -71,16 +71,15 @@ static int macrolookup(tree23 *macros, input *in, wchar_t *name,
     } else
 	return FALSE;
 }
-static void macrocleanup(tree23 *macros) {
-    enum23 e;
+static void macrocleanup(tree234 *macros) {
+    int ti;
     macro *m;
-    for (m = (macro *)first23(macros, &e); m;
-	 m = (macro *)next23(&e)) {
+    for (ti = 0; (m = (macro *)index234(macros, ti)) != NULL; ti++) {
 	sfree(m->name);
 	sfree(m->text);
 	sfree(m);
     }
-    freetree23(macros);
+    freetree234(macros);
 }
 
 /*
@@ -498,7 +497,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
     token t;
     paragraph par;
     word wd, **whptr, **idximplicit;
-    tree23 *macros;
+    tree234 *macros;
     wchar_t utext[2], *wdtext;
     int style, spcstyle;
     int already;
@@ -525,7 +524,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
     wchar_t uchr;
 
     t.text = NULL;
-    macros = newtree23();
+    macros = newtree234(macrocmp);
 
     /*
      * Loop on each paragraph.

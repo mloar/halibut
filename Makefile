@@ -51,7 +51,7 @@ endif
 
 SRC := ../
 
-MODULES := main malloc ustring error help licence version misc tree23
+MODULES := main malloc ustring error help licence version misc tree234
 MODULES += input keywords contents index style biblio
 MODULES += bk_text bk_xhtml
 

@@ -567,7 +567,7 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_id
 {
 /*  int i;*/
   indexentry *ientry;
-  enum23 e;
+  int ti;
   xhtmlsection *xsect;
 
   sourceparas = sourceform;
@@ -576,9 +576,7 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_id
   idx = in_idx;
 
   /* Clear up the index entries backend data pointers */
-  for (ientry = (indexentry *)first23(idx->entries, &e);
-       ientry;
-       ientry = (indexentry *)next23(&e)) {
+  for (ti=0; (ientry = (indexentry *)index234(idx->entries, ti))!=NULL; ti++) {
     ientry->backend_data=NULL;
   }
 
@@ -605,8 +603,7 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_id
     sfree(xsect);
   }
   xhtml_free_file(topfile);
-  for (ientry = (indexentry *)first23(idx->entries, &e); ientry;
-       ientry = (indexentry *)next23(&e)) {
+  for (ti = 0; (ientry=(indexentry *)index234(idx->entries, ti))!=NULL; ti++) {
     if (ientry->backend_data!=NULL) {
       xhtmlindex *xi = (xhtmlindex*) ientry->backend_data;
       if (xi->sections!=NULL) {
@@ -679,7 +676,7 @@ static void xhtml_do_index()
 {
   word temp_word = { NULL, NULL, word_Normal, 0, 0, L"Index", { NULL, 0, 0} };
   indexentry *y;
-  enum23 e;
+  int ti;
   FILE *fp = fopen(xhtml_index_filename, "w");
 
   if (fp==NULL)
@@ -689,8 +686,7 @@ static void xhtml_do_index()
 
   fprintf(fp, "<dl>\n");
   /* iterate over idx->entries using the tree functions and display everything */
-  for (y = (indexentry *)first23(idx->entries, &e); y;
-       y = (indexentry *)next23(&e)) {
+  for (ti = 0; (y = (indexentry *)index234(idx->entries, ti)) != NULL; ti++) {
     if (y->backend_data) {
       int i;
       xhtmlindex *xi;
@@ -1231,7 +1227,7 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
     keyword *kwl;
     xhtmlsection *sect;
     indextag *itag;
-    enum23 e;
+    int ti;
 
     for (; text && text != end; text = text->next) {
       switch (text->type) {
@@ -1273,9 +1269,7 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
 	/* what we _do_ need to do is to fix up the backend data
 	 * for any indexentry this points to.
 	 */
-	for (itag = (indextag *)first23(idx->tags, &e);
-	     itag;
-	     itag = (indextag *)next23(&e)) {
+	for (ti=0; (itag = (indextag *)index234(idx->tags, ti))!=NULL; ti++) {
 	  /* FIXME: really ustricmp() and not ustrcmp()? */
 	  if (ustricmp(itag->name, text->text)==0) {
 	    break;
