@@ -14,7 +14,6 @@
  *    to add indexing support.
  *  - nonbreaking spaces and hyphens will be needed.
  *  - tabs, and tab stop settings in the paragraphinfo.
- *  - browse sequence support.
  * 
  * Potential future features:
  * 
@@ -109,6 +108,8 @@ char *dupstr(char *s) { char *r = mknewa(char, 1+strlen(s)); strcpy(r,s); return
 #define MAX_PAGE_SIZE 0x800	       /* max page size in any B-tree */
 #define TOPIC_BLKSIZE 4096	       /* implied by version/flags combo */
 
+typedef struct WHLP_TOPIC_tag context;
+
 struct file {
     char *name;			       /* file name, will need freeing */
     unsigned char *data;	       /* file data, will need freeing */
@@ -123,16 +124,16 @@ struct topiclink {
     int recordtype;
     int len1, len2;
     unsigned char *data1, *data2;
-    struct topiclink *browse_next, *browse_prev;
+    context *context;
     struct topiclink *nonscroll, *scroll, *nexttopic;
     int block_size;		       /* for the topic header - *boggle* */
 };
 
-typedef struct WHLP_TOPIC_tag context;
 struct WHLP_TOPIC_tag {
     char *name;			       /* needs freeing */
     unsigned long hash;
     struct topiclink *link;	       /* this provides TOPICOFFSET */
+    context *browse_next, *browse_prev;
     char *title;		       /* needs freeing */
 };
 
@@ -394,8 +395,8 @@ void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...)
 	h->prevtopic->nexttopic = link;
     h->prevtopic = link;
 
-    link->browse_next = link->browse_prev =
-	link->nonscroll = link->scroll = NULL;
+    link->nonscroll = link->scroll = NULL;
+    link->context = topic;
     link->block_size = 0;
 
     link->recordtype = 2;	       /* topic header */
@@ -425,6 +426,21 @@ void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...)
     topic->link = link;
 
     addpos234(h->text, link, count234(h->text));
+}
+
+void whlp_browse_link(WHLP h, WHLP_TOPIC before, WHLP_TOPIC after)
+{
+    /*
+     * See if the `before' topic is already linked to another one,
+     * and break the link to that if so. Likewise the `after'
+     * topic.
+     */
+    if (before->browse_next)
+        before->browse_next->browse_prev = NULL;
+    if (after->browse_prev)
+        after->browse_prev->browse_next = NULL;
+    before->browse_next = after;
+    after->browse_prev = before;
 }
 
 /* ----------------------------------------------------------------------
@@ -519,8 +535,8 @@ void whlp_begin_para(WHLP h, int para_type)
      * that aren't type 2 they should never actually be needed.
      */
     link->nexttopic = NULL;
-    link->browse_next = link->browse_prev =
-	link->nonscroll = link->scroll = NULL;
+    link->context = NULL;
+    link->nonscroll = link->scroll = NULL;
 
     link->recordtype = 32;	       /* text record */
 
@@ -706,8 +722,8 @@ static void whlp_topic_layout(WHLP h)
     link->len2 = 0;
     link->nexttopic = NULL;
     link->recordtype = 2;
-    link->browse_next = link->browse_prev =
-	link->nonscroll = link->scroll = NULL;
+    link->nonscroll = link->scroll = NULL;
+    link->context = NULL;
     addpos234(h->text, link, count234(h->text));
 
     /*
@@ -751,14 +767,14 @@ static void whlp_topic_layout(WHLP h)
 	    continue;
 	
 	PUT_32BIT_LSB_FIRST(link->data1 + 0, link->block_size);
-	if (link->browse_prev)
+	if (link->context && link->context->browse_prev)
 	    PUT_32BIT_LSB_FIRST(link->data1 + 4,
-				link->browse_prev->topicoffset);
+				link->context->browse_prev->link->topicoffset);
 	else
 	    PUT_32BIT_LSB_FIRST(link->data1 + 4, 0xFFFFFFFFL);
-	if (link->browse_next)
+	if (link->context && link->context->browse_next)
 	    PUT_32BIT_LSB_FIRST(link->data1 + 8,
-				link->browse_next->topicoffset);
+				link->context->browse_next->link->topicoffset);
 	else
 	    PUT_32BIT_LSB_FIRST(link->data1 + 8, 0xFFFFFFFFL);
 	PUT_32BIT_LSB_FIRST(link->data1 + 12, topicnum);
@@ -1699,6 +1715,12 @@ int main(void)
 	}
     }
     #endif
+
+    /*
+     * Browse sequence.
+     */
+    whlp_browse_link(h, t1, t2);
+    whlp_browse_link(h, t2, t3);
 
     whlp_close(h, "test.hlp");
     return 0;

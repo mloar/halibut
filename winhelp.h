@@ -56,6 +56,12 @@ void whlp_start_macro(WHLP h, char *macro);
 WHLP_TOPIC whlp_register_topic(WHLP h, char *context_name, char **clash);
 
 /*
+ * Link two topics together in a browse sequence. Automatically
+ * takes care of the forward and reverse links.
+ */
+void whlp_browse_link(WHLP h, WHLP_TOPIC before, WHLP_TOPIC after);
+
+/*
  * After calling whlp_register_topic for all topics, you should
  * call this, which will sort out all loose ends and allocate
  * context names for all anonymous topics. Then you can start
