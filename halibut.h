@@ -293,6 +293,12 @@ wchar_t *ustrftime(wchar_t *fmt, struct tm *timespec);
 int cvt_ok(int charset, const wchar_t *s);
 
 /*
+ * wcwidth.c
+ */
+int strwid(char const *s, int charset);
+int ustrwid(wchar_t const *s, int charset);
+
+/*
  * help.c
  */
 void help(void);

@@ -263,7 +263,7 @@ int main(int argc, char **argv) {
 	in.pushback = NULL;
 	in.reportcols = reportcols;
 	in.stack = NULL;
-	in.defcharset = locale_charset();
+	in.defcharset = charset_from_locale();
 
 	idx = make_index();
 

@@ -480,7 +480,7 @@ static int text_width(void *ctx, word *text) {
 		    attraux(text->aux) == attr_Always ? 0 : 1)
 		 : 0) +
 		(cvt_ok(charset, text->text) || !text->alt ?
-		 ustrlen(text->text) :
+		 ustrwid(text->text, charset) :
 		 text_width_list(ctx, text->alt)));
 
       case word_WhiteSpace:

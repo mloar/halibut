@@ -25,17 +25,6 @@
  *  - might be helpful to diagnose duplicate node names!
  */
 
-/*
- * FIXME:
- * 
- *  - alignment in the index is broken when a non-representable
- *    character appears with no alternative. More generally, I
- *    fear, this is the fault of the info_rdadd* functions failing
- *    to return correct width figures in this circumstance (so it
- *    will affect list paragraph prefixes and paragraph wrapping as
- *    well).
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -767,7 +756,7 @@ static int info_width_internal(word *words, int xrefs, int charset) {
 		    attraux(words->aux) == attr_Always ? 0 : 1)
 		 : 0) +
 		(cvt_ok(charset, words->text) || !words->alt ?
-		 ustrlen(words->text) :
+		 ustrwid(words->text, charset) :
 		 info_width_internal_list(words->alt, xrefs, charset)));
 
       case word_WhiteSpace:
@@ -790,7 +779,7 @@ static int info_width_internal(word *words, int xrefs, int charset) {
       case word_LowerXref:
 	if (xrefs && words->private_data) {
 	    /* "*Note " plus "::" comes to 8 characters */
-	    return 8 + strlen(((node *)words->private_data)->name);
+	    return 8 + strwid(((node *)words->private_data)->name, charset);
 	}
 	break;
     }
@@ -995,9 +984,11 @@ static int info_rdadds(info_data *d, wchar_t const *wcs)
 
     if (wcs) {
 	char buf[256];
-	int len, origlen, ret;
+	int len, width, ret;
 
-	origlen = len = ustrlen(wcs);
+	width = ustrwid(wcs, d->charset);
+
+	len = ustrlen(wcs);
 	while (len > 0) {
 	    int prevlen = len;
 
@@ -1012,7 +1003,7 @@ static int info_rdadds(info_data *d, wchar_t const *wcs)
 	    }
 	}
 
-	return origlen;
+	return width;
     } else
 	return 0;
 }
