@@ -99,7 +99,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	fprintf(fp, "%%%%IncludeResource: font %s\n", fe->font->name);
 
     /*
-     * Re-encode and re-metric the fonts.
+     * Re-encode the fonts.
      */
     font_index = 0;
     for (fe = doc->fonts->head; fe; fe = fe->next) {
@@ -109,22 +109,14 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	sprintf(fname, "f%d", font_index++);
 	fe->name = dupstr(fname);
 
-	fprintf(fp, "/%s findfont dup length 1 add dict begin\n",
-	    fe->font->name);
+	fprintf(fp, "/%s findfont dup length dict begin\n", fe->font->name);
 	fprintf(fp, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
 	fprintf(fp, "/Encoding [\n");
 	for (i = 0; i < 256; i++)
 	    fprintf(fp, "/%s%c", fe->vector[i] ? fe->vector[i] : ".notdef",
 		    i % 4 == 3 ? '\n' : ' ');
-	fprintf(fp, "] def /Metrics 256 dict dup begin\n");
-	for (i = 0; i < 256; i++) {
-	    if (fe->indices[i] >= 0) {
-		double width = fe->font->widths[fe->indices[i]];
-		fprintf(fp, "/%s %g def\n", fe->vector[i],
-			1000.0 * width / FUNITS_PER_PT);
-	    }
-	}
-	fprintf(fp, "end def currentdict end\n");
+	fprintf(fp, "] def\n");
+	fprintf(fp, "currentdict end\n");
 	fprintf(fp, "/fontname-%s exch definefont /%s exch def\n\n",
 	       fe->name, fe->name);
     }
