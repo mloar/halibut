@@ -1599,8 +1599,10 @@ static int render_string(page_data *page, font_data *font, int fontsize,
     while (*str) {
 	glyph = font->bmp[*str];
 
-	if (glyph == 0xFFFF)
+	if (glyph == 0xFFFF) {
+	    str++;
 	    continue;		       /* nothing more we can do here */
+	}
 
 	/*
 	 * Find which subfont this character is going in.
