@@ -101,7 +101,7 @@ char *dupstr(char *s) {
  * Duplicate a linked list of words
  */
 word *dup_word_list(word *w) {
-    word *head, **eptr = &head;
+    word *head = NULL, **eptr = &head;
 
     while (w) {
 	word *newwd = snew(word);
