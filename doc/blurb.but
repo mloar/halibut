@@ -3,7 +3,7 @@
 \cfg{xhtml-leaf-level}{1}
 \cfg{xhtml-leaf-smallest-contents}{2}
 \cfg{xhtml-leaf-contains-contents}{true}
-\cfg{xhtml-body-end}{Comments to <a href='mailto:anakin@pobox.com'>anakin@pobox.com</a>}
+\cfg{xhtml-address-start}{Comments to <a href='mailto:anakin@pobox.com'>anakin@pobox.com</a>}
 
 \cfg{xhtml-contents-filename}{index.html}
 \cfg{xhtml-template-filename}{%k.html}
