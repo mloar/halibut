@@ -44,11 +44,6 @@
  * 
  * Cleanup work:
  * 
- *  - outsource the generation of the |FONT section. Users should
- *    specify their own font descriptors and then just pass a font
- *    descriptor number in to whlp_set_font. This will also mean
- *    removing the WHLP_FONT_* enum in winhelp.h.
- * 
  *  - sort out begin_topic. Ideally we should have a separate
  *    topic_macro function that adds to the existing linkdata for
  *    the topic, because that's more flexible than a variadic
@@ -79,6 +74,23 @@
 #include "buttress.h"
 #include "winhelp.h"
 #include "tree234.h"
+
+#ifdef TESTMODE
+/*
+ * This lot is useful for testing. Something like it will also be
+ * needed to use this module standalone.
+ */
+#define smalloc malloc
+#define srealloc realloc
+#define sfree free
+#define mknew(type) ( (type *) smalloc (sizeof (type)) )
+#define mknewa(type, number) ( (type *) smalloc ((number) * sizeof (type)) )
+#define resize(array, len) ( srealloc ((array), (len) * sizeof (*(array))) )
+#define lenof(array) ( sizeof(array) / sizeof(*(array)) )
+char *dupstr(char *s) {
+    char *r = mknewa(char, 1+strlen(s)); strcpy(r,s); return r;
+}
+#endif
 
 #define UNUSEDARG(x) ( (x) = (x) )
 
@@ -141,6 +153,12 @@ struct WHLP_TOPIC_tag {
     int index;                         /* arbitrary number */
 };
 
+struct fontdesc {
+    char *font;
+    int family, rendition, halfpoints;
+    int r, g, b;
+};
+
 struct WHLP_tag {
     tree234 *files;		       /* stores `struct file' */
     tree234 *pre_contexts;	       /* stores `context' */
@@ -149,6 +167,8 @@ struct WHLP_tag {
     tree234 *text;		       /* stores `struct topiclink' */
     tree234 *index;		       /* stores `struct indexrec' */
     tree234 *tabstops;                 /* stores `int' */
+    tree234 *fontnames;		       /* stores `char *' */
+    tree234 *fontdescs;		       /* stores `struct fontdesc' */
     struct file *systemfile;	       /* the |SYSTEM internal file */
     context *ptopic;		       /* primary topic */
     struct topiclink *prevtopic;       /* to link type-2 records together */
@@ -316,6 +336,14 @@ static int tabcmp(void *av, void *bv)
     if ((*a & 0xFFFF) > (*b & 0xFFFF))
 	return +1;
     return 0;
+}
+
+/* The internal `fontnames' B-tree stores strings. */
+static int fontcmp(void *av, void *bv)
+{
+    const char *a = (const char *)av;
+    const char *b = (const char *)bv;
+    return strcmp(a,b);
 }
 
 /* ----------------------------------------------------------------------
@@ -1127,78 +1155,83 @@ static void whlp_do_primary_topic(WHLP h)
     whlp_system_record(h->systemfile, 3, firsttopic, sizeof(firsttopic));
 }
 
-static void whlp_standard_fontsection(struct file *f)
+int whlp_create_font(WHLP h, char *font, int family, int halfpoints,
+		     int rendition, int r, int g, int b)
 {
-    static const char *const fontnames[] = {
-	"Times New Roman", "Courier New", "Arial", "Wingdings"
-    };
-    enum {
-	FLAG_BOLD = 1,
-	FLAG_ITALIC = 2,
-	FLAG_UNDERLINE = 4,
-	FLAG_STRIKEOUT = 8,
-	FLAG_DOUBLEUND = 16,
-	FLAG_SMALLCAPS = 32
-    };
-    enum {
-	FAM_MODERN = 1,
-	FAM_ROMAN = 2,
-	FAM_SWISS = 3,
-	FAM_SCRIPT = 4,
-	FAM_DECOR = 5
-    };
-    static const struct fontdesc {
-	int flags, halfpoints, facetype, font;
-    } fontdescriptors[] = {
-	/* Title face: 15-point Arial */
-	{ FLAG_BOLD, 30, FAM_SWISS, 2},
-	/* Main text face: 12-point Times */
-	{ 0, 24, FAM_ROMAN, 0},
-	/* Emphasised text face: 12-point Times Italic */
-	{ FLAG_ITALIC, 24, FAM_ROMAN, 0},
-	/* Code text face: 12-point Courier */
-	{ 0, 24, FAM_MODERN, 1},
-    };
+    char *fontname = dupstr(font);
+    struct fontdesc *fontdesc;
+    int index;
 
+    font = add234(h->fontnames, fontname);
+    if (font != fontname) {
+	/* The font name was already present. Free the new copy. */
+	sfree(fontname);
+    }
+
+    fontdesc = mknew(struct fontdesc);
+    fontdesc->font = font;
+    fontdesc->family = family;
+    fontdesc->halfpoints = halfpoints;
+    fontdesc->rendition = rendition;
+    fontdesc->r = r;
+    fontdesc->g = g;
+    fontdesc->b = b;
+
+    index = count234(h->fontdescs);
+    addpos234(h->fontdescs, fontdesc, index);
+    return index;
+}
+
+static void whlp_make_fontsection(WHLP h, struct file *f)
+{
     int i;
+    char *fontname;
+    struct fontdesc *fontdesc;
 
     /*
      * Header block: number of font names, number of font
      * descriptors, offset to font names, and offset to font
      * descriptors.
      */
-    whlp_file_add_short(f, lenof(fontnames));
-    whlp_file_add_short(f, lenof(fontdescriptors));
+    whlp_file_add_short(f, count234(h->fontnames));
+    whlp_file_add_short(f, count234(h->fontdescs));
     whlp_file_add_short(f, 8);
-    whlp_file_add_short(f, 8 + 32 * lenof(fontnames));
-
+    whlp_file_add_short(f, 8 + 32 * count234(h->fontnames));
+    
     /*
      * Font names.
      */
-    for (i = 0; i < (int)lenof(fontnames); i++) {
+    for (i = 0; (fontname = index234(h->fontnames, i)) != NULL; i++) {
 	char data[32];
 	memset(data, i, sizeof(data));
-	strncpy(data, fontnames[i], sizeof(data));
+	strncpy(data, fontname, sizeof(data));
 	whlp_file_add(f, data, sizeof(data));
     }
-
+    
     /*
      * Font descriptors.
      */
-    for (i = 0; i < (int)lenof(fontdescriptors); i++) {
-	whlp_file_add_char(f, fontdescriptors[i].flags);
-	whlp_file_add_char(f, fontdescriptors[i].halfpoints);
-	whlp_file_add_char(f, fontdescriptors[i].facetype);
-	whlp_file_add_short(f, fontdescriptors[i].font);
-	/* Foreground RGB is always zero */
-	whlp_file_add_char(f, 0);
-	whlp_file_add_char(f, 0);
-	whlp_file_add_char(f, 0);
+    for (i = 0; (fontdesc = index234(h->fontdescs, i)) != NULL; i++) {
+	int fontpos;
+	void *ret;
+
+	ret = findpos234(h->fontnames, fontdesc->font, NULL, &fontpos);
+	assert(ret != NULL);
+
+	whlp_file_add_char(f, fontdesc->rendition);
+	whlp_file_add_char(f, fontdesc->halfpoints);
+	whlp_file_add_char(f, fontdesc->family);
+	whlp_file_add_short(f, fontpos);
+	/* Foreground RGB */
+	whlp_file_add_char(f, fontdesc->r);
+	whlp_file_add_char(f, fontdesc->g);
+	whlp_file_add_char(f, fontdesc->b);
 	/* Background RGB is apparently unused and always set to zero */
 	whlp_file_add_char(f, 0);
 	whlp_file_add_char(f, 0);
 	whlp_file_add_char(f, 0);
     }
+
 }
 
 /* ----------------------------------------------------------------------
@@ -1520,14 +1553,14 @@ WHLP whlp_new(void)
     ret->text = newtree234(NULL);
     ret->index = newtree234(idxcmp);
     ret->tabstops = newtree234(tabcmp);
+    ret->fontnames = newtree234(fontcmp);
+    ret->fontdescs = newtree234(NULL);
 
     /*
      * Some standard files.
      */
     f = whlp_new_file(ret, "|CTXOMAP");
     whlp_file_add_short(f, 0);	       /* dummy section */
-    f = whlp_new_file(ret, "|FONT");
-    whlp_standard_fontsection(f);
     f = whlp_new_file(ret, "|SYSTEM");
     whlp_standard_systemsection(f);
     ret->systemfile = f;
@@ -1559,6 +1592,12 @@ void whlp_close(WHLP h, char *filename)
      * Finish off the system section.
      */
     whlp_do_primary_topic(h);
+
+    /*
+     * Assemble the font section.
+     */
+    file = whlp_new_file(h, "|FONT");
+    whlp_make_fontsection(h, file);
 
     /*
      * Set up the index.
@@ -1667,6 +1706,8 @@ void whlp_abandon(WHLP h)
     struct file *f;
     struct indexrec *idx;
     struct topiclink *link;
+    struct fontdesc *fontdesc;
+    char *fontname;
     context *ctx;
 
     /* Get rid of any lingering tab stops. */
@@ -1691,6 +1732,20 @@ void whlp_abandon(WHLP h)
 	sfree(link);
     }
     freetree234(h->text);
+
+    /* Delete the fontdescs tree and all its entries. */
+    while ( (fontdesc = index234(h->fontdescs, 0)) != NULL) {
+	delpos234(h->fontdescs, 0);
+	sfree(fontdesc);
+    }
+    freetree234(h->fontdescs);
+
+    /* Delete the fontnames tree and all its entries. */
+    while ( (fontname = index234(h->fontnames, 0)) != NULL) {
+	delpos234(h->fontnames, 0);
+	sfree(fontname);
+    }
+    freetree234(h->fontnames);
 
     /* There might be an unclosed paragraph in h->link. */
     if (h->link)
@@ -1752,6 +1807,15 @@ int main(void)
     whlp_start_macro(h, "CB(\"btn_up\",\"&Up\",\"Contents()\")");
     whlp_start_macro(h, "BrowseButtons()");
 
+    whlp_create_font(h, "Arial", WHLP_FONTFAM_SANS, 30,
+		     0, 0, 0, 0);
+    whlp_create_font(h, "Times New Roman", WHLP_FONTFAM_SERIF, 24,
+		     WHLP_FONT_STRIKEOUT, 0, 0, 0);
+    whlp_create_font(h, "Times New Roman", WHLP_FONTFAM_SERIF, 24,
+		     WHLP_FONT_ITALIC, 0, 0, 0);
+    whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
+		     0, 0, 0, 0);
+
     t1 = whlp_register_topic(h, "foobar", &e);
     assert(t1 != NULL);
     t2 = whlp_register_topic(h, "M359HPEHGW", &e);
@@ -1768,31 +1832,31 @@ int main(void)
     whlp_begin_topic(h, t1, "First Topic", "DB(\"btn_up\")", NULL);
 
     whlp_begin_para(h, WHLP_PARA_NONSCROLL);
-    whlp_set_font(h, WHLP_FONT_TITLE);
+    whlp_set_font(h, 0);
     whlp_text(h, "Foobar");
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "This is a silly paragraph with ");
-    whlp_set_font(h, WHLP_FONT_FIXED);
+    whlp_set_font(h, 3);
     whlp_text(h, "code");
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, " in it.");
     whlp_end_para(h);
 
     whlp_para_attr(h, WHLP_PARA_SPACEABOVE, 12);
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "This second, equally silly, paragraph has ");
-    whlp_set_font(h, WHLP_FONT_ITALIC);
+    whlp_set_font(h, 2);
     whlp_text(h, "emphasis");
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, " just to prove we can do it.");
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1800,7 +1864,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1808,7 +1872,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1816,7 +1880,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1824,7 +1888,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1832,7 +1896,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1840,7 +1904,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1848,7 +1912,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1856,7 +1920,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1864,7 +1928,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1872,7 +1936,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1880,7 +1944,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1888,7 +1952,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1896,7 +1960,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1904,7 +1968,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1912,7 +1976,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1920,7 +1984,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1928,7 +1992,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1936,7 +2000,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1944,7 +2008,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1952,7 +2016,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1960,7 +2024,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Now I'm going to waffle on indefinitely, in a vague attempt"
 	      " to make some wrapping happen, and also to make the topicblock"
 	      " go across its boundaries. This is going to take a fair amount"
@@ -1968,7 +2032,7 @@ int main(void)
     whlp_end_para(h);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Have a ");
     whlp_start_hyperlink(h, t2);
     whlp_text(h, "hyperlink");
@@ -1982,7 +2046,7 @@ int main(void)
     whlp_begin_topic(h, t2, "Second Topic", mymacro, NULL);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "This topic contains no non-scrolling region. I would"
 	      " illustrate this with a ludicrously long paragraph, but that"
 	      " would get very tedious very quickly. Instead I'll just waffle"
@@ -1994,7 +2058,7 @@ int main(void)
     whlp_para_attr(h, WHLP_PARA_FIRSTLINEINDENT, -36);
     whlp_para_attr(h, WHLP_PARA_SPACEABOVE, 12);
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "\225");              /* bullet */
     whlp_tab(h);
     whlp_text(h, "This is a paragraph with a bullet. With any luck it should"
@@ -2006,7 +2070,7 @@ int main(void)
     whlp_set_tabstop(h, 384, WHLP_ALIGN_LEFT);
     whlp_para_attr(h, WHLP_PARA_SPACEABOVE, 12);
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Ooh:"); whlp_tab(h);
     whlp_text(h, "Right?"); whlp_tab(h);
     whlp_text(h, "Centre?"); whlp_tab(h);
@@ -2017,7 +2081,7 @@ int main(void)
     whlp_set_tabstop(h, 256, WHLP_ALIGN_CENTRE);
     whlp_set_tabstop(h, 384, WHLP_ALIGN_LEFT);
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "Aah:"); whlp_tab(h);
     whlp_text(h, "R?"); whlp_tab(h);
     whlp_text(h, "C?"); whlp_tab(h);
@@ -2030,7 +2094,7 @@ int main(void)
     whlp_begin_topic(h, t3, "Third Topic", mymacro, NULL);
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
-    whlp_set_font(h, WHLP_FONT_NORMAL);
+    whlp_set_font(h, 1);
     whlp_text(h, "This third topic is almost as boring as the first. Woo!");
     whlp_end_para(h);
 

@@ -104,6 +104,39 @@ void whlp_primary_topic(WHLP h, WHLP_TOPIC topic);
 void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...);
 
 /*
+ * Call this to set up a font descriptor. You supply the font name,
+ * the font size (in half-points), the graphic rendition flags
+ * (bold, italic etc), and the general font family (for Windows to
+ * select a fallback font if yours is unavailable). You can also
+ * specify a foreground colour for the text (but unfortunately not
+ * a background).
+ * 
+ * Font descriptors are identified in whlp_set_font() by small
+ * integers, which are allocated from 0 upwards in the order you
+ * call whlp_create_font(). For your convenience,
+ * whlp_create_font() returns the integer allocated to each font
+ * descriptor you create, but you could work this out just as
+ * easily yourself by counting.
+ */
+enum {
+    WHLP_FONT_BOLD = 1,
+    WHLP_FONT_ITALIC = 2,
+    WHLP_FONT_UNDERLINE = 4,
+    WHLP_FONT_STRIKEOUT = 8,
+    WHLP_FONT_DOUBLEUND = 16,
+    WHLP_FONT_SMALLCAPS = 32
+};
+enum {
+    WHLP_FONTFAM_FIXED = 1,
+    WHLP_FONTFAM_SERIF = 2,
+    WHLP_FONTFAM_SANS = 3,
+    WHLP_FONTFAM_SCRIPT = 4,
+    WHLP_FONTFAM_DECOR = 5
+};
+int whlp_create_font(WHLP h, char *font, int family, int halfpoints,
+		     int rendition, int r, int g, int b);
+
+/*
  * Routines to output paragraphs and actual text (at last).
  * 
  * You should start by calling whlp_para_attr() to set any
@@ -120,9 +153,6 @@ enum {
 };
 enum {
     WHLP_ALIGN_LEFT, WHLP_ALIGN_RIGHT, WHLP_ALIGN_CENTRE
-};
-enum {
-    WHLP_FONT_TITLE, WHLP_FONT_NORMAL, WHLP_FONT_ITALIC, WHLP_FONT_FIXED
 };
 enum {
     WHLP_PARA_SCROLL, WHLP_PARA_NONSCROLL

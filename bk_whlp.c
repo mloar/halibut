@@ -2,8 +2,6 @@
  * Windows Help backend for Buttress
  * 
  * TODO:
- * 
- *  - rules
  *  - allow user to specify section contexts.
  */
 
@@ -19,6 +17,19 @@ struct bk_whlp_state {
     indexdata *idx;
     keywordlist *keywords;
     WHLP_TOPIC curr_topic;
+};
+
+/*
+ * Indexes of fonts in our standard font descriptor set.
+ */
+enum {
+    FONT_NORMAL,
+    FONT_EMPH,
+    FONT_CODE,
+    FONT_TITLE,
+    FONT_TITLE_EMPH,
+    FONT_TITLE_CODE,
+    FONT_RULE
 };
 
 static void whlp_rdaddwc(rdstringc *rs, word *text);
@@ -46,6 +57,21 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     whlp_start_macro(h, "CB(\"btn_about\",\"&About\",\"About()\")");
     whlp_start_macro(h, "CB(\"btn_up\",\"&Up\",\"Contents()\")");
     whlp_start_macro(h, "BrowseButtons()");
+
+    whlp_create_font(h, "Times New Roman", WHLP_FONTFAM_SERIF, 24,
+		     0, 0, 0, 0);
+    whlp_create_font(h, "Times New Roman", WHLP_FONTFAM_SERIF, 24,
+		     WHLP_FONT_ITALIC, 0, 0, 0);
+    whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
+		     0, 0, 0, 0);
+    whlp_create_font(h, "Arial", WHLP_FONTFAM_SERIF, 30,
+		     WHLP_FONT_BOLD, 0, 0, 0);
+    whlp_create_font(h, "Arial", WHLP_FONTFAM_SERIF, 30,
+		     WHLP_FONT_BOLD|WHLP_FONT_ITALIC, 0, 0, 0);
+    whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 30,
+		     WHLP_FONT_BOLD, 0, 0, 0);
+    whlp_create_font(h, "Courier New", WHLP_FONTFAM_SANS, 18,
+		     WHLP_FONT_STRIKEOUT, 0, 0, 0);
 
     /*
      * Loop over the source form registering WHLP_TOPICs for
@@ -92,7 +118,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	for (p = sourceform; p; p = p->next) {
 	    if (p->type == para_Title) {
 		whlp_begin_para(h, WHLP_PARA_NONSCROLL);
-		whlp_mkparagraph(&state, WHLP_FONT_TITLE, p->words, FALSE);
+		whlp_mkparagraph(&state, FONT_TITLE, p->words, FALSE);
 		whlp_rdaddwc(&rs, p->words);
 		whlp_end_para(h);
 	    }
@@ -111,7 +137,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	if (p->type == para_Preamble) {
 	    whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
 	    whlp_begin_para(h, WHLP_PARA_SCROLL);
-	    whlp_mkparagraph(&state, WHLP_FONT_NORMAL, p->words, FALSE);
+	    whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
 	    whlp_end_para(h);
 	}
     }
@@ -126,7 +152,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    if (p->type == para_Copyright) {
 		whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
 		whlp_begin_para(h, WHLP_PARA_SCROLL);
-		whlp_mkparagraph(&state, WHLP_FONT_NORMAL, p->words, FALSE);
+		whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
 		whlp_end_para(h);
 		whlp_rdaddwc(&rs, p->words);
 	    }
@@ -217,11 +243,11 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 
 	    whlp_begin_para(h, WHLP_PARA_NONSCROLL);
 	    if (p->kwtext) {
-		whlp_mkparagraph(&state, WHLP_FONT_TITLE, p->kwtext, FALSE);
-		whlp_set_font(h, WHLP_FONT_TITLE);
+		whlp_mkparagraph(&state, FONT_TITLE, p->kwtext, FALSE);
+		whlp_set_font(h, FONT_TITLE);
 		whlp_text(h, ": ");    /* FIXME: configurability */
 	    }
-	    whlp_mkparagraph(&state, WHLP_FONT_TITLE, p->words, FALSE);
+	    whlp_mkparagraph(&state, FONT_TITLE, p->words, FALSE);
 	    whlp_end_para(h);
 
 	    lastsect = p;
@@ -229,7 +255,20 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Rule:
-	/* FIXME: what do we do about rules? */
+	whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
+	whlp_para_attr(h, WHLP_PARA_ALIGNMENT, WHLP_ALIGN_CENTRE);
+	whlp_begin_para(h, WHLP_PARA_SCROLL);
+	whlp_set_font(h, FONT_RULE);
+#define TEN "\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0"
+#define TWENTY TEN TEN
+#define FORTY TWENTY TWENTY
+#define EIGHTY FORTY FORTY
+	whlp_text(h, EIGHTY);
+#undef TEN
+#undef TWENTY
+#undef FORTY
+#undef EIGHTY
+	whlp_end_para(h);
 	break;
 
       case para_Normal:
@@ -245,7 +284,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    if (p->type == para_Bullet) {
 		whlp_text(h, "\x95");
 	    } else {
-		whlp_mkparagraph(&state, WHLP_FONT_NORMAL, p->kwtext, FALSE);
+		whlp_mkparagraph(&state, FONT_NORMAL, p->kwtext, FALSE);
 		whlp_text(h, ".");
 	    }
 	    whlp_tab(h);
@@ -254,11 +293,11 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 
 	if (p->type == para_BiblioCited) {
-	    whlp_mkparagraph(&state, WHLP_FONT_NORMAL, p->kwtext, FALSE);
+	    whlp_mkparagraph(&state, FONT_NORMAL, p->kwtext, FALSE);
 	    whlp_text(h, " ");
 	}
 
-	whlp_mkparagraph(&state, WHLP_FONT_NORMAL, p->words, FALSE);
+	whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
 	whlp_end_para(h);
 	break;
 
@@ -276,7 +315,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		if (!w->next)
 		    whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
 		whlp_begin_para(h, WHLP_PARA_SCROLL);
-		whlp_set_font(h, WHLP_FONT_FIXED);
+		whlp_set_font(h, FONT_CODE);
 		whlp_convert(w->text, &c, FALSE);
 		whlp_text(h, c);
 		sfree(c);
@@ -302,11 +341,11 @@ static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p) {
     whlp_begin_para(state->h, WHLP_PARA_NONSCROLL);
     whlp_start_hyperlink(state->h, (WHLP_TOPIC)p->private_data);
     if (p->kwtext) {
-	whlp_mkparagraph(state, WHLP_FONT_NORMAL, p->kwtext, TRUE);
-	whlp_set_font(state->h, WHLP_FONT_NORMAL);
+	whlp_mkparagraph(state, FONT_NORMAL, p->kwtext, TRUE);
+	whlp_set_font(state->h, FONT_NORMAL);
 	whlp_text(state->h, ": ");    /* FIXME: configurability */
     }
-    whlp_mkparagraph(state, WHLP_FONT_NORMAL, p->words, TRUE);
+    whlp_mkparagraph(state, FONT_NORMAL, p->words, TRUE);
     whlp_end_hyperlink(state->h);
     whlp_end_para(state->h);
 
@@ -381,10 +420,10 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
       case word_CodeQuote:
       case word_WkCodeQuote:
 	if (towordstyle(text->type) == word_Emph)
-	    newfont = WHLP_FONT_ITALIC;
+	    newfont = deffont + FONT_EMPH;
 	else if (towordstyle(text->type) == word_Code ||
 		 towordstyle(text->type) == word_WeakCode)
-	    newfont = WHLP_FONT_FIXED;
+	    newfont = deffont + FONT_CODE;
 	else
 	    newfont = deffont;
 	if (newfont != currfont) {
