@@ -199,7 +199,7 @@ static xhtmlconfig xhtml_configure(paragraph *source)
       } else if (!ustricmp(source->keyword, L"xhtml-chapter-numeric")) {
 	ret.fchapter.just_numbers = utob(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-chapter-suffix")) {
-	ret.fchapter.number_suffix = uadv(source->keyword);
+	ret.fchapter.number_suffix = ustrdup(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-section-numeric")) {
 	wchar_t *p = uadv(source->keyword);
 	int n = 0;
@@ -229,7 +229,7 @@ static xhtmlconfig xhtml_configure(paragraph *source)
 	    ret.fsect[i] = ret.fsect[ret.nfsect-1];
 	  ret.nfsect = n+1;
 	}
-	ret.fsect[n].number_suffix = p;
+	ret.fsect[n].number_suffix = ustrdup(p);
       }
     }
   }

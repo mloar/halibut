@@ -96,7 +96,7 @@ static textconfig text_configure(paragraph *source) {
 	    } else if (!ustricmp(source->keyword, L"text-chapter-numeric")) {
 		ret.achapter.just_numbers = utob(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-chapter-suffix")) {
-		ret.achapter.number_suffix = uadv(source->keyword);
+		ret.achapter.number_suffix = ustrdup(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-section-align")) {
 		wchar_t *p = uadv(source->keyword);
 		int n = 0;
@@ -156,7 +156,7 @@ static textconfig text_configure(paragraph *source) {
 			ret.asect[i] = ret.asect[ret.nasect-1];
 		    ret.nasect = n+1;
 		}
-		ret.asect[n].number_suffix = p;
+		ret.asect[n].number_suffix = ustrdup(p);
 	    } else if (!ustricmp(source->keyword, L"text-title-align")) {
 		ret.atitle.align = utoalign(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-title-underline")) {
