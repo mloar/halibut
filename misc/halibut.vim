@@ -3,7 +3,7 @@
 " Maintainer:	Jacob Nevins <jacobn+vim@chiark.greenend.org.uk>
 " URL:          FIXME
 " Filenames:    *.but
-" Version:      $Id: halibut.vim,v 1.1 2004/04/01 01:02:43 jtn Exp $
+" Version:      $Id: halibut.vim,v 1.2 2004/04/01 01:12:21 jtn Exp $
 
 " I'm not proud of this. Every time I tangle with vim's syntax highlighting
 " I come away unsatisfied. Nevertheless, it seems to work.
@@ -60,7 +60,7 @@ syn region butComment matchgroup=Comment start="\\#{" end="}" contains=butCommen
 syn region butCommentBrace start="{" end="}" contains=butCommentBrace,butTodo contained transparent
 
 " Section headings - a bit hairy. Order wrt rest of file is important.
-syn match butCmdSpecific "\\\(S\d\|[CHSU]\)" nextgroup=butIdentArgH
+syn match butCmdSpecific "\\\(S\d\|[CAHSU]\)" nextgroup=butIdentArgH
 " butIdentArgH -> butTextArgH? -> this, which highlights the rest of the para:
 syn region butTextHeading start="" end="^\s*$" contained contains=@butText
 " ...and overall title
