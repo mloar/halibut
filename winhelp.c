@@ -16,6 +16,34 @@
  *  - tabs, and tab stop settings in the paragraphinfo.
  *  - browse sequence support.
  * 
+ * Potential future features:
+ * 
+ *  - perhaps LZ77 compression? This appears to cause a phase order
+ *    problem: it's hard to do the compression until the data to be
+ *    compressed is finalised, and yet you can't finalise the data
+ *    to be compressed until you know how much of it is going into
+ *    which TOPICBLOCK in order to work out the offsets in the
+ *    topic headers - for which you have to have already done the
+ *    compression. Perhaps the thing to do is to implement an LZ77
+ *    compressor that can guarantee to leave particular bytes in
+ *    the stream as literals, and then go back and fix the offsets
+ *    up later. Not pleasant.
+ * 
+ *  - tables might be nice.
+ * 
+ * Unlikely future features:
+ * 
+ *  - Phrase compression sounds harder. It's reasonably easy
+ *    (though space-costly) to analyse all the text in the file to
+ *    determine the one key phrase which would save most space if
+ *    replaced by a reference everywhere it appears; but finding
+ *    the _1024_ most effective phrases seems much harder since a
+ *    naive analysis might find lots of phrases that all overlap
+ *    (so you wouldn't get the saving you expected, as after taking
+ *    out the first phrase the rest would never crop up). In
+ *    addition, MS hold US patent number 4955066 which may cover
+ *    phrase compression, so perhaps it's best just to leave it.
+ * 
  * Cleanup work:
  * 
  *  - outsource the generation of the |FONT section. Users should
@@ -23,17 +51,16 @@
  *    descriptor number in to whlp_set_font. This will also mean
  *    removing the WHLP_FONT_* enum in winhelp.h.
  * 
- *  - find out what really happens if you try to make a paragraph
- *    (=> topiclink) unbelievably large. Can the format simply not
- *    cope? What does HCW do?
+ *  - find out what should happen if a single topiclink crosses
+ *    _two_ topicblock boundaries.
  * 
  *  - What is the BlockSize in a topic header (first 4 bytes of
- *    LinkData1 in a type 2 record)? How on earth is it measured?
- *    The help file doesn't become perceptibly corrupt if I frob it
- *    randomly; and on some occasions taking a bit _out_ of the
- *    help file _increases_ that value. I have a feeling it's
- *    completely made up and/or vestigial, so for the moment I'm
- *    just making up a plausible value as I go along.
+ *    LinkData1 in a type 2 record) supposed to mean? How on earth
+ *    is it measured? The help file doesn't become perceptibly
+ *    corrupt if I frob it randomly; and on some occasions taking a
+ *    bit _out_ of the help file _increases_ that value. I have a
+ *    feeling it's completely made up and/or vestigial, so for the
+ *    moment I'm just making up a plausible value as I go along.
  */
 
 #include <stdlib.h>
