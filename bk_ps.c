@@ -80,7 +80,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "  /integertype /realtype load def\n"
 	    "  /stringtype {show} bind def\n"
 	    "end def\n"
-	    "/t { tdict begin {dup type exec} forall end } bind def\n");
+	    "/t { tdict begin {dup type exec} forall end pop } bind def\n");
 
     fprintf(fp, "%%%%EndResource\n");
     fprintf(fp, "%%%%EndProlog\n");
