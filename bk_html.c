@@ -885,9 +885,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		if (f != files.head)
 		    element_close(&ho, "a");
 
-		html_text(&ho, conf.nav_separator);
-
 		if (has_index) {
+		    html_text(&ho, conf.nav_separator);
 		    if (f != files.index) {
 			element_open(&ho, "a");
 			element_attr(&ho, "href", files.index->filename);
