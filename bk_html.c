@@ -540,6 +540,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    sect->text = NULL;
 	    sect->type = INDEX;
 	    sect->parent = topsect;
+            sect->contents_depth = 0;
 	    html_file_section(&conf, &files, sect, 0);   /* peer of chapters */
 	    sect->fragment = utoa_dup(conf.index_text, CS_ASCII);
 	    sect->fragment = html_sanitise_fragment(&files, sect->file,
