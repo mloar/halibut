@@ -214,6 +214,9 @@ struct keywordlist_Tag {
     int nkeywords;
     int size;
     keyword **keys;
+    word **looseends;		       /* non-keyword list element numbers */
+    int nlooseends;
+    int looseendssize;
 };
 struct keyword_Tag {
     wchar_t *key;		       /* the keyword itself */
@@ -229,6 +232,8 @@ void subst_keywords(paragraph *, keywordlist *);
 /*
  * index.c
  */
+/* index_merge takes responsibility for freeing arg 3 but not arg 2 */
+void index_merge(int is_explicit, wchar_t *, word *);
 
 /*
  * contents.c

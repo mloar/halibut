@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 
     {
 	input in;
-	paragraph *sourceform;
+	paragraph *sourceform, *p;
 	keywordlist *keywords;
 
 	in.filenames = infiles;
@@ -185,10 +185,18 @@ int main(int argc, char **argv) {
 	gen_citations(sourceform, keywords);
 	subst_keywords(sourceform, keywords);
 
+	for (p = sourceform; p; p = p->next) {
+	    if (p->type == para_IM) {
+		index_merge(TRUE, p->keyword, p->words);
+		p->words = NULL;       /* this has now been freed */
+	    }
+	}
+
 	dbg_prtkws(keywords);
 	dbg_prtsource(sourceform);
 
 	free_para_list(sourceform);
+	free_keywords(keywords);
     }
 
     return 0;

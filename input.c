@@ -410,7 +410,10 @@ token get_codepar_token(input *in) {
  * Adds a new word to a linked list
  */
 static word *addword(word newword, word ***hptrptr) {
-    word *mnewword = mknew(word);
+    word *mnewword;
+    if (!hptrptr)
+	return NULL;
+    mnewword = mknew(word);
     *mnewword = newword;	       /* structure copy */
     mnewword->next = NULL;
     **hptrptr = mnewword;
@@ -442,7 +445,8 @@ static paragraph *addpara(paragraph newpara, paragraph ***hptrptr) {
 static void read_file(paragraph ***ret, input *in) {
     token t;
     paragraph par;
-    word wd, **whptr;
+    word wd, **whptr, **idximplicit;
+    wchar_t utext[2], *wdtext;
     int style;
     int already;
     int iswhite, seenwhite;
@@ -456,9 +460,11 @@ static void read_file(paragraph ***ret, input *in) {
 	    stack_hyper = 8,	       /* \W */
 	} type;
 	word **whptr;		       /* to restore from \u alternatives */
+	word **idximplicit;	       /* to restore from \u alternatives */
     } *sitem;
     stack parsestk;
-    word *indexword, *uword;
+    word *indexword, *uword, *iword;
+    word *idxwordlist;
     rdstring indexstr;
     int index_downcase, index_visible, indexing;
     const rdstring nullrs = { 0, 0, NULL };
@@ -658,6 +664,8 @@ static void read_file(paragraph ***ret, input *in) {
 		    rdadd(&indexstr, ' ');
 		if (!indexing || index_visible)
 		    addword(wd, &whptr);
+		if (indexing)
+		    addword(wd, &idximplicit);
 		iswhite = TRUE;
 		break;
 	      case tok_word:
@@ -669,6 +677,10 @@ static void read_file(paragraph ***ret, input *in) {
 		    wd.alt = NULL;
 		    wd.fpos = t.pos;
 		    addword(wd, &whptr);
+		}
+		if (indexing) {
+		    wd.text = ustrdup(t.text);
+		    addword(wd, &idximplicit);
 		}
 		break;
 	      case tok_lbrace:
@@ -683,16 +695,20 @@ static void read_file(paragraph ***ret, input *in) {
 		if (!sitem)
 		    error(err_unexbrace, &t.pos);
 		else {
-		    if (sitem->type & stack_ualt)
+		    if (sitem->type & stack_ualt) {
 			whptr = sitem->whptr;
+			idximplicit = sitem->idximplicit;
+		    }
 		    if (sitem->type & stack_style)
 			style = word_Normal;
 		    if (sitem->type & stack_idx) {
 			indexword->text = ustrdup(indexstr.text);
-			sfree(indexstr.text);
 			if (index_downcase)
 			    ustrlow(indexword->text);
 			indexing = FALSE;
+			rdadd(&indexstr, L'\0');
+			index_merge(FALSE, indexstr.text, idxwordlist);
+			sfree(indexstr.text);
 		    }
 		    if (sitem->type & stack_hyper) {
 			wd.text = NULL;
@@ -701,6 +717,8 @@ static void read_file(paragraph ***ret, input *in) {
 			wd.fpos = t.pos;
 			if (!indexing || index_visible)
 			    addword(wd, &whptr);
+			if (indexing)
+			    addword(wd, &idximplicit);
 		    }
 		}
 		sfree(sitem);
@@ -765,7 +783,7 @@ static void read_file(paragraph ***ret, input *in) {
 			    time_t thetime = time(NULL);
 			    struct tm *broken = localtime(&thetime);
 			    already = TRUE;
-			    wd.text = ustrftime(NULL, broken);
+			    wdtext = ustrftime(NULL, broken);
 			    wd.type = style;
 			} else
 			    error(err_explbr, &t.pos);
@@ -781,10 +799,10 @@ static void read_file(paragraph ***ret, input *in) {
 			if (wd.type == word_Normal) {
 			    time_t thetime = time(NULL);
 			    struct tm *broken = localtime(&thetime);
-			    wd.text = ustrftime(rs.text, broken);
+			    wdtext = ustrftime(rs.text, broken);
 			    wd.type = style;
 			} else {
-			    wd.text = ustrdup(rs.text);
+			    wdtext = ustrdup(rs.text);
 			}
 			sfree(rs.text);
 			if (t.type != tok_rbrace) {
@@ -792,10 +810,15 @@ static void read_file(paragraph ***ret, input *in) {
 			}
 		    }
 		    wd.alt = NULL;
-		    if (!indexing || index_visible)
+		    if (!indexing || index_visible) {
+			wd.text = ustrdup(wdtext);
 			addword(wd, &whptr);
-		    else
-			sfree(wd.text);
+		    }
+		    if (indexing) {
+			wd.text = ustrdup(wdtext);
+			addword(wd, &idximplicit);
+		    }
+		    sfree(wdtext);
 		    if (wd.type == word_HyperLink) {
 			/*
 			 * Hyperlinks are different: they then
@@ -897,22 +920,28 @@ static void read_file(paragraph ***ret, input *in) {
 			index_visible = (type != c_I);
 			index_downcase = (type == c_ii);
 			indexing = TRUE;
+			idxwordlist = NULL;
+			idximplicit = &idxwordlist;
 			/* Stack item to close the indexing on exit */
 			stk_push(parsestk, sitem);
 		    }
 		    break;
 		  case c_u:
 		    uchr = t.aux;
+		    utext[0] = uchr; utext[1] = 0;
 		    if (!indexing || index_visible) {
-			wchar_t text[2];
-			text[1] = 0;
-			text[0] = uchr;
-			wd.text = ustrdup(text);
+			wd.text = ustrdup(utext);
 			wd.type = style;
 			wd.alt = NULL;
 			wd.fpos = t.pos;
 			uword = addword(wd, &whptr);
-		    }
+		    } else
+			uword = NULL;
+		    if (indexing) {
+			wd.text = ustrdup(utext);
+			iword = addword(wd, &idximplicit);
+		    } else
+			iword = NULL;
 		    dtor(t), t = get_token(in);
 		    if (t.type == tok_lbrace) {
 			/*
@@ -924,8 +953,10 @@ static void read_file(paragraph ***ret, input *in) {
 			sitem = mknew(struct stack_item);
 			sitem->type = stack_ualt;
 			sitem->whptr = whptr;
+			sitem->idximplicit = idximplicit;
 			stk_push(parsestk, sitem);
-			whptr = &uword->alt;
+			whptr = uword ? &uword->alt : NULL;
+			idximplicit = iword ? &iword->alt : NULL;
 		    } else {
 			if (indexing)
 			    rdadd(&indexstr, uchr);

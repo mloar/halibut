@@ -29,6 +29,7 @@ numberstate *number_init(void) {
 }
 
 void number_free(numberstate *state) {
+    sfree(state->sectionlevels);
     sfree(state);
 }
 

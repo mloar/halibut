@@ -93,6 +93,8 @@ keywordlist *get_keywords(paragraph *source) {
     kl->nkeywords = 0;
     kl->size = 0;
     kl->keys = NULL;
+    kl->nlooseends = kl->looseendssize = 0;
+    kl->looseends = NULL;
     for (; source; source = source->next) {
 	/*
 	 * Number the chapter / section / list-item / whatever.
@@ -113,6 +115,12 @@ keywordlist *get_keywords(paragraph *source) {
 		    p += ustrlen(p) + 1;
 		}
 	    }
+	} else {
+	    if (kl->nlooseends >= kl->looseendssize) {
+		kl->looseendssize += 32;
+		kl->looseends = resize(kl->looseends, kl->looseendssize);
+	    }
+	    kl->looseends[kl->nlooseends++] = source->kwtext;
 	}
     }
 
@@ -125,8 +133,15 @@ keywordlist *get_keywords(paragraph *source) {
 
 void free_keywords(keywordlist *kl) {
     int i;
-    for (i = 0; i < kl->nkeywords; i++)
+    while (kl->nlooseends)
+	free_word_list(kl->looseends[--kl->nlooseends]);
+    sfree(kl->looseends);
+    for (i = 0; i < kl->nkeywords; i++) {
+	if (kl->keys[i])
+	    free_word_list(kl->keys[i]->text);
 	sfree(kl->keys[i]);
+    }
+    sfree(kl->keys);
     sfree(kl);
 }
 

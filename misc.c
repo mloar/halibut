@@ -13,7 +13,7 @@ struct stackTag {
 stack stk_new(void) {
     stack s;
 
-    s = mknew(stack);
+    s = mknew(struct stackTag);
     s->sp = 0;
     s->size = 0;
     s->data = NULL;
