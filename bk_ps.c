@@ -6,7 +6,7 @@
 #include "halibut.h"
 #include "paper.h"
 
-static void ps_versionid(FILE *fp, word *words);
+static void ps_comment(FILE *fp, char const *leader, word *words);
 
 paragraph *ps_config_filename(char *filename)
 {
@@ -43,13 +43,25 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	return;
     }
 
-    fprintf(fp, "%%!PS-Adobe-1.0\n");
+    fprintf(fp, "%%!PS-Adobe-3.0\n");
+    fprintf(fp, "%%%%Creator: Halibut, %s\n", version);
+    fprintf(fp, "%%%%DocumentData: Clean8Bit\n");
+    fprintf(fp, "%%%%LanguageLevel: 1\n");
     for (pageno = 0, page = doc->pages; page; page = page->next)
 	pageno++;
     fprintf(fp, "%%%%Pages: %d\n", pageno);
+    for (p = sourceform; p; p = p->next)
+	if (p->type == para_Title)
+	    ps_comment(fp, "%%Title: ", p->words);
+    fprintf(fp, "%%%%DocumentNeededResources:\n");
+    for (fe = doc->fonts->head; fe; fe = fe->next)
+	/* XXX This may request the same font multiple times. */
+	fprintf(fp, "%%%%+ font %s\n", fe->font->name);
+    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 0\n");
     fprintf(fp, "%%%%EndComments\n");
 
     fprintf(fp, "%%%%BeginProlog\n");
+    fprintf(fp, "%%%%BeginResource: procset Halibut 0 0\n");
     /*
      * Supply a prologue function which allows a reasonably
      * compressed representation of the text on the pages.
@@ -71,6 +83,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "  } forall\n"
 	    "} def\n");
 
+    fprintf(fp, "%%%%EndResource\n");
     fprintf(fp, "%%%%EndProlog\n");
 
     fprintf(fp, "%%%%BeginSetup\n");
@@ -80,7 +93,11 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
      */
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_VersionID)
-	    ps_versionid(fp, p->words);
+	    ps_comment(fp, "% ", p->words);
+
+    for (fe = doc->fonts->head; fe; fe = fe->next)
+	/* XXX This may request the same font multiple times. */
+	fprintf(fp, "%%%%IncludeResource: font %s\n", fe->font->name);
 
     /*
      * Re-encode and re-metric the fonts.
@@ -122,8 +139,6 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
-	fprintf(fp, "%%%%BeginPageSetup\n");
-	fprintf(fp, "%%%%EndPageSetup\n");
 
 #if 0
 	{
@@ -202,9 +217,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     sfree(filename);
 }
 
-static void ps_versionid(FILE *fp, word *words)
+static void ps_comment(FILE *fp, char const *leader, word *words)
 {
-    fprintf(fp, "%% ");
+    fprintf(fp, "%s", leader);
 
     for (; words; words = words->next) {
 	char *text;
