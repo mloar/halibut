@@ -153,9 +153,6 @@ static xhtmlconfig xhtml_configure(paragraph *source)
         ret.contents_depth[5] = utoi(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-leaf-level")) {
         ret.leaf_level = utoi(uadv(source->keyword));
-        if (ret.leaf_level==0) {
-          fatal(err_whatever, "xhtml-leaf-level cannot be zero");
-        }
       } else if (!ustricmp(source->keyword, L"xhtml-leaf-smallest-contents")) {
         ret.leaf_smallest_contents = utoi(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-versionid")) {
@@ -390,6 +387,12 @@ static void xhtml_ponder_layout(paragraph *p)
   currentfile = topfile;
   currentsect = topsection;
 
+  if (conf.leaf_level == 0) {
+    topfile->is_leaf = 1;
+    topfile->sections = topsection;
+    topsection->file = topfile;
+  }
+
   for (; p; p=p->next)
   {
     int level = xhtml_para_level(p);
@@ -596,8 +599,10 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords,
   /* new system ... (writes to *.html, but isn't fully trusted) */
   xhtml_do_top_file(topfile, sourceform);
   assert(!topfile->next); /* shouldn't have a sibling at all */
-  xhtml_do_files(topfile->child);
-  xhtml_do_index();
+  if (topfile->child) {
+    xhtml_do_files(topfile->child);
+    xhtml_do_index();
+  }
 
   /* release file, section, index data structures */
   xsect = topsection;
@@ -629,6 +634,7 @@ static int xhtml_para_level(paragraph *p)
   case para_UnnumberedChapter:
   case para_Chapter:
   case para_Appendix:
+  case para_Title:
     return 1;
     break;
 /*  case para_BiblioCited:
@@ -685,17 +691,13 @@ static void xhtml_donavlinks(FILE *fp, xhtmlfile *file)
 }
 
 /* Write out the index file */
-static void xhtml_do_index()
+static void xhtml_do_index_body(FILE *fp)
 {
-  word temp_word = { NULL, NULL, word_Normal, 0, 0, L"Index", { NULL, 0, 0} };
   indexentry *y;
   int ti;
-  FILE *fp = fopen(xhtml_index_filename, "w");
 
-  if (fp==NULL)
-    fatal(err_cantopenw, xhtml_index_filename);
-  xhtml_doheader(fp, &temp_word);
-  xhtml_donavlinks(fp, NULL);
+  if (count234(idx->entries) == 0)
+    return;			       /* don't write anything at all */
 
   fprintf(fp, "<dl>\n");
   /* iterate over idx->entries using the tree functions and display everything */
@@ -728,6 +730,18 @@ static void xhtml_do_index()
     }
   }
   fprintf(fp, "</dl>\n");
+}
+static void xhtml_do_index()
+{
+  word temp_word = { NULL, NULL, word_Normal, 0, 0, L"Index", { NULL, 0, 0} };
+  FILE *fp = fopen(xhtml_index_filename, "w");
+
+  if (fp==NULL)
+    fatal(err_cantopenw, xhtml_index_filename);
+  xhtml_doheader(fp, &temp_word);
+  xhtml_donavlinks(fp, NULL);
+
+  xhtml_do_index_body(fp);
 
   xhtml_donavlinks(fp, NULL);
   xhtml_dofooter(fp);
@@ -751,7 +765,8 @@ static void xhtml_do_file(xhtmlfile *file)
 
   xhtml_donavlinks(fp, file);
 
-  if (file->is_leaf && conf.leaf_contains_contents && xhtml_do_contents(NULL, file)>=conf.leaf_smallest_contents)
+  if (file->is_leaf && conf.leaf_contains_contents &&
+      xhtml_do_contents(NULL, file)>=conf.leaf_smallest_contents)
     xhtml_do_contents(fp, file);
   xhtml_do_sections(fp, file->sections);
   if (!file->is_leaf)
@@ -786,6 +801,17 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
   if (!done)
     xhtml_doheader(fp, NULL /* Eek! */);
 
+  /*
+   * Display the title.
+   */
+  for (p = sourceform; p; p = p->next)
+  {
+    if (p->type == para_Title) {
+      xhtml_heading(fp, p);
+      break;
+    }
+  }
+
   /* Do the preamble and copyright */
   for (p = sourceform; p; p = p->next)
   {
@@ -808,6 +834,12 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
 
   xhtml_do_contents(fp, file);
   xhtml_do_sections(fp, file->sections);
+
+  if (count234(idx->entries) > 0) {
+    fprintf(fp, "<a name=\"index\"></a><h1>Index</h1>\n");
+    xhtml_do_index_body(fp);
+  }
+
   xhtml_dofooter(fp);
   fclose(fp);
 }
@@ -939,7 +971,7 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
 {
   if (!section || section->level > limit)
     return FALSE;
-  if (fp==NULL)
+  if (fp==NULL || !section->parent)
     return TRUE;
   while (last_level > section->level) {
     last_level--;
@@ -1401,8 +1433,12 @@ static void xhtml_heading(FILE *fp, paragraph *p)
     if (sect) {
       fragment = sect->fragment;
     } else {
-      fragment = ""; /* FIXME: what else can we do? */
-      error(err_whatever, "Couldn't locate heading cross-reference!");
+      if (p->type == para_Title)
+	fragment = "title";
+      else {
+	fragment = ""; /* FIXME: what else can we do? */
+	error(err_whatever, "Couldn't locate heading cross-reference!");
+      }
     }
 
     if (level>2 && nprefix) { /* FIXME: configurability on the level thing */
