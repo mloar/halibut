@@ -557,7 +557,9 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		    /* FIXME: there will be bugs if anyone specifies an
 		     * empty keyword (\foo{}), so trap this case. */
 		    while (dtor(t), t = get_token(in),
-			   t.type == tok_word || t.type == tok_white) {
+			   t.type == tok_word || 
+			   t.type == tok_white ||
+			   (t.type == tok_cmd && t.cmd == c__escaped)) {
 			if (t.type == tok_white)
 			    rdadd(&rs, ' ');
 			else

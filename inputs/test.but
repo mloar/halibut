@@ -7,9 +7,9 @@ date \date{%Y.%m.%d} (default format is \date).
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
 reserved.
 
-\versionid $Id: test.but,v 1.6 1999/09/12 15:38:06 simon Exp $
+\versionid $Id: test.but,v 1.7 1999/10/21 13:26:48 simon Exp $
 
-\C{chap} First chapter title
+\C{ch\\ap} First chapter title
 
 This is a para\#{another{} comment}graph of text. It
 has line\#{yet another one} breaks in   between words, multiple
