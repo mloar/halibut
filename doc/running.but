@@ -97,6 +97,9 @@ Halibut will append it. Halibut will also generate a contents file
 optionally specify a file name (e.g. \c{--man=myfile.5}), in which
 case Halibut will change the name of the output file as well.
 
+If you do not specify any of the above options, Halibut will simply
+produce \e{all} of its output formats.
+
 Also, there is an option which allows you to specify an arbitrary
 \i\c{\\cfg} configuration directive (see \k{input-config}):
 
