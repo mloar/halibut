@@ -312,6 +312,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
      */
 
     whlp_begin_topic(h, contents_topic, "Contents", "DB(\"btn_up\")", NULL);
+    state.curr_topic = contents_topic;
 
     /*
      * The manual title goes in the non-scroll region, and also
@@ -411,8 +412,6 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		    p->type == para_UnnumberedChapter)
 		    whlp_navmenu(&state, p, &conf);
 	    }
-
-	    state.curr_topic = contents_topic;
 
 	    done_contents_topic = TRUE;
 	}
