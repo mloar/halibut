@@ -65,6 +65,17 @@ commands, which means you can use them in the middle of a paragraph.
 \K{input-para} describes some \e{paragraph} commands, which affect a
 whole paragraph at a time.
 
+Many of these commands are followed by a pair of braces surrounding
+some text. In all cases, it is perfectly safe to have a line break
+(in the input file) within those braces; Halibut will treat that
+exactly the same as a space. For example, these two paragraphs will
+be treated identically:
+
+\c Here is some \e{emphasised
+\c text}.
+\c
+\c Here is some \e{emphasised text}.
+
 \S{input-emph} \c{\\e}: Emphasising text
 
 Possibly the most obvious piece of formatting you might want to use
@@ -1016,7 +1027,7 @@ You can wrap more than one word in \c{\\i} as well:
 \S{input-index-special} Special cases of indexing
 
 If you need to index a computer-related term, you can use the
-special case \c{\\i\\c}:
+special case \c{\\i\\c} (or \c{\\i\\cw} if you prefer):
 
 \c The \i\c{grep} command is what you want here.
 
