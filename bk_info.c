@@ -134,9 +134,7 @@ static infoconfig info_configure(paragraph *source) {
 		sfree(ret.filename);
 		ret.filename = dupstr(adv(p->origkeyword));
 	    } else if (!ustricmp(p->keyword, L"info-charset")) {
-		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
-		ret.charset = charset_from_localenc(csname);
-		sfree(csname);
+		ret.charset = charset_from_ustr(&p->fpos, uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"info-max-file-size")) {
 		ret.maxfilesize = utoi(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"info-width")) {

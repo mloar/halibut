@@ -69,9 +69,7 @@ static manconfig man_configure(paragraph *source) {
 		ret.th = snewn(ep - wp + 1, wchar_t);
 		memcpy(ret.th, wp, (ep - wp + 1) * sizeof(wchar_t));
 	    } else if (!ustricmp(p->keyword, L"man-charset")) {
-		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
-		ret.charset = charset_from_localenc(csname);
-		sfree(csname);
+		ret.charset = charset_from_ustr(&p->fpos, uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"man-headnumbers")) {
 		ret.headnumbers = utob(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"man-mindepth")) {

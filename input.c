@@ -86,9 +86,7 @@ static void input_configure(input *in, paragraph *cfg) {
     assert(cfg->type == para_Config);
 
     if (!ustricmp(cfg->keyword, L"input-charset")) {
-	char *csname = utoa_dup(uadv(cfg->keyword), CS_ASCII);
-	in->charset = charset_from_localenc(csname);
-	sfree(csname);
+	in->charset = charset_from_ustr(&cfg->fpos, uadv(cfg->keyword));
     }
 }
 

@@ -459,3 +459,28 @@ int cvt_ok(int charset, const wchar_t *s)
     }
     return TRUE;
 }
+
+/*
+ * Wrapper around charset_from_localenc which accepts the charset
+ * name as a wide string (since that happens to be more useful).
+ * Also throws a Halibut error and falls back to CS_ASCII if the
+ * charset is unrecognised, meaning the rest of the program can
+ * rely on always getting a valid charset id back from this
+ * function.
+ */
+int charset_from_ustr(filepos *fpos, const wchar_t *name)
+{
+    char *csname;
+    int charset;
+
+    csname = utoa_dup(name, CS_ASCII);
+    charset = charset_from_localenc(csname);
+
+    if (charset == CS_NONE) {
+	charset = CS_ASCII;
+	error(err_charset, fpos, name);
+    }
+
+    sfree(csname);
+    return charset;
+}

@@ -267,13 +267,9 @@ static htmlconfig html_configure(paragraph *source) {
 		k++;		    /* treat `xhtml-' and `html-' the same */
 
 	    if (!ustricmp(k, L"html-restrict-charset")) {
-		char *csname = utoa_dup(uadv(k), CS_ASCII);
-		ret.restrict_charset = charset_from_localenc(csname);
-		sfree(csname);
+		ret.restrict_charset = charset_from_ustr(&p->fpos, uadv(k));
 	    } else if (!ustricmp(k, L"html-output-charset")) {
-		char *csname = utoa_dup(uadv(k), CS_ASCII);
-		ret.output_charset = charset_from_localenc(csname);
-		sfree(csname);
+		ret.output_charset = charset_from_ustr(&p->fpos, uadv(k));
 	    } else if (!ustricmp(k, L"html-version")) {
 		wchar_t *vername = uadv(k);
 		static const struct {

@@ -241,6 +241,7 @@ enum {
     err_infonodechar,		       /* colon/comma in node name in info */
     err_text_codeline,		       /* \c line too long in text backend */
     err_htmlver,		       /* unrecognised HTML version keyword */
+    err_charset,		       /* unrecognised character set name */
     err_whatever                       /* random error of another type */
 };
 
@@ -299,6 +300,7 @@ int uisdigit(wchar_t);
 wchar_t *ustrlow(wchar_t *s);
 wchar_t *ustrftime(const wchar_t *wfmt, const struct tm *timespec);
 int cvt_ok(int charset, const wchar_t *s);
+int charset_from_ustr(filepos *fpos, const wchar_t *name);
 
 /*
  * wcwidth.c

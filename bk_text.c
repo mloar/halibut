@@ -126,9 +126,7 @@ static textconfig text_configure(paragraph *source) {
 	    if (!ustricmp(p->keyword, L"text-indent")) {
 		ret.indent = utoi(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"text-charset")) {
-		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
-		ret.charset = charset_from_localenc(csname);
-		sfree(csname);
+		ret.charset = charset_from_ustr(&p->fpos, uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"text-filename")) {
 		sfree(ret.filename);
 		ret.filename = dupstr(adv(p->origkeyword));
