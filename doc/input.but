@@ -313,12 +313,12 @@ The \c{\\W} command supports a piece of extra syntax to make this
 convenient for you. You can specify \c{\\c} or \c{\\cw} \e{between}
 the first and second pairs of braces. For example, you might write
 
-\c Google is located at \W{http://www.google.com/}\cw{www.google.com}.
+\c Google is at \W{http://www.google.com/}\cw{www.google.com}.
 
 and Halibut would produce
 
 \quote{
-Google is located at \W{http://www.google.com/}\cw{www.google.com}.
+Google is at \W{http://www.google.com/}\cw{www.google.com}.
 }
 
 If you want the link text to be an index term as well, you can also
