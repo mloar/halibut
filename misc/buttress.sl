@@ -11,6 +11,14 @@ set_syntax_flags ($1, 8);
 
 #ifdef HAS_DFA_SYNTAX
 %enable_highlight_cache ("buttress.dfa", $1);
+
+% A braced comment in Buttress is \#{ ... }, where ... may contain
+% any correctly nested sequence of braces. Of course we can't match
+% that in a DFA rule, so we'll go down to a reasonable depth of 3
+% instead.
+define_highlight_rule ("\\\\#{[^{}]*({[^{}]*({[^}]*}[^{}]*)*}[^{}]*)*}",
+		       "Qcomment", $1);
+
 define_highlight_rule ("\\\\#.*$", "comment", $1);
 define_highlight_rule ("^\\\\c([ \t].*)?$", "string", $1);
 define_highlight_rule ("\\\\[\\\\{}\\-_]", "keyword0", $1);
