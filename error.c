@@ -18,7 +18,7 @@ static void do_error(int code, va_list ap) {
     char auxbuf[256];
     char *sp, *sp2;
     wchar_t *wsp;
-    filepos fpos;
+    filepos fpos, fpos2;
     int flags;
 
     switch(code) {
@@ -173,6 +173,15 @@ static void do_error(int code, va_list ap) {
 	sp2 = va_arg(ap, char *);
 	sprintf(error, "Windows Help context id `%.200s' clashes with "
 		"previously defined `%.200s'", sp, sp2);
+	flags = FILEPOS;
+	break;
+      case err_multikw:
+	fpos = *va_arg(ap, filepos *);
+	fpos2 = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf));
+	sprintf(error, "paragraph keyword `%.200s' already defined at ", sp);
+	sprintf(error + strlen(error), "%s:%d", fpos2.filename, fpos2.line);
 	flags = FILEPOS;
 	break;
       case err_whatever:

@@ -7,76 +7,22 @@
 #include <assert.h>
 #include "buttress.h"
 
-#define heapparent(x) (((x)+1)/2-1)
-#define heaplchild(x) (2*(x)+1)
-#define heaprchild(x) (2*(x)+2)
-
-#define key(x) ( kl->keys[(x)] )
-
-#define greater(x,y) ( ustrcmp(key(x)->key, key(y)->key) > 0 )
-#define swap(x,y) do { keyword *t=key(x); key(x)=key(y); key(y)=t; } while(0)
-
-static void heap_add(keywordlist *kl, keyword *key) {
-    int p;
-    if (kl->nkeywords >= kl->size) {
-	kl->size = kl->nkeywords + 128;
-	kl->keys = resize(kl->keys, kl->size);
-    }
-    p = kl->nkeywords++;
-    kl->keys[p] = key;
-    while (heapparent(p) >= 0 && greater(p, heapparent(p))) {
-	swap(p, heapparent(p));
-	p = heapparent(p);
-    }
+static int kwcmp(void *av, void *bv)
+{
+    const keyword *a = (const keyword *)av;
+    const keyword *b = (const keyword *)bv;
+    return ustrcmp(a->key, b->key);
 }
 
-static void heap_sort(keywordlist *kl) {
-    int i, j;
-
-    kl->size = kl->nkeywords;
-    kl->keys = resize(kl->keys, kl->size);
-
-    i = kl->nkeywords;
-    while (i > 1) {
-	i--;
-	swap(0, i);		       /* put greatest at end */
-	j = 0;
-	while (1) {
-	    int left = heaplchild(j), right = heaprchild(j);
-	    if (left >= i || !greater(left, j))
-		left = -1;
-	    if (right >= i || !greater(right, j))
-		right = -1;
-	    if (left >= 0 && right >= 0) {
-		if (greater(left, right))
-		    right = -1;
-		else
-		    left = -1;
-	    }
-	    if (left >= 0) { swap(j, left); j = left; }
-	    else if (right >= 0) { swap(j, right); j = right; }
-	    else break;
-	}
-    }
-    /* FIXME: check for duplicate keys; do what about them? */
+static int kwfind(void *av, void *bv)
+{
+    wchar_t *a = (wchar_t *)av;
+    const keyword *b = (const keyword *)bv;
+    return ustrcmp(a, b->key);
 }
 
 keyword *kw_lookup(keywordlist *kl, wchar_t *str) {
-    int i, j, k, cmp;
-
-    i = -1;
-    j = kl->nkeywords;
-    while (j-i > 1) {
-	k = (i+j)/2;
-	cmp = ustrcmp(str, kl->keys[k]->key);
-	if (cmp < 0)
-	    j = k;
-	else if (cmp > 0)
-	    i = k;
-	else
-	    return kl->keys[k];
-    }
-    return NULL;
+    return find234(kl->keys, str, kwfind);
 }
 
 /*
@@ -93,9 +39,8 @@ keywordlist *get_keywords(paragraph *source) {
 
     number_cfg(n, source);
 
-    kl->nkeywords = 0;
     kl->size = 0;
-    kl->keys = NULL;
+    kl->keys = newtree234(kwcmp);
     kl->nlooseends = kl->looseendssize = 0;
     kl->looseends = NULL;
     for (; source; source = source->next) {
@@ -122,11 +67,18 @@ keywordlist *get_keywords(paragraph *source) {
 
 	if (p && *p) {
 	    if (source->kwtext || source->type == para_Biblio) {
-		keyword *kw = mknew(keyword);
+		keyword *kw, *ret;
+
+		kw = mknew(keyword);
 		kw->key = p;
 		kw->text = source->kwtext;
 		kw->para = source;
-		heap_add(kl, kw);
+		ret = add234(kl->keys, kw);
+		if (ret != kw) {
+		    error(err_multikw, &source->fpos, &ret->para->fpos, p);
+		    sfree(kw);
+		    /* FIXME: what happens to kw->text? Does it leak? */
+		}
 	    }
 	} else {
 	    if (kl->nlooseends >= kl->looseendssize) {
@@ -144,22 +96,20 @@ keywordlist *get_keywords(paragraph *source) {
 	return NULL;
     }
 
-    heap_sort(kl);
-
     return kl;
 }
 
 void free_keywords(keywordlist *kl) {
-    int i;
+    keyword *kw;
     while (kl->nlooseends)
 	free_word_list(kl->looseends[--kl->nlooseends]);
     sfree(kl->looseends);
-    for (i = 0; i < kl->nkeywords; i++) {
-	if (kl->keys[i])
-	    free_word_list(kl->keys[i]->text);
-	sfree(kl->keys[i]);
+    while ( (kw = index234(kl->keys, 0)) != NULL) {
+        delpos234(kl->keys, 0);
+	free_word_list(kw->text);
+	sfree(kw);
     }
-    sfree(kl->keys);
+    freetree234(kl->keys);
     sfree(kl);
 }
 

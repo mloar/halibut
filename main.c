@@ -259,11 +259,12 @@ static void dbg_prtkws(keywordlist *kws) {
      */
 
     int i;
+    keyword *kw;
 
-    for (i = 0; i < kws->nkeywords; i++) {
+    for (i = 0; (kw = index234(kws->keys, i)) != NULL; i++) {
 	wchar_t *wp;
 	printf("keyword ");
-	wp = kws->keys[i]->key;
+	wp = kw->key;
 	while (*wp) {
 	    putchar('\"');
 	    for (; *wp; wp++)
@@ -273,7 +274,7 @@ static void dbg_prtkws(keywordlist *kws) {
 		printf(", ");
 	}
 	printf(" {\n");
-	dbg_prtwordlist(1, kws->keys[i]->text);
+	dbg_prtwordlist(1, kw->text);
 	printf("}\n");
     }
 }

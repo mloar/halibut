@@ -206,6 +206,7 @@ enum {
     err_macroexists,		       /* this macro already exists */
     err_sectjump,		       /* jump a heading level, eg \C -> \S */
     err_winhelp_ctxclash,	       /* WinHelp context ID hash clash */
+    err_multikw,		       /* keyword clash in sections */
     err_whatever                       /* random error of another type */
 };
 
@@ -321,7 +322,7 @@ paragraph *read_input(input *in, indexdata *idx);
 struct keywordlist_Tag {
     int nkeywords;
     int size;
-    keyword **keys;
+    tree234 *keys;		       /* sorted by `key' field */
     word **looseends;		       /* non-keyword list element numbers */
     int nlooseends;
     int looseendssize;
