@@ -124,13 +124,13 @@ additional files \c{output.info-1}, \c{output.info-2} and so on.
 \dt \i\cw{--ps}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate PostScript output. You
-can optionally specify a file name (e.g. \c{--man=myfile.ps}), in
+can optionally specify a file name (e.g. \c{--ps=myfile.ps}), in
 which case Halibut will change the name of the output file as well.
 
 \dt \i\cw{--pdf}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate PDF output. You
-can optionally specify a file name (e.g. \c{--man=myfile.pdf}), in
+can optionally specify a file name (e.g. \c{--pdf=myfile.pdf}), in
 which case Halibut will change the name of the output file as well.
 
 If you do not specify any of the above options, Halibut will simply
