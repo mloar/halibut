@@ -16,6 +16,22 @@ set_syntax_flags ($1, 8);
 % any correctly nested sequence of braces. Of course we can't match
 % that in a DFA rule, so we'll go down to a reasonable depth of 3
 % instead.
+#ifexists dfa_define_highlight_rule
+dfa_define_highlight_rule ("\\\\#{[^{}]*({[^{}]*({[^}]*}[^{}]*)*}[^{}]*)*}",
+			   "Qcomment", $1);
+
+dfa_define_highlight_rule ("\\\\#.*$", "comment", $1);
+dfa_define_highlight_rule ("^\\\\c([ \t].*)?$", "string", $1);
+dfa_define_highlight_rule ("\\\\[\\\\{}\\-_]", "keyword0", $1);
+dfa_define_highlight_rule ("\\\\[A-Za-tv-z][A-Za-z0-9]*", "keyword0", $1);
+dfa_define_highlight_rule ("\\\\u[A-Fa-f0-9][A-Fa-f0-9][A-Fa-f0-9][A-Fa-f0-9]",
+			   "keyword0", $1);
+dfa_define_highlight_rule ("\\\\u[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]",
+			   "keyword1", $1);
+dfa_define_highlight_rule ("[{}]", "delimiter", $1);
+dfa_define_highlight_rule (".", "normal", $1);
+dfa_build_highlight_table ($1);
+#else
 define_highlight_rule ("\\\\#{[^{}]*({[^{}]*({[^}]*}[^{}]*)*}[^{}]*)*}",
 		       "Qcomment", $1);
 
@@ -30,6 +46,7 @@ define_highlight_rule ("\\\\u[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]",
 define_highlight_rule ("[{}]", "delimiter", $1);
 define_highlight_rule (".", "normal", $1);
 build_highlight_table ($1);
+#endif
 #endif
 
 %  This hook identifies lines containing comments as paragraph separator
