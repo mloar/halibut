@@ -14,7 +14,7 @@ set_syntax_flags ($1, 8);
 define_highlight_rule ("\\\\#.*$", "comment", $1);
 define_highlight_rule ("^\\\\c([ \t].*)?$", "string", $1);
 define_highlight_rule ("\\\\[\\\\{}]", "keyword0", $1);
-define_highlight_rule ("\\\\[A-Za-tv-z][A-Za-z]*", "keyword0", $1);
+define_highlight_rule ("\\\\[A-Za-tv-z][A-Za-z0-9]*", "keyword0", $1);
 define_highlight_rule ("\\\\u[A-Fa-f0-9][A-Fa-f0-9][A-Fa-f0-9][A-Fa-f0-9]",
 		       "keyword0", $1);
 define_highlight_rule ("\\\\u[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]?[A-Fa-f0-9]",
