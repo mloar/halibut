@@ -86,6 +86,7 @@ keyword *kw_lookup(keywordlist *kl, wchar_t *str) {
  * finish).
  */
 keywordlist *get_keywords(paragraph *source) {
+    int errors = FALSE;
     keywordlist *kl = mknew(keywordlist);
     numberstate *n = number_init();
     int prevpara = para_NotParaType;
@@ -102,7 +103,15 @@ keywordlist *get_keywords(paragraph *source) {
 	 * Number the chapter / section / list-item / whatever.
 	 */
 	source->kwtext = number_mktext(n, source->type, source->aux,
-				       prevpara, &source->kwtext2);
+				       prevpara, &source->kwtext2,
+				       source->fpos);
+	if (!source->kwtext) {
+	    /* There was an error collecting the section numbers.
+	     * number_mktext has reported it; we record it and bail
+	     * out at the end. */
+	    errors = TRUE;
+	    continue;
+	}
 	prevpara = source->type;
 
 	if (source->keyword && *source->keyword) {
@@ -127,6 +136,11 @@ keywordlist *get_keywords(paragraph *source) {
     }
 
     number_free(n);
+
+    if (errors) {
+	free_keywords(kl);
+	return NULL;
+    }
 
     heap_sort(kl);
 

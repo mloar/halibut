@@ -197,6 +197,8 @@ int main(int argc, char **argv) {
 	sfree(infiles);
 
 	keywords = get_keywords(sourceform);
+	if (!keywords)
+	    exit(EXIT_FAILURE);
 	gen_citations(sourceform, keywords);
 	subst_keywords(sourceform, keywords);
 

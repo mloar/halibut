@@ -13,6 +13,7 @@ struct numberstate_Tag {
     int appendixnum;
     int ischapter;
     int *sectionlevels;
+    int oklevel;
     int maxsectlevel;
     int listitem;
     wchar_t *chaptertext;	       /* the word for a chapter */
@@ -25,6 +26,7 @@ numberstate *number_init(void) {
     ret->chapternum = 0;
     ret->appendixnum = -1;
     ret->ischapter = 1;
+    ret->oklevel = -1;		       /* not even in a chapter yet */
     ret->maxsectlevel = 32;
     ret->sectionlevels = mknewa(int, ret->maxsectlevel);
     ret->listitem = -1;
@@ -114,7 +116,7 @@ void number_cfg(numberstate *state, paragraph *source) {
 }
 
 word *number_mktext(numberstate *state, int para, int aux, int prev,
-		    word **auxret) {
+		    word **auxret, filepos fpos) {
     word *ret = NULL;
     word **ret2 = &ret;
     word **pret = &ret;
@@ -130,10 +132,16 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	ret2 = pret;
 	donumber(&pret, state->chapternum);
 	state->ischapter = 1;
+	state->oklevel = 0;
 	break;
       case para_Heading:
       case para_Subsect:
 	level = (para == para_Heading ? 0 : aux);
+	if (level > state->oklevel) {
+	    error(err_sectjump, &fpos);
+	    return NULL;
+	}
+	state->oklevel = level+1;
 	if (state->maxsectlevel <= level) {
 	    state->maxsectlevel = level + 32;
 	    state->sectionlevels = resize(state->sectionlevels,
@@ -165,6 +173,7 @@ word *number_mktext(numberstate *state, int para, int aux, int prev,
 	ret2 = pret;
 	doanumber(&pret, state->appendixnum);
 	state->ischapter = 0;
+	state->oklevel = 0;
 	break;
       case para_NumberedList:
 	ret2 = pret;

@@ -1,0 +1,5 @@
+\H{outofplace} Heading out of place.
+
+\C{chap} Chapter is fine
+
+\S{subsect} Subsection should have heading before it.

@@ -199,6 +199,7 @@ enum {
     err_nosuchidxtag,		       /* \IM on unknown index tag (warning) */
     err_cantopenw,		       /* can't open output file for write */
     err_macroexists,		       /* this macro already exists */
+    err_sectjump,		       /* jump a heading level, eg \C -> \S */
     err_whatever                       /* random error of another type */
 };
 
@@ -374,7 +375,7 @@ void index_debug(index *);
  */
 numberstate *number_init(void);
 void number_cfg(numberstate *, paragraph *);
-word *number_mktext(numberstate *, int, int, int, word **);
+word *number_mktext(numberstate *, int, int, int, word **, filepos);
 void number_free(numberstate *);
 
 /*
