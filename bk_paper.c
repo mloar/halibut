@@ -12,6 +12,11 @@
 /*
  * TODO in future work:
  * 
+ *  - the index should not refer to the contents, if an indexable
+ *    term crops up in a section title!
+ * 
+ *  - include the version IDs.
+ * 
  *  - linearised PDF, perhaps?
  * 
  *  - compression of output files. For the actual text display,
@@ -63,6 +68,20 @@
  *     * we need to parse the font to extract its metrics
  *     * then we pass the font bodily to both PS and PDF so it can
  * 	 be included in the output file
+ * 
+ *  - character substitution for better typography?
+ *     * fi, fl, ffi, ffl ligatures
+ *     * use real ellipsis rather than ...
+ *     * a hyphen in a word by itself might prefer to be an en-dash
+ *     * (Americans might even want a convenient way to use an
+ * 	 em-dash)
+ *     * substituting `minus' for `hyphen' in the standard encoding
+ * 	 is probably preferable in Courier, though certainly not in
+ * 	 the main text font
+ *     * if I do do this lot, I'm rather inclined to at least try
+ * 	 to think up a configurable way to do it so that Americans
+ * 	 can do em-dash tricks without my intervention and other
+ * 	 people can do other odd things too.
  */
 
 #include <assert.h>
