@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.31 2004/06/19 14:44:47 simon Exp $
+\versionid $Id: test.but,v 1.32 2004/06/19 16:04:39 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -222,10 +222,10 @@ It also contains a \W{http://www.tartarus.org/}{hyperlink}.
 Also I'm going to index \i\c{-output} to ensure that its two
 components are displayed as a joined-up code fragment in the index.
 
-Here are some subsections with silly chapter titles and interesting
-use of Unicode. The Unicode oddities are in the titles rather than
-the body text because that way I get to test their handling in the
-PDF document outline.
+Here are \I{testone}some \I{testtwo}subsections \I{testthree}with
+silly chapter titles and interesting use of Unicode. The Unicode
+oddities are in the titles rather than the body text because that
+way I get to test their handling in the PDF document outline.
 
 \H{app-one} The 1024 \u00D7{x} 768 screen resolution
 
@@ -267,3 +267,11 @@ the document even though there is no \cw{\\k} citing it.
 
 \IM{she seems to have an invisible tag}{appendix} Invisible tags
 and/or appendices
+
+\# The display forms of these three index terms differ only in case.
+\# This is a fiddly special case in the Windows Help backend,
+\# because Windows Help's index mechanism is case-insensitive...
+
+\IM{testone} Test
+\IM{testtwo} TesT
+\IM{testthree} test

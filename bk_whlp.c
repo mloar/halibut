@@ -246,10 +246,63 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
      * Loop over the index entries, preparing final text forms for
      * each one.
      */
-    for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
-	rdstringc rs = {0, 0, NULL};
-	whlp_rdaddwc(&rs, ie->text, &conf, NULL);
-	ie->backend_data = rs.text;
+    {
+	indexentry *ie_prev = NULL;
+	int nspaces = 1;
+
+	for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
+	    rdstringc rs = {0, 0, NULL};
+	    charset_state state = CHARSET_INIT_STATE;
+	    whlp_rdaddwc(&rs, ie->text, &conf, &state);
+
+	    if (ie_prev) {
+		/*
+		 * It appears that Windows Help's index mechanism
+		 * is inherently case-sensitive. Therefore, if two
+		 * adjacent index terms compare equal apart from
+		 * case, I'm going to append nonbreaking spaces to
+		 * the end of the second one so that Windows will
+		 * treat them as distinct.
+		 * 
+		 * This is nasty because we're depending on our
+		 * case-insensitive comparison having the same
+		 * semantics as the Windows one :-/ but I see no
+		 * alternative.
+		 */
+		wchar_t *a, *b;
+
+		a = ufroma_dup((char *)ie_prev->backend_data, conf.charset);
+		b = ufroma_dup(rs.text, conf.charset);
+		if (!ustricmp(a, b)) {
+		    int j;
+		    for (j = 0; j < nspaces; j++)
+			whlp_rdadds(&rs, L"\xA0", &conf, &state);
+		    /*
+		     * Add one to nspaces, so that if another term
+		     * appears which is equivalent to the previous
+		     * two it'll acquire one more space.
+		     */
+		    nspaces++;
+		} else
+		    nspaces = 1;
+		sfree(a);
+		sfree(b);
+	    }
+
+	    whlp_rdadds(&rs, NULL, &conf, &state);
+
+	    ie->backend_data = rs.text;
+
+	    /*
+	     * Only move ie_prev on if nspaces==1 (since when we
+	     * have three or more adjacent terms differing only in
+	     * case, we will want to compare with the _first_ of
+	     * them because that won't have had any extra spaces
+	     * added on which will foul up the comparison).
+	     */
+	    if (nspaces == 1)
+		ie_prev = ie;
+	}
     }
 
     whlp_prepare(h);
