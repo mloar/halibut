@@ -2,7 +2,7 @@
 
 # Requires a compiler with -MD support, currently
 
-# `make' from top level will build in buttress.b
+# `make' from top level will build in directory `build'
 # `make BUILDDIR=foo' from top level will build in directory foo
 ifndef REALBUILD
 ifndef BUILDDIR
@@ -15,6 +15,9 @@ endif
 all:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile REALBUILD=yes
+spotless:
+	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
+	@make -C $(BUILDDIR) -f ../Makefile spotless REALBUILD=yes
 clean:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
 	@make -C $(BUILDDIR) -f ../Makefile clean REALBUILD=yes
@@ -63,6 +66,9 @@ buttress: $(OBJECTS)
 
 version.o: FORCE
 	$(CC) $(VDEF) -MD -c $(SRC)version.c
+
+spotless:: clean
+	rm -f *.d
 
 clean::
 	rm -f *.o buttress core
