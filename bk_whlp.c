@@ -17,6 +17,8 @@ struct bk_whlp_state {
     indexdata *idx;
     keywordlist *keywords;
     WHLP_TOPIC curr_topic;
+    FILE *cntfp;
+    int cnt_last_level, cnt_workaround;
 };
 
 /*
@@ -37,11 +39,13 @@ static int whlp_convert(wchar_t *s, char **result, int hard_spaces);
 static void whlp_mkparagraph(struct bk_whlp_state *state,
 			     int font, word *text, int subsidiary);
 static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p);
+static void whlp_contents_write(struct bk_whlp_state *state,
+				int level, char *text, WHLP_TOPIC topic);
     
 void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		  indexdata *idx) {
     WHLP h;
-    char *filename;
+    char *filename, *cntname;
     paragraph *p, *lastsect;
     struct bk_whlp_state state;
     WHLP_TOPIC contents_topic;
@@ -49,7 +53,11 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     indexentry *ie;
 
     filename = "output.hlp";	       /* FIXME: configurability */
-    
+    cntname = "output.cnt";	       /* corresponding contents file */
+
+    state.cntfp = fopen(cntname, "wb");
+    state.cnt_last_level = -1; state.cnt_workaround = 0;
+
     h = state.h = whlp_new();
     state.keywords = keywords;
     state.idx = idx;
@@ -125,8 +133,11 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 	if (rs.text) {
 	    whlp_title(h, rs.text);
+	    fprintf(state.cntfp, ":Title %s\r\n", rs.text);
 	    sfree(rs.text);
 	}
+	whlp_contents_write(&state, 1, "Title page", contents_topic);
+	/* FIXME: configurability in that string */
     }
 
     /*
@@ -239,6 +250,27 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 			     rs.text ? rs.text : "",
 			     macro, NULL);
 	    sfree(macro);
+
+	    {
+		/*
+		 * Output the .cnt entry.
+		 */
+		int i;
+		paragraph *q;
+		i = 1;
+		for (q = p; q->parent; q = q->parent) i++;
+		if (p->child) {
+		    /*
+		     * Need two entries: one directory, and then
+		     * one actual link. The link is on the next
+		     * level down.
+		     */
+		    whlp_contents_write(&state, i, rs.text, NULL);
+		    i++;
+		}
+		whlp_contents_write(&state, i, rs.text, new_topic);
+	    }
+
 	    sfree(rs.text);
 
 	    whlp_begin_para(h, WHLP_PARA_NONSCROLL);
@@ -326,8 +358,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
     }
 
+    fclose(state.cntfp);
     whlp_close(h, filename);
-
 
     /*
      * Loop over the index entries, cleaning up our final text
@@ -336,6 +368,31 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
 	sfree(ie->backend_data);
     }
+}
+
+static void whlp_contents_write(struct bk_whlp_state *state,
+				int level, char *text, WHLP_TOPIC topic) {
+    /*
+     * Horrifying bug in WinHelp. When dropping a section level or
+     * more without using a folder-type entry, WinHelp accidentally
+     * adds one to the section level. So we correct for that here.
+     */
+    if (state->cnt_last_level > level && topic)
+	state->cnt_workaround = -1;
+    else if (!topic)
+	state->cnt_workaround = 0;
+    state->cnt_last_level = level;
+
+    fprintf(state->cntfp, "%d ", level + state->cnt_workaround);
+    while (*text) {
+	if (*text == '=')
+	    fputc('\\', state->cntfp);
+	fputc(*text, state->cntfp);
+	text++;
+    }
+    if (topic)
+	fprintf(state->cntfp, "=%s", whlp_topic_id(topic));
+    fputc('\n', state->cntfp);
 }
 
 static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p) {
