@@ -236,14 +236,9 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 		/*
 		 * Special case: if we're at the very end of the
 		 * paragraph, we don't score penalty points for the
-		 * white space left on the line, unless the line
-		 * contains no spaces (widow penalty). The widow
-		 * penalty is the square of 1/4 the line width.
+		 * white space left on the line.
 		 */
-		if (seenspace)
-		    cost = 0;
-		else
-		    cost = (thiswidth/4)*(thiswidth/4);
+		cost = 0;
 	    } else {
 		cost = (thiswidth-linelen) * (thiswidth-linelen);
 		cost += wrapwords[i+j].cost;
