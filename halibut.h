@@ -348,7 +348,7 @@ char *rdtrimc(rdstringc *rs);
 
 int compare_wordlists(word *a, word *b);
 
-void mark_attr_ends(paragraph *sourceform);
+void mark_attr_ends(word *words);
 
 typedef struct tagWrappedLine wrappedline;
 struct tagWrappedLine {

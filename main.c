@@ -288,8 +288,6 @@ int main(int argc, char **argv) {
 
 	sfree(in.pushback);
 
-	mark_attr_ends(sourceform);
-
 	sfree(infiles);
 
 	keywords = get_keywords(sourceform);
@@ -303,6 +301,20 @@ int main(int argc, char **argv) {
 		index_merge(idx, TRUE, p->keyword, p->words, &p->fpos);
 
 	build_index(idx);
+
+	/*
+	 * Set up attr_First / attr_Last / attr_Always, in the main
+	 * document and in the index entries.
+	 */
+	for (p = sourceform; p; p = p->next)
+	    mark_attr_ends(p->words);
+	{
+	    int i;
+	    indexentry *entry;
+
+	    for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++)
+		mark_attr_ends(entry->text);
+	}
 
 	if (debug) {
 	    index_debug(idx);

@@ -213,23 +213,22 @@ int compare_wordlists(word *a, word *b) {
     return compare_wordlists_literally(a, b);
 }
 
-void mark_attr_ends(paragraph *sourceform) {
-    paragraph *p;
+void mark_attr_ends(word *words)
+{
     word *w, *wp;
-    for (p = sourceform; p; p = p->next) {
-	wp = NULL;
-	for (w = p->words; w; w = w->next) {
-	    if (isattr(w->type)) {
-		int before = (wp && isattr(wp->type) &&
-			      sameattr(wp->type, w->type));
-		int after = (w->next && isattr(w->next->type) &&
-			     sameattr(w->next->type, w->type));
-		w->aux |= (before ?
-			   (after ? attr_Always : attr_Last) :
-			   (after ? attr_First : attr_Only));
-	    }
-	    wp = w;
+
+    wp = NULL;
+    for (w = words; w; w = w->next) {
+	if (isattr(w->type)) {
+	    int before = (wp && isattr(wp->type) &&
+			  sameattr(wp->type, w->type));
+	    int after = (w->next && isattr(w->next->type) &&
+			 sameattr(w->next->type, w->type));
+	    w->aux |= (before ?
+		       (after ? attr_Always : attr_Last) :
+		       (after ? attr_First : attr_Only));
 	}
+	wp = w;
     }
 }
 

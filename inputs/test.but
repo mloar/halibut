@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.29 2004/04/20 19:20:55 simon Exp $
+\versionid $Id: test.but,v 1.30 2004/04/22 18:01:31 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -218,6 +218,9 @@ __\k{book}__ (please excuse those underscores, I'm testing
 whitespace).
 
 It also contains a \W{http://www.tartarus.org/}{hyperlink}.
+
+Also I'm going to index \i\c{-output} to ensure that its two
+components are displayed as a joined-up code fragment in the index.
 
 Here are some subsections with silly chapter titles and interesting
 use of Unicode. The Unicode oddities are in the titles rather than
