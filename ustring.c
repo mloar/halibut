@@ -288,7 +288,7 @@ int uisalpha(wchar_t c) {
 #endif
 }
 
-int ustricmp(wchar_t *lhs, wchar_t *rhs) {
+int ustricmp(wchar_t const *lhs, wchar_t const *rhs) {
     wchar_t lc, rc;
     while ((lc = utolower(*lhs)) == (rc = utolower(*rhs)) && lc && rc)
 	lhs++, rhs++;
@@ -298,6 +298,19 @@ int ustricmp(wchar_t *lhs, wchar_t *rhs) {
 	return -1;
     else
 	return 1;
+}
+
+int ustrnicmp(wchar_t const *lhs, wchar_t const *rhs, int maxlen) {
+    wchar_t lc = 0, rc = 0;
+    while (maxlen-- > 0 &&
+	   (lc = utolower(*lhs)) == (rc = utolower(*rhs)) && lc && rc)
+	lhs++, rhs++;
+    if (lc < rc)
+	return -1;
+    else if (lc > rc)
+	return 1;
+    else
+	return 0;
 }
 
 wchar_t *ustrlow(wchar_t *s) {

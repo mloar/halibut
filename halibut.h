@@ -286,7 +286,8 @@ wchar_t *ustrncpy(wchar_t *dest, wchar_t const *source, int n);
 wchar_t utolower(wchar_t);
 int uisalpha(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);
-int ustricmp(wchar_t *lhs, wchar_t *rhs);
+int ustricmp(wchar_t const *lhs, wchar_t const *rhs);
+int ustrnicmp(wchar_t const *lhs, wchar_t const *rhs, int maxlen);
 int utoi(wchar_t const *);
 double utof(wchar_t const *);
 int utob(wchar_t const *);
@@ -463,10 +464,10 @@ void text_backend(paragraph *, keywordlist *, indexdata *, void *);
 paragraph *text_config_filename(char *filename);
 
 /*
- * bk_xhtml.c
+ * bk_html.c
  */
-void xhtml_backend(paragraph *, keywordlist *, indexdata *, void *);
-paragraph *xhtml_config_filename(char *filename);
+void html_backend(paragraph *, keywordlist *, indexdata *, void *);
+paragraph *html_config_filename(char *filename);
 
 /*
  * bk_whlp.c

@@ -26,8 +26,8 @@ static const struct backend {
     int bitfield, prebackend_bitfield;
 } backends[] = {
     {"text", text_backend, text_config_filename, 0x0001, 0},
-    {"xhtml", xhtml_backend, xhtml_config_filename, 0x0002, 0},
-    {"html", xhtml_backend, xhtml_config_filename, 0x0002, 0},
+    {"xhtml", html_backend, html_config_filename, 0x0002, 0},
+    {"html", html_backend, html_config_filename, 0x0002, 0},
     {"hlp", whlp_backend, whlp_config_filename, 0x0004, 0},
     {"whlp", whlp_backend, whlp_config_filename, 0x0004, 0},
     {"winhelp", whlp_backend, whlp_config_filename, 0x0004, 0},

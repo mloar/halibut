@@ -565,7 +565,7 @@ number, before displaying the chapter title. For example, if you set
 this to \q{\cw{:\_}}, then the chapter title might look something
 like \q{Chapter 2: Doing Things}.
 
-\dt \I{\cw{\\cfg\{xhtml-section-numeric\}}}\cw{\\cfg\{xhtml-section-numeric\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-section-numeric\}}}\cw{\\cfg\{xhtml-section-numeric\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
 
 \dd Specifies whether section headings at a particular level should
 contain the word \q{Section} or equivalent (if \c{false}), or should
@@ -574,7 +574,7 @@ which level of section headings you want to affect: 0 means
 first-level headings (\c{\\H}), 1 means second-level headings
 (\c{\\S}), 2 means the level below that (\c{\\S2}), and so on.
 
-\dt \I{\cw{\\cfg\{xhtml-section-suffix\}}}\cw{\\cfg\{xhtml-section-suffix\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-section-suffix\}}}\cw{\\cfg\{xhtml-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
 
 \dd Specifies the suffix text to be appended to section numbers at a
 particular level, before displaying the section title.
