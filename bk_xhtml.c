@@ -913,7 +913,8 @@ static void xhtml_do_index_body(FILE *fp)
 }
 static void xhtml_do_index()
 {
-  word temp_word = { NULL, NULL, word_Normal, 0, 0, L"Index", { NULL, 0, 0} };
+  word temp_word = { NULL, NULL, word_Normal, 0, 0, L"Index",
+      { NULL, 0, 0}, NULL };
   FILE *fp = fopen(conf.index_filename, "w");
 
   if (fp==NULL)

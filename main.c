@@ -24,6 +24,7 @@ static const struct backend {
     {"whlp", whlp_backend, whlp_config_filename, 0x0004},
     {"winhelp", whlp_backend, whlp_config_filename, 0x0004},
     {"man", man_backend, man_config_filename, 0x0008},
+    {"info", info_backend, info_config_filename, 0x0010},
 };
 
 int main(int argc, char **argv) {

@@ -127,6 +127,8 @@ struct word_Tag {
     int breaks;			       /* can a line break after it? */
     wchar_t *text;
     filepos fpos;
+
+    void *private_data; 	       /* for temp use in backends */
 };
 enum {
     /* ORDERING CONSTRAINT: these normal-word types ... */
@@ -252,9 +254,9 @@ char *ustrtoa(wchar_t *s, char *outbuf, int size);
 wchar_t *ustrfroma(char *s, wchar_t *outbuf, int size);
 char *utoa_dup(wchar_t *s);
 wchar_t *ufroma_dup(char *s);
-int ustrlen(wchar_t *s);
+int ustrlen(wchar_t const *s);
 wchar_t *uadv(wchar_t *s);
-wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
+wchar_t *ustrcpy(wchar_t *dest, wchar_t const *source);
 wchar_t utolower(wchar_t);
 int uisalpha(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);
@@ -305,10 +307,10 @@ struct tagRdstringc {
 extern const rdstring empty_rdstring;
 extern const rdstringc empty_rdstringc;
 void rdadd(rdstring *rs, wchar_t c);
-void rdadds(rdstring *rs, wchar_t *p);
+void rdadds(rdstring *rs, wchar_t const *p);
 wchar_t *rdtrim(rdstring *rs);
 void rdaddc(rdstringc *rs, char c);
-void rdaddsc(rdstringc *rs, char *p);
+void rdaddsc(rdstringc *rs, char const *p);
 char *rdtrimc(rdstringc *rs);
 
 int compare_wordlists(word *a, word *b);
@@ -435,5 +437,11 @@ paragraph *whlp_config_filename(char *filename);
  */
 void man_backend(paragraph *, keywordlist *, indexdata *);
 paragraph *man_config_filename(char *filename);
+
+/*
+ * bk_info.c
+ */
+void info_backend(paragraph *, keywordlist *, indexdata *);
+paragraph *info_config_filename(char *filename);
 
 #endif

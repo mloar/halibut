@@ -7,10 +7,10 @@ HALIBUT = ../build/halibut
 all: Contents.html halibut.1
 
 Contents.html: $(INPUTS) $(HALIBUT)
-	$(HALIBUT) --text=halibut.txt --html $(INPUTS)
+	$(HALIBUT) --text=halibut.txt --html --info=halibut.info $(INPUTS)
 
 halibut.1: manpage.but
 	$(HALIBUT) --man=halibut.1 manpage.but
 
 clean:
-	rm -f *.html *.txt *.hlp *.cnt *.1
+	rm -f *.html *.txt *.hlp *.cnt *.1 *.info*

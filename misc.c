@@ -62,7 +62,7 @@ void rdadd(rdstring *rs, wchar_t c) {
     rs->text[rs->pos++] = c;
     rs->text[rs->pos] = 0;
 }
-void rdadds(rdstring *rs, wchar_t *p) {
+void rdadds(rdstring *rs, wchar_t const *p) {
     int len = ustrlen(p);
     if (rs->pos >= rs->size - len) {
 	rs->size = rs->pos + len + 128;
@@ -84,7 +84,7 @@ void rdaddc(rdstringc *rs, char c) {
     rs->text[rs->pos++] = c;
     rs->text[rs->pos] = 0;
 }
-void rdaddsc(rdstringc *rs, char *p) {
+void rdaddsc(rdstringc *rs, char const *p) {
     int len = strlen(p);
     if (rs->pos >= rs->size - len) {
 	rs->size = rs->pos + len + 128;

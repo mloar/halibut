@@ -3,3 +3,4 @@
 *.gid *.GID
 *.log
 *.1
+*.info *.info-*

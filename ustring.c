@@ -78,7 +78,7 @@ wchar_t *ufroma_dup(char *s) {
     return buf;
 }
 
-int ustrlen(wchar_t *s) {
+int ustrlen(wchar_t const *s) {
     int len = 0;
     while (*s++) len++;
     return len;
@@ -88,7 +88,7 @@ wchar_t *uadv(wchar_t *s) {
     return s + 1 + ustrlen(s);
 }
 
-wchar_t *ustrcpy(wchar_t *dest, wchar_t *source) {
+wchar_t *ustrcpy(wchar_t *dest, wchar_t const *source) {
     wchar_t *ret = dest;
     do {
 	*dest++ = *source;
