@@ -631,10 +631,12 @@ static int xhtml_para_level(paragraph *p)
 {
   switch (p->type)
   {
+  case para_Title:
+    return 0;
+    break;
   case para_UnnumberedChapter:
   case para_Chapter:
   case para_Appendix:
-  case para_Title:
     return 1;
     break;
 /*  case para_BiblioCited:
@@ -1449,6 +1451,18 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 	rdaddsc(&t, ": ");	       /* FIXME: configurability */
     }
     xhtml_rdaddwc(&t, text, NULL);
+    /*
+     * If we're outputting in single-file mode, we need to lower
+     * the level of each heading by one, because the overall
+     * document title will be sitting right at the top as an <h1>
+     * and so chapters and sections should start at <h2>.
+     * 
+     * Even if not, the document title will come back from
+     * xhtml_para_level() as level zero, so we must increment that
+     * no matter what leaf_level is set to.
+     */
+    if (conf.leaf_level == 0 || level == 0)
+	level++;
     fprintf(fp, "<a name=\"%s\"></a><h%i>%s</h%i>\n", fragment, level, t.text, level);
     sfree(t.text);
 }
