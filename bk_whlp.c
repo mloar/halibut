@@ -55,6 +55,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     int i;
     int nesting;
     indexentry *ie;
+    int done_contents_topic;
 
     filename = "output.hlp";	       /* FIXME: configurability */
     cntname = "output.cnt";	       /* corresponding contents file */
@@ -144,8 +145,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     whlp_prepare(h);
 
     /* ------------------------------------------------------------------
-     * Do the contents page, containing title, preamble and
-     * copyright.
+     * Begin the contents page.
      */
 
     whlp_begin_topic(h, contents_topic, "Contents", "DB(\"btn_up\")", NULL);
@@ -173,51 +173,6 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	/* FIXME: configurability in that string */
     }
 
-    /*
-     * Next comes the preamble, which just goes into the ordinary
-     * scrolling region.
-     */
-    for (p = sourceform; p; p = p->next) {
-	if (p->type == para_Preamble) {
-	    whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
-	    whlp_begin_para(h, WHLP_PARA_SCROLL);
-	    whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
-	    whlp_end_para(h);
-	}
-    }
-
-    /*
-     * The copyright goes to two places, again: into the contents
-     * page and also into the system section.
-     */
-    {
-	rdstringc rs = {0, 0, NULL};
-	for (p = sourceform; p; p = p->next) {
-	    if (p->type == para_Copyright) {
-		whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
-		whlp_begin_para(h, WHLP_PARA_SCROLL);
-		whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
-		whlp_end_para(h);
-		whlp_rdaddwc(&rs, p->words);
-	    }
-	}
-	if (rs.text) {
-	    whlp_copyright(h, rs.text);
-	    sfree(rs.text);
-	}
-    }
-
-    /*
-     * Now do the primary navigation menu.
-     */
-    for (p = sourceform; p; p = p->next) {
-	if (p->type == para_Chapter ||
-	    p->type == para_Appendix ||
-	    p->type == para_UnnumberedChapter)
-	    whlp_navmenu(&state, p);
-    }
-
-    state.curr_topic = contents_topic;
     lastsect = NULL;
 
     /* ------------------------------------------------------------------
@@ -235,7 +190,6 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Biblio:		       /* only touch BiblioCited */
       case para_VersionID:
       case para_Copyright:
-      case para_Preamble:
       case para_NoCite:
       case para_Title:
 	break;
@@ -258,6 +212,53 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
       case para_UnnumberedChapter:
       case para_Heading:
       case para_Subsect:
+
+	if (!done_contents_topic) {
+	    paragraph *p;
+
+	    /*
+	     * If this is the first section title we've seen, then
+	     * we're currently still in the contents topic. We
+	     * should therefore finish up the contents page by
+	     * writing the copyright notice and a nav menu.
+	     */
+
+	    /*
+	     * The copyright goes to two places, again: into the
+	     * contents page and also into the system section.
+	     */
+	    {
+		rdstringc rs = {0, 0, NULL};
+		for (p = sourceform; p; p = p->next) {
+		    if (p->type == para_Copyright) {
+			whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
+			whlp_begin_para(h, WHLP_PARA_SCROLL);
+			whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
+			whlp_end_para(h);
+			whlp_rdaddwc(&rs, p->words);
+		    }
+		}
+		if (rs.text) {
+		    whlp_copyright(h, rs.text);
+		    sfree(rs.text);
+		}
+	    }
+
+	    /*
+	     * Now do the primary navigation menu.
+	     */
+	    for (p = sourceform; p; p = p->next) {
+		if (p->type == para_Chapter ||
+		    p->type == para_Appendix ||
+		    p->type == para_UnnumberedChapter)
+		    whlp_navmenu(&state, p);
+	    }
+
+	    state.curr_topic = contents_topic;
+
+	    done_contents_topic = TRUE;
+	}
+
 	if (lastsect && lastsect->child) {
 	    paragraph *q;
 	    /*

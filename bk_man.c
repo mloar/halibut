@@ -62,8 +62,8 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 		 indexdata *idx) {
     paragraph *p;
     FILE *fp;
-    char const *sep;
     manconfig conf;
+    int done_copyright;
 
     IGNORE(keywords);		       /* we don't happen to need this */
     IGNORE(idx);		       /* or this */
@@ -107,20 +107,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 
     fprintf(fp, ".UC\n");
 
-    /* Do the preamble and copyright */
-    sep = "";
-    for (p = sourceform; p; p = p->next)
-	if (p->type == para_Preamble) {
-	    fprintf(fp, "%s", sep);
-	    man_text(fp, p->words, TRUE, 0);
-	    sep = "\n";
-	}
-    for (p = sourceform; p; p = p->next)
-	if (p->type == para_Copyright) {
-	    fprintf(fp, "%s", sep);
-	    man_text(fp, p->words, TRUE, 0);
-	    sep = "\n";
-	}
+    done_copyright = FALSE;
 
     for (p = sourceform; p; p = p->next) switch (p->type) {
 	/*
@@ -132,7 +119,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Biblio:		       /* only touch BiblioCited */
       case para_VersionID:
       case para_Copyright:
-      case para_Preamble:
       case para_NoCite:
       case para_Title:
 	break;
@@ -145,6 +131,22 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_UnnumberedChapter:
       case para_Heading:
       case para_Subsect:
+
+	if (!done_copyright) {
+	    paragraph *p;
+
+	    /*
+	     * The copyright comes just before the first chapter
+	     * title.
+	     */
+	    for (p = sourceform; p; p = p->next)
+		if (p->type == para_Copyright) {
+		    fprintf(fp, ".PP\n");
+		    man_text(fp, p->words, TRUE, 0);
+		}
+	    done_copyright = TRUE;
+	}
+
 	{
 	    int depth;
 	    if (p->type == para_Subsect)

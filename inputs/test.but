@@ -6,9 +6,15 @@ Lines, Not Just Two. How's That For Ludicrous?
 \cfg{xhtml-leaf-contains-contents}{true}
 \cfg{man-headnumbers}{true}
 
+This paragraph is not labelled \q{preamble}, but should still appear
+as it.
+
 \preamble This manual is a small joke effort, designed to use every
 feature \#{ comment } that Halibut's input format supports. Creation
 date \date{%Y.%m.%d} (default format is \date).
+
+\c Here is a code paragraph in the preamble, just to stress that all
+\c things are possible. Ooh!
 
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
 reserved.
@@ -19,7 +25,7 @@ a bit]
 
 \define{coopt} co\u00F6{-o}pt
 
-\versionid $Id: test.but,v 1.21 2004/03/24 19:23:21 simon Exp $
+\versionid $Id: test.but,v 1.22 2004/03/25 19:16:28 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more

@@ -190,7 +190,7 @@ enum {
     c_lcont,			       /* continuation para(s) for list item */
     c_n,			       /* numbered list */
     c_nocite,			       /* bibliography trickery */
-    c_preamble,			       /* document preamble text */
+    c_preamble,			       /* (obsolete) preamble text */
     c_q,			       /* quote marks */
     c_quote,			       /* block-quoted paragraphs */
     c_rule,			       /* horizontal rule */
@@ -259,7 +259,7 @@ static void match_kw(token *tok) {
 	{"lcont", c_lcont},	       /* continuation para(s) for list item */
 	{"n", c_n},		       /* numbered list */
 	{"nocite", c_nocite},	       /* bibliography trickery */
-	{"preamble", c_preamble},      /* document preamble text */
+	{"preamble", c_preamble},      /* (obsolete) preamble text */
 	{"q", c_q},		       /* quote marks */
 	{"quote", c_quote},	       /* block-quoted paragraphs */
 	{"rule", c_rule},	       /* horizontal rule */
@@ -766,7 +766,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	      case c_define: is_macro = TRUE; needkw = 1; break;
 		/* For \nocite the keyword is _everything_ */
 	      case c_nocite: needkw = 8; par.type = para_NoCite; break;
-	      case c_preamble: needkw = 32; par.type = para_Preamble; break;
+	      case c_preamble: needkw = 32; par.type = para_Normal; break;
 	      case c_rule: needkw = 16; par.type = para_Rule; break;
 	      case c_title: needkw = 32; par.type = para_Title; break;
 	      case c_versionid: needkw = 32; par.type = para_VersionID; break;

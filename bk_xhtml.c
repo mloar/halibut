@@ -580,7 +580,7 @@ static void xhtml_ponder_layout(paragraph *p)
 static void xhtml_do_index();
 static void xhtml_do_file(xhtmlfile *file);
 static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform);
-static void xhtml_do_paras(FILE *fp, paragraph *p);
+static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end);
 static int xhtml_do_contents_limit(FILE *fp, xhtmlfile *file, int limit);
 static int xhtml_do_contents_section_limit(FILE *fp, xhtmlsection *section, int limit);
 static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit);
@@ -875,11 +875,15 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
   /* Do the preamble and copyright */
   for (p = sourceform; p; p = p->next)
   {
-    if (p->type == para_Preamble)
-    {
-      fprintf(fp, "<p>");
-      xhtml_para(fp, p->words);
-      fprintf(fp, "</p>\n");
+    if (p->type == para_Chapter || p->type == para_Heading ||
+	p->type == para_Subsect || p->type == para_Appendix ||
+	p->type == para_UnnumberedChapter) {
+	/*
+	 * We've found the end of the preamble. Do every normal
+	 * paragraph up to there.
+	 */
+	xhtml_do_paras(fp, sourceform, p);
+	break;
     }
   }
   for (p = sourceform; p; p = p->next)
@@ -1067,14 +1071,14 @@ static void xhtml_do_sections(FILE *fp, xhtmlsection *sections)
 {
   while (sections) {
     currentsection = sections;
-    xhtml_do_paras(fp, sections->para);
+    xhtml_do_paras(fp, sections->para, NULL);
     xhtml_do_sections(fp, sections->child);
     sections = sections->next;
   }
 }
 
 /* Write this list of paragraphs. Close off all lists at the end. */
-static void xhtml_do_paras(FILE *fp, paragraph *p)
+static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end)
 {
   int last_type = -1, ptype, first=TRUE;
   stack lcont_stack = stk_new();
@@ -1082,7 +1086,7 @@ static void xhtml_do_paras(FILE *fp, paragraph *p)
     return;
 
 /*  for (; p && (xhtml_para_level(p)>limit || xhtml_para_level(p)==-1 || first); p=p->next) {*/
-  for (; p && (xhtml_para_level(p)==-1 || first); p=p->next) {
+  for (; p && p != end && (xhtml_para_level(p)==-1 || first); p=p->next) {
     first=FALSE;
     switch (ptype = p->type)
     {
@@ -1095,7 +1099,6 @@ static void xhtml_do_paras(FILE *fp, paragraph *p)
      case para_Biblio:		       /* only touch BiblioCited */
      case para_VersionID:
      case para_Copyright:
-     case para_Preamble:
      case para_NoCite:
      case para_Title:
        break;

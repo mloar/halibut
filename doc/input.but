@@ -867,16 +867,16 @@ These sometimes occur in books, for specialist purposes such as
 keyword argument, because there is no sensible way to generate an
 automatic cross-reference to such a chapter anyway.
 
-\S{input-blurb} \c{\\preamble}, \c{\\copyright}, \c{\\title},
-\c{\\versionid}: Miscellaneous blurb commands
+\S{input-blurb} \c{\\copyright}, \c{\\title}, \c{\\versionid}:
+Miscellaneous blurb commands
 
-These four commands define a variety of special paragraph types.
+These three commands define a variety of special paragraph types.
 They are all used in the same way: you put the command at the start
 of a paragraph, and then just follow it with normal text, like this:
 
 \c \title My First Manual
 
-The four special paragraph types are:
+The three special paragraph types are:
 
 \dt \c{\\title}
 
@@ -885,23 +885,15 @@ title is treated specially in some output formats (for example, it's
 used in a \cw{<title>} tag in the HTML output), so it needs a
 special paragraph type to point it out.
 
-\dt \c{\\preamble}
-
-\dd This command indicates ordinary text that appears \e{before} the
-first chapter heading. \#{FIXME: figure out what Halibut actually
-does do with ordinary text before a chapter heading. Then figure out
-whether that's sensible. Then figure out what \preamble has to offer
-that's perceptibly different. Fix if necessary.}
-
 \dt \c{\\copyright}
 
 \dd This command indicates that the paragraph attached to it
 contains a copyright statement for the document. This text is
-usually displayed inline, in the same way as \c{\\preamble} text,
-but in some output formats it is given additional special treatment.
-For example, Windows Help files have a standard slot in which to
-store a copyright notice, so that other software can display it
-prominently.
+usually displayed inline, just before the first chapter title but
+after any preamble text before that; but in some output formats it
+is given additional special treatment. For example, Windows Help
+files have a standard slot in which to store a copyright notice, so
+that other software can display it prominently.
 
 \dt \c{\\versionid}
 

@@ -105,7 +105,6 @@ enum {
     para_Description,
     para_Code,
     para_Copyright,
-    para_Preamble,
     para_NoCite,
     para_Title,
     para_VersionID,
