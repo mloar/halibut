@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+#
+# Reads a log file, containing lines of the four types
+#    <file> <line> malloc(<number>) returns <pointer>
+#    <file> <line> strdup(<number>) returns <pointer>
+#    <file> <line> calloc(<number>*<number>) returns <pointer>
+#    <file> <line> realloc(<pointer>,<number>) returns <pointer>
+#    <file> <line> free(<pointer>)
+#
+# with optional line on the front saying
+#    null pointer is <pointer>
+#
+# and produces a list of free()s and realloc()s of wrong pointers,
+# and also of malloc()s, calloc()s and realloc()s that never get free()d.
+
+$errors=0;
+
+while (<>) {
+  $in=$out="";
+  ($file, $line, $call, $in, $out)=($1,$2,$3,"",$4)
+      if /^(\S+) (\S+) (malloc|strdup)\(\S+\) returns (\S+)$/;
+  ($file, $line, $call, $in, $out)=($1,$2,"calloc","",$5)
+      if /^(\S+) (\S+) calloc\(\S+\*\S+\) returns (\S+)$/;
+  ($file, $line, $call, $in, $out)=($1,$2,"realloc",$3,$4)
+      if /^(\S+) (\S+) realloc\((\S+),\S+\) returns (\S+)$/;
+  ($file, $line, $call, $in, $out)=($1,$2,"free",$3,"")
+      if /^(\S+) (\S+) free\((\S+)\)$/;
+  $null = $1, next if /^null pointer is (\S+)$/;
+  if ($in ne "") {
+    $bad = &null($in) ? "null" : "bad";
+    $errors=1, print "($.) $file:$line: attempt to $call() $bad pointer\n"
+      if $record{$in} eq "";
+    $record{$in}="";
+  }
+  if ($out ne "" && !&null($out)) {
+    $errors=1, print "($.) $file:$line: $call() returned already ".
+      "allocated pointer\n" if $record{$out} ne "";
+    $record{$out}="($.) $file:$line: $call()";
+  }
+}
+
+foreach $i (keys %record) {
+  $errors=1, print "$record{$i} never got freed\n"
+      if $record{$i} ne "";
+}
+
+print "no problems\n" if !$errors;
+
+# determine if a string refers to a null pointer
+sub null {
+  local ($_) = @_;
+  $null ? $_ eq $null : /^((0x)?0+|\(nil\))$/;
+}
