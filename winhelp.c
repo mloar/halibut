@@ -90,6 +90,7 @@
 #define resize(array, len) ( srealloc ((array), (len) * sizeof (*(array))) )
 #define lenof(array) ( sizeof(array) / sizeof(*(array)) )
 char *dupstr(char *s) { char *r = mknewa(char, 1+strlen(s)); strcpy(r,s); return r; }
+#define UNUSEDARG(x) ( (x) = (x) )
 /* ------------------------------------------------------------------- */
 
 #define GET_32BIT_LSB_FIRST(cp) \
@@ -396,6 +397,7 @@ WHLP_TOPIC whlp_register_topic(WHLP h, char *context_name, char **clash)
      * C libraries.
      */
     ctx->index = h->ncontexts++;
+    ctx->browse_prev = ctx->browse_next = NULL;
 
     if (context_name) {
 	/*
@@ -505,6 +507,8 @@ void whlp_begin_topic(WHLP h, WHLP_TOPIC topic, char *title, ...)
 
 void whlp_browse_link(WHLP h, WHLP_TOPIC before, WHLP_TOPIC after)
 {
+    UNUSEDARG(h);
+
     /*
      * See if the `before' topic is already linked to another one,
      * and break the link to that if so. Likewise the `after'
@@ -794,14 +798,18 @@ void whlp_end_para(WHLP h)
  * Manage the layout and generation of the |TOPIC section.
  */
 
-static void whlp_topicsect_write(WHLP h, struct file *f, void *data, int len)
+static void whlp_topicsect_write(WHLP h, struct file *f, void *data, int len,
+				 int can_break)
 {
     unsigned char *p = (unsigned char *)data;
 
-    if (h->topicblock_remaining <= 0) {
+    if (h->topicblock_remaining <= 0 ||
+	h->topicblock_remaining < can_break) {
 	/*
 	 * Start a new block.
 	 */
+	if (h->topicblock_remaining > 0)
+	    whlp_file_fill(f, h->topicblock_remaining);
 	whlp_file_add_long(f, h->lasttopiclink);
 	h->firsttopiclink_offset = whlp_file_offset(f);
 	whlp_file_add_long(f, -1L);    /* this will be filled in later */
@@ -869,9 +877,19 @@ static void whlp_topic_layout(WHLP h)
     nlinks = count234(h->text);
     for (i = 0; i < nlinks; i++) {
 	link = index234(h->text, i);
+	size = 21 + link->len1 + link->len2;
+	/*
+	 * We can't split within the topicblock header or within
+	 * linkdata1. So if the split would fall in that area,
+	 * start a new block _now_.
+	 */
+	if (TOPIC_BLKSIZE - pos < 21 + link->len1) {
+	    block++;
+	    offset = 0;
+	    pos = 12;
+	}
 	link->topicoffset = block * 0x8000 + offset;
 	link->topicpos = block * 0x4000 + pos;
-	size = 21 + link->len1 + link->len2;
 	pos += size;
 	if (link->recordtype != 2)     /* TOPICOFFSET doesn't count titles */
 	    offset += link->len2;
@@ -931,31 +949,12 @@ static void whlp_topic_layout(WHLP h)
     h->lasttopicstart = 0L;
     f = whlp_new_file(h, "|TOPIC");
     h->topicblock_remaining = -1;
-    whlp_topicsect_write(h, f, NULL, 0);   /* start the first block */
+    whlp_topicsect_write(h, f, NULL, 0, 0);   /* start the first block */
     for (i = 0; i < nlinks; i++) {
 	unsigned char header[21];
 	struct topiclink *otherlink;
 
 	link = index234(h->text, i);
-
-	/*
-	 * Fill in the `first topiclink' pointer in the block
-	 * header if appropriate.
-	 */
-	if (h->firsttopiclink_offset > 0) {
-	    whlp_file_seek(f, h->firsttopiclink_offset, 0);
-	    whlp_file_add_long(f, link->topicpos);
-	    h->firsttopiclink_offset = 0;
-	    whlp_file_seek(f, 0, 2);
-	}
-
-	/*
-	 * Update the `last topiclink', and possibly `last
-	 * topicstart', pointers.
-	 */
-	h->lasttopiclink = link->topicpos;
-	if (link->recordtype == 2)
-	    h->lasttopicstart = link->topicpos;
 
 	/*
 	 * Create and output the TOPICLINK header.
@@ -976,13 +975,35 @@ static void whlp_topic_layout(WHLP h)
 	}
 	PUT_32BIT_LSB_FIRST(header + 16, 21 + link->len1);
 	header[20] = link->recordtype;
-	whlp_topicsect_write(h, f, header, 21);
+	whlp_topicsect_write(h, f, header, 21, 21 + link->len1);
 	
+	/*
+	 * Fill in the `first topiclink' pointer in the block
+	 * header if appropriate. (We do this _after_ outputting
+	 * the header because then we can be sure we'll be in the
+	 * same block as we think we are.)
+	 */
+	if (h->firsttopiclink_offset > 0) {
+	    whlp_file_seek(f, h->firsttopiclink_offset, 0);
+	    whlp_file_add_long(f, link->topicpos);
+	    h->firsttopiclink_offset = 0;
+	    whlp_file_seek(f, 0, 2);
+	}
+
+	/*
+	 * Update the `last topiclink', and possibly `last
+	 * topicstart', pointers.
+	 */
+	h->lasttopiclink = link->topicpos;
+	if (link->recordtype == 2)
+	    h->lasttopicstart = link->topicpos;
+
+
 	/*
 	 * Output LinkData1 and LinkData2.
 	 */
-	whlp_topicsect_write(h, f, link->data1, link->len1);
-	whlp_topicsect_write(h, f, link->data2, link->len2);
+	whlp_topicsect_write(h, f, link->data1, link->len1, link->len1);
+	whlp_topicsect_write(h, f, link->data2, link->len2, 0);
 
 	/*
 	 * Output the block header.
@@ -1159,7 +1180,7 @@ static void whlp_standard_fontsection(struct file *f)
     /*
      * Font names.
      */
-    for (i = 0; i < lenof(fontnames); i++) {
+    for (i = 0; i < (int)lenof(fontnames); i++) {
 	char data[32];
 	memset(data, i, sizeof(data));
 	strncpy(data, fontnames[i], sizeof(data));
@@ -1169,7 +1190,7 @@ static void whlp_standard_fontsection(struct file *f)
     /*
      * Font descriptors.
      */
-    for (i = 0; i < lenof(fontdescriptors); i++) {
+    for (i = 0; i < (int)lenof(fontdescriptors); i++) {
 	whlp_file_add_char(f, fontdescriptors[i].flags);
 	whlp_file_add_char(f, fontdescriptors[i].halfpoints);
 	whlp_file_add_char(f, fontdescriptors[i].facetype);
@@ -1718,7 +1739,7 @@ void whlp_abandon(WHLP h)
     sfree(h);
 }
 
-#ifndef NOT_TESTMODE_FIXME_FLIP_SENSE_OF_THIS
+#ifdef TESTMODE
 
 int main(void)
 {

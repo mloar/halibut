@@ -82,6 +82,8 @@ struct paragraph_Tag {
     word *kwtext;		       /* chapter/section indication */
     word *kwtext2;		       /* numeric-only form of kwtext */
     filepos fpos;
+
+    void *private_data; 	       /* for temp use in backends */
 };
 enum {
     para_IM,			       /* index merge */
