@@ -375,6 +375,7 @@ void cleanup_index(indexdata *);
 void index_merge(indexdata *, int is_explicit, wchar_t *, word *);
 void build_index(indexdata *);
 void index_debug(indexdata *);
+indextag *index_findtag(indexdata *idx, wchar_t *name);
 
 /*
  * contents.c

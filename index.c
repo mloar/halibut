@@ -31,9 +31,22 @@ static int compare_tags(void *av, void *bv) {
     return ustricmp(a->name, b->name);
 }
 
+static int compare_to_find_tag(void *av, void *bv) {
+    wchar_t *a = (wchar_t *)av;
+    indextag *b = (indextag *)bv;
+    return ustricmp(a, b->name);
+}
+
 static int compare_entries(void *av, void *bv) {
     indexentry *a = (indexentry *)av, *b = (indexentry *)bv;
     return compare_wordlists(a->text, b->text);    
+}
+
+/*
+ * Back-end utility: find the indextag with a given name.
+ */
+indextag *index_findtag(indexdata *idx, wchar_t *name) {
+    return find234(idx->tags, name, compare_to_find_tag);
 }
 
 /*

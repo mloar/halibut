@@ -17,8 +17,9 @@
 
 struct bk_whlp_state {
     WHLP h;
+    indexdata *idx;
     keywordlist *keywords;
-    paragraph *biblio;
+    WHLP_TOPIC curr_topic;
 };
 
 static void whlp_rdaddwc(rdstringc *rs, word *text);
@@ -33,12 +34,15 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     char *filename;
     paragraph *p, *lastsect;
     struct bk_whlp_state state;
-    WHLP_TOPIC contents_topic, curr_topic;
+    WHLP_TOPIC contents_topic;
+    int i;
+    indexentry *ie;
 
     filename = "output.hlp";	       /* FIXME: configurability */
     
     h = state.h = whlp_new();
     state.keywords = keywords;
+    state.idx = idx;
 
     whlp_start_macro(h, "CB(\"btn_about\",\"&About\",\"About()\")");
     whlp_start_macro(h, "CB(\"btn_up\",\"&Up\",\"Contents()\")");
@@ -59,6 +63,16 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    p->type == para_Subsect) {
 	    p->private_data = whlp_register_topic(h, NULL, NULL);
 	}
+    }
+
+    /*
+     * Loop over the index entries, preparing final text forms for
+     * each one.
+     */
+    for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
+	rdstringc rs = {0, 0, NULL};
+	whlp_rdaddwc(&rs, ie->text);
+	ie->backend_data = rs.text;
     }
 
     whlp_prepare(h);
@@ -134,7 +148,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    whlp_navmenu(&state, p);
     }
 
-    curr_topic = contents_topic;
+    state.curr_topic = contents_topic;
     lastsect = NULL;
 
     /* ------------------------------------------------------------------
@@ -179,8 +193,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    char *macro, *topicid;
 
 	    new_topic = p->private_data;
-	    whlp_browse_link(h, curr_topic, new_topic);
-	    curr_topic = new_topic;
+	    whlp_browse_link(h, state.curr_topic, new_topic);
+	    state.curr_topic = new_topic;
 
 	    if (p->kwtext) {
 		whlp_rdaddwc(&rs, p->kwtext);
@@ -274,6 +288,15 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     whlp_close(h, filename);
+
+
+    /*
+     * Loop over the index entries, cleaning up our final text
+     * forms.
+     */
+    for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
+	sfree(ie->backend_data);
+    }
 }
 
 static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p) {
@@ -303,7 +326,18 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
     for (; text; text = text->next) switch (text->type) {
       case word_HyperLink:
       case word_HyperEnd:
+	break;
+
       case word_IndexRef:
+	{
+	    indextag *tag = index_findtag(state->idx, text->text);
+	    int i;
+	    if (!tag)
+		break;
+	    for (i = 0; i < tag->nrefs; i++)
+		whlp_index_term(state->h, tag->refs[i]->backend_data,
+				state->curr_topic);
+	}
 	break;
 
       case word_UpperXref:
