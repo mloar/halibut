@@ -123,6 +123,7 @@ enum {
     c_n,			       /* numbered list */
     c_nocite,			       /* bibliography trickery */
     c_preamble,			       /* document preamble text */
+    c_rule,			       /* horizontal rule */
     c_title,			       /* document title */
     c_u,			       /* aux field is char code */
     c_versionid			       /* document RCS id */
@@ -182,6 +183,7 @@ static void match_kw(token *tok) {
 	{"n", c_n},		       /* numbered list */
 	{"nocite", c_nocite},	       /* bibliography trickery */
 	{"preamble", c_preamble},      /* document preamble text */
+	{"rule", c_rule},	       /* horizontal rule */
 	{"title", c_title},	       /* document title */
 	{"versionid", c_versionid},    /* document RCS id */
 	{"{", c__escaped},	       /* escaped lbrace (\{) */
@@ -521,11 +523,12 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		/*
 		 * `needkw' values:
 		 *
-		 *   0 -- no keywords at all
 		 *   1 -- exactly one keyword
 		 *   2 -- at least one keyword
 		 *   4 -- any number of keywords including zero
 		 *   8 -- at least one keyword and then nothing else
+		 *  16 -- nothing at all! no keywords, no body
+		 *  32 -- no keywords at all
 		 */
 	      case c_A: needkw = 2; par.type = para_Appendix; break;
 	      case c_B: needkw = 2; par.type = para_Biblio; break;
@@ -535,19 +538,20 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	      case c_IM: needkw = 2; par.type = para_IM; break;
 	      case c_S: needkw = 2; par.type = para_Subsect;
 		par.aux = t.aux; break;
-	      case c_U: needkw = 0; par.type = para_UnnumberedChapter; break;
+	      case c_U: needkw = 32; par.type = para_UnnumberedChapter; break;
 		/* For \b and \n the keyword is optional */
 	      case c_b: needkw = 4; par.type = para_Bullet; break;
 	      case c_n: needkw = 4; par.type = para_NumberedList; break;
-	      case c_copyright: needkw = 0; par.type = para_Copyright; break;
+	      case c_copyright: needkw = 32; par.type = para_Copyright; break;
 		/* For \nocite the keyword is _everything_ */
 	      case c_nocite: needkw = 8; par.type = para_NoCite; break;
-	      case c_preamble: needkw = 0; par.type = para_Preamble; break;
-	      case c_title: needkw = 0; par.type = para_Title; break;
-	      case c_versionid: needkw = 0; par.type = para_VersionID; break;
+	      case c_preamble: needkw = 32; par.type = para_Preamble; break;
+	      case c_rule: needkw = 16; par.type = para_Rule; break;
+	      case c_title: needkw = 32; par.type = para_Title; break;
+	      case c_versionid: needkw = 32; par.type = para_VersionID; break;
 	    }
 
-	    if (needkw >= 0) {
+	    if (needkw > 0) {
 		rdstring rs = { 0, 0, NULL };
 		int nkeys = 0;
 		filepos fp;
@@ -580,7 +584,7 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 		rdadd(&rs, 0);     /* add string terminator */
 
 		/* See whether we have the right number of keywords. */
-		if (needkw == 0 && nkeys > 0)
+		if ((needkw & 48) && nkeys > 0)
 		    error(err_kwillegal, &fp);
 		if ((needkw & 11) && nkeys == 0)
 		    error(err_kwexpected, &fp);
@@ -589,8 +593,8 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 
 		par.keyword = rdtrim(&rs);
 
-		/* Move to EOP in case of needkw==8 (no body) */
-		if (needkw == 8) {
+		/* Move to EOP in case of needkw==8 or 16 (no body) */
+		if (needkw & 24) {
 		    if (t.type != tok_eop) {
 			error(err_bodyillegal, &t.pos);
 			/* Error recovery: eat the rest of the paragraph */

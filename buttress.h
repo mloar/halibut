@@ -74,6 +74,7 @@ struct paragraph_Tag {
 enum {
     para_IM,			       /* index merge */
     para_BR,			       /* bibliography rewrite */
+    para_Rule,			       /* random horizontal rule */
     para_Chapter,
     para_Appendix,
     para_UnnumberedChapter,

@@ -23,6 +23,7 @@ static int text_convert(wchar_t *, char **);
 
 static void text_title(FILE *, word *, word *, alignment, wchar_t, int, int);
 static void text_heading(FILE *, word *, word *, int, int);
+static void text_rule(FILE *, int, int);
 static void text_para(FILE *, word *, char *, word *, int, int, int);
 static void text_codepara(FILE *, word *, int, int);
 static void text_versionid(FILE *, word *);
@@ -137,6 +138,10 @@ void text_backend(paragraph *sourceform, keywordlist *keywords, index *idx) {
       case para_Heading:
       case para_Subsect:
 	text_heading(fp, p->kwtext2, p->words, conf.indent, conf.width);
+	break;
+
+      case para_Rule:
+	text_rule(fp, conf.indent, conf.width);
 	break;
 
       case para_Normal:
@@ -408,6 +413,13 @@ static void text_heading(FILE *fp, word *prefix, word *text,
     }
 
     sfree(t.text);
+}
+
+static void text_rule(FILE *fp, int indent, int width) {
+    while (indent--) putc(' ', fp);
+    while (width--) putc('-', fp);     /* FIXME: configurability! */
+    putc('\n', fp);
+    putc('\n', fp);
 }
 
 static void text_para(FILE *fp, word *prefix, char *prefixextra, word *text,

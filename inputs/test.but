@@ -7,7 +7,7 @@ date \date{%Y.%m.%d} (default format is \date).
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
 reserved.
 
-\versionid $Id: test.but,v 1.7 1999/10/21 13:26:48 simon Exp $
+\versionid $Id: test.but,v 1.8 1999/10/22 16:04:02 simon Exp $
 
 \C{ch\\ap} First chapter title
 
@@ -39,6 +39,10 @@ This is a list:
 \b Aah.
 
 \b Eek.
+
+This is a horizontal rule:
+
+\rule
 
 This is a numbered list:
 
