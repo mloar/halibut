@@ -6,12 +6,21 @@
 #include "halibut.h"
 
 static char *helptext[] = {
-    "FIXME: help text goes here",
+    "usage:   halibut [options] files",
+    "options: --text[=filename]     generate plain text output",
+    "         --html[=filename]     generate XHTML output",
+    "         --winhelp[=filename]  generate Windows Help output",
+    "         --man[=filename]      generate man page output",
+    "         -Cfoo:bar:baz         append \\cfg{foo}{bar}{baz} to input",
+    "         --precise             report column numbers in error messages",
+    "         --help                display this text",
+    "         --version             display version number",
+    "         --licence             display licence text",
     NULL
 };
 
 static char *usagetext[] = {
-    "FIXME: usage text goes here",
+    "usage: halibut [--format[=filename]] [-Cconfig...] file.but [file.but...]",
     NULL
 };
 
