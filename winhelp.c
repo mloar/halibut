@@ -453,6 +453,12 @@ void whlp_prepare(WHLP h)
 	    otherctx = add234(h->contexts, ctx);
 	} while (otherctx != ctx);
     }
+
+    /*
+     * Ensure paragraph attributes are clear for the start of text
+     * output.
+     */
+    whlp_para_reset(h);
 }
 
 char *whlp_topic_id(WHLP_TOPIC topic)
