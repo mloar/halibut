@@ -1248,16 +1248,34 @@ static font_encoding *new_font_encoding(font_data *font)
     return fe;
 }
 
+static int kern_cmp(void *a, void *b)
+{
+    kern_pair const *ka = a, *kb = b;
+
+    if (ka->left < kb->left)
+	return -1;
+    if (ka->left > kb->left)
+	return 1;
+    if (ka->right < kb->right)
+	return -1;
+    if (ka->right > kb->right)
+	return 1;
+    return 0;
+}
+
 static font_data *make_std_font(font_list *fontlist, char const *name)
 {
     const int *widths;
+    const kern_pair *kerns;
     int nglyphs;
     font_data *f;
     font_encoding *fe;
     int i;
 
+    /* XXXKERN */
     widths = ps_std_font_widths(name);
-    if (!widths)
+    kerns = ps_std_font_kerns(name);
+    if (!widths || !kerns)
 	return NULL;
 
     for (nglyphs = 0; ps_std_glyphs[nglyphs] != NULL; nglyphs++);
@@ -1269,6 +1287,9 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
     f->nglyphs = nglyphs;
     f->glyphs = ps_std_glyphs;
     f->widths = widths;
+    f->kerns = newtree234(kern_cmp);
+    for (;kerns->left != 0xFFFF; kerns++)
+	add234(f->kerns, (void *)kerns);
     f->subfont_map = snewn(nglyphs, subfont_map_entry);
 
     /*
@@ -1308,16 +1329,32 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
     return f;
 }
 
+/* NB: arguments are glyph numbers from font->bmp. */
+static int find_kern(font_data *font, int lindex, int rindex)
+{
+    kern_pair wantkp;
+    kern_pair const *kp;
+
+    if (lindex == 0xFFFF || rindex == 0xFFFF)
+	return 0;
+    wantkp.left = lindex;
+    wantkp.right = rindex;
+    kp = find234(font->kerns, &wantkp, NULL);
+    if (kp == NULL)
+	return 0;
+    return kp->kern;
+}
+
 static int string_width(font_data *font, wchar_t const *string, int *errs)
 {
     int width = 0;
+    int index, oindex;
 
     if (errs)
 	*errs = 0;
 
+    oindex = 0xFFFF;
     for (; *string; string++) {
-	int index;
-
 	index = (*string < 0 || *string > 0xFFFF ? 0xFFFF :
 		 font->bmp[*string]);
 
@@ -1325,8 +1362,9 @@ static int string_width(font_data *font, wchar_t const *string, int *errs)
 	    if (errs)
 		*errs = 1;
 	} else {
-	    width += font->widths[index];
+	    width += find_kern(font, oindex, index) + font->widths[index];
 	}
+	oindex = index;
     }
 
     return width;
@@ -1762,13 +1800,15 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 			 int x, int y, wchar_t *str)
 {
     char *text;
-    int textpos, textwid, glyph;
+    int textpos, textwid, kern, glyph, oglyph;
     font_encoding *subfont = NULL, *sf;
 
     text = snewn(1 + ustrlen(str), char);
     textpos = textwid = 0;
 
+    glyph = 0xFFFF;
     while (*str) {
+	oglyph = glyph;
 	glyph = (*str < 0 || *str > 0xFFFF ? 0xFFFF :
 		 font->bmp[*str]);
 
@@ -1804,16 +1844,19 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 	    sf = font->latest_subfont;
 	}
 
-	if (!subfont || sf != subfont) {
+	kern = find_kern(font, oglyph, glyph) * fontsize;
+
+	if (!subfont || sf != subfont || kern) {
 	    if (subfont) {
 		text[textpos] = '\0';
 		add_string_to_page(page, x, y, subfont, fontsize, text,
 				   textwid);
-		x += textwid;
+		x += textwid + kern;
 	    } else {
 		assert(textpos == 0);
 	    }
 	    textpos = 0;
+	    textwid = 0;
 	    subfont = sf;
 	}
 

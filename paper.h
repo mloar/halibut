@@ -13,6 +13,7 @@
 #define FUNITS_PER_PT 1000.0
 
 typedef struct document_Tag document;
+typedef struct kern_pair_Tag kern_pair;
 typedef struct font_data_Tag font_data;
 typedef struct font_encoding_Tag font_encoding;
 typedef struct font_list_Tag font_list;
@@ -39,6 +40,16 @@ struct document_Tag {
 };
 
 /*
+ * This data structure represents a kerning pair within a font.
+ */
+struct kern_pair_Tag {
+    /* Glyph indices, in font_data.glyphs. */
+    unsigned short left, right;
+    /* Kern amount, in internal units. */
+    int kern;
+};
+
+/*
  * This data structure represents a particular font.
  */
 struct font_data_Tag {
@@ -54,6 +65,7 @@ struct font_data_Tag {
     int nglyphs;
     const char *const *glyphs;
     const int *widths;
+    tree234 *kerns;
     /*
      * For reasonably speedy lookup, we set up a 65536-element
      * table representing the Unicode BMP (I can conveniently
@@ -311,5 +323,6 @@ struct outline_element_Tag {
 wchar_t ps_glyph_to_unicode(char const *glyph);
 extern const char *const ps_std_glyphs[];
 const int *ps_std_font_widths(char const *fontname);
+const kern_pair *ps_std_font_kerns(char const *fontname);
 
 #endif
