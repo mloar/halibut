@@ -12,10 +12,6 @@
 /*
  * To be done:
  * 
- *  - Text wrapping is suspicious in both PS and PDF: the space
- *    adjust seems to be _approximately_ working, but not exactly.
- *    I bet some rounding error compensation is required.
- * 
  *  - set up contents section now we know what sections begin on
  *    which pages
  * 
@@ -385,25 +381,23 @@ static int string_width(font_data *font, wchar_t const *string, int *errs)
     return width;
 }
 
-static int paper_width(void *vctx, word *word);
+static int paper_width_internal(void *vctx, word *word, int *nspaces);
 
 struct paper_width_ctx {
     int minspacewidth;
     para_data *pdata;
 };
 
-static int paper_width_list(void *vctx, word *text, word *end) {
+static int paper_width_list(void *vctx, word *text, word *end, int *nspaces) {
     int w = 0;
-    while (text) {
-	w += paper_width(vctx, text);
-	if (text == end)
-	    break;
+    while (text && text != end) {
+	w += paper_width_internal(vctx, text, nspaces);
 	text = text->next;
     }
     return w;
 }
 
-static int paper_width(void *vctx, word *word)
+static int paper_width_internal(void *vctx, word *word, int *nspaces)
 {
     struct paper_width_ctx *ctx = (struct paper_width_ctx *)vctx;
     int style, type, findex, width, errs;
@@ -429,9 +423,11 @@ static int paper_width(void *vctx, word *word)
     if (type == word_Normal) {
 	str = word->text;
     } else if (type == word_WhiteSpace) {
-	if (findex != FONT_CODE)
+	if (findex != FONT_CODE) {
+	    if (nspaces)
+		(*nspaces)++;
 	    return ctx->minspacewidth;
-	else
+	} else
 	    str = L" ";
     } else /* if (type == word_Quote) */ {
 	if (word->aux == quote_Open)
@@ -443,9 +439,14 @@ static int paper_width(void *vctx, word *word)
     width = string_width(ctx->pdata->fonts[findex], str, &errs);
 
     if (errs && word->alt)
-	return paper_width_list(vctx, word->alt, NULL);
+	return paper_width_list(vctx, word->alt, NULL, nspaces);
     else
 	return ctx->pdata->sizes[findex] * width;
+}
+
+static int paper_width(void *vctx, word *word)
+{
+    return paper_width_internal(vctx, word, NULL);
 }
 
 static void wrap_paragraph(para_data *pdata, word *words,
@@ -504,7 +505,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
 
 	ldata->pdata = pdata;
 	ldata->first = p->begin;
-	ldata->last = p->end;
+	ldata->end = p->end;
 	ldata->line_height = line_height;
 
 	ldata->xpos = (p == wrapping ? i1 : i2);
@@ -519,57 +520,27 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	ldata->next = NULL;
 	pdata->last = ldata;
 
-	len = paper_width_list(&ctx, ldata->first, ldata->last);
-	wid = (p == wrapping ? w - i1 : w - i2);
 	spaces = 0;
+	len = paper_width_list(&ctx, ldata->first, ldata->end, &spaces);
+	wid = (p == wrapping ? w - i1 : w - i2);
 	wd = ldata->first;
-	while (wd) {
-#if 0
-	    switch (wd->type) {
-	      case word_HyperLink:
-	      case word_HyperEnd:
-	      case word_UpperXref:
-	      case word_LowerXref:
-	      case word_XrefEnd:
-	      case word_IndexRef:
-		break;
 
-	      default:
-		if (removeattr(wd->type) == word_Normal)
-		    printf("%ls", wd->text);
-		else if (removeattr(wd->type) == word_WhiteSpace)
-		    printf(" ");
-		else if (removeattr(wd->type) == word_Quote)
-		    printf(wd->aux == quote_Open ? "`" : "'");
-		break;
-	    }
-#endif
-	    if (removeattr(wd->type) == word_WhiteSpace)
-		spaces++;
-	    if (wd == ldata->last)
-		break;
-	    wd = wd->next;
-	}
-
-	if (spaces) {
-	    ldata->space_adjust = (wid - len) / spaces;
-	    /*
-	     * This tells us how much the space width needs to
-	     * change from _min_spacewidth. But we want to store
-	     * its difference from the _natural_ space width, to
-	     * make the text rendering easier.
-	     */
-	    ldata->space_adjust += ctx.minspacewidth;
-	    ldata->space_adjust -= spacewidth;
-	    /*
-	     * Special case: on the last line of a paragraph, we
-	     * never stretch spaces.
-	     */
-	    if (ldata->space_adjust > 0 && !p->next)
-		ldata->space_adjust = 0;
-	} else {
-	    ldata->space_adjust = 0;
-	}
+	ldata->hshortfall = wid - len;
+	ldata->nspaces = spaces;
+	/*
+	 * This tells us how much the space width needs to
+	 * change from _min_spacewidth. But we want to store
+	 * its difference from the _natural_ space width, to
+	 * make the text rendering easier.
+	 */
+	ldata->hshortfall += ctx.minspacewidth * spaces;
+	ldata->hshortfall -= spacewidth * spaces;
+	/*
+	 * Special case: on the last line of a paragraph, we
+	 * never stretch spaces.
+	 */
+	if (ldata->hshortfall > 0 && !p->next)
+	    ldata->hshortfall = 0;
 
 	ldata->aux_text = NULL;
 	ldata->aux_left_indent = 0;
@@ -654,9 +625,9 @@ static page_data *page_breaks(line_data *first, line_data *last,
 		 */
 		l->bestcost = cost;
 		if (m->next && !m->next->page_break)
-		    l->shortfall = page_height - minheight;
+		    l->vshortfall = page_height - minheight;
 		else
-		    l->shortfall = 0;
+		    l->vshortfall = 0;
 		l->text = text;
 		l->space = space;
 		l->page_last = m;
@@ -702,7 +673,7 @@ static page_data *page_breaks(line_data *first, line_data *last,
 
 	    l->page = page;
 	    l->ypos = text + space +
-		space * (float)page->first_line->shortfall /
+		space * (float)page->first_line->vshortfall /
 		page->first_line->space;
 
 	    if (l == page->last_line)
@@ -813,9 +784,10 @@ static int render_string(page_data *page, font_data *font, int fontsize,
  * Returns the updated x coordinate.
  */
 static int render_text(page_data *page, para_data *pdata, int x, int y,
-		       word *text, word *text_end, int space_adjust)
+		       word *text, word *text_end,
+		       int shortfall, int nspaces, int *nspace)
 {
-    while (text) {
+    while (text && text != text_end) {
 	int style, type, findex, errs;
 	wchar_t *str;
 
@@ -847,7 +819,11 @@ static int render_text(page_data *page, para_data *pdata, int x, int y,
 	} else if (type == word_WhiteSpace) {
 	    x += pdata->sizes[findex] *
 		string_width(pdata->fonts[findex], L" ", NULL);
-	    x += space_adjust;
+	    if (nspaces && findex != FONT_CODE) {
+		x += (*nspace+1) * shortfall / nspaces;
+		x -= *nspace * shortfall / nspaces;
+		(*nspace)++;
+	    }
 	    goto nextword;
 	} else /* if (type == word_Quote) */ {
 	    if (text->aux == quote_Open)
@@ -859,14 +835,13 @@ static int render_text(page_data *page, para_data *pdata, int x, int y,
 	(void) string_width(pdata->fonts[findex], str, &errs);
 
 	if (errs && text->alt)
-	    x = render_text(page, pdata, x, y, text->alt, NULL, space_adjust);
+	    x = render_text(page, pdata, x, y, text->alt, NULL,
+			    shortfall, nspaces, nspace);
 	else
 	    x = render_string(page, pdata->fonts[findex],
 			      pdata->sizes[findex], x, y, str);
 
 	nextword:
-	if (text == text_end)
-	    break;
 	text = text->next;
     }
 
@@ -875,10 +850,14 @@ static int render_text(page_data *page, para_data *pdata, int x, int y,
 
 static void render_line(line_data *ldata, int left_x, int top_y)
 {
-    if (ldata->aux_text)
+    int nspace;
+    if (ldata->aux_text) {
+	nspace = 0;
 	render_text(ldata->page, ldata->pdata, left_x + ldata->aux_left_indent,
-		    top_y - ldata->ypos, ldata->aux_text, NULL, 0);
+		    top_y - ldata->ypos, ldata->aux_text, NULL, 0, 0, &nspace);
+    }
+    nspace = 0;
     render_text(ldata->page, ldata->pdata, left_x + ldata->xpos,
-		top_y - ldata->ypos, ldata->first, ldata->last,
-		ldata->space_adjust);
+		top_y - ldata->ypos, ldata->first, ldata->end,
+		ldata->hshortfall, ldata->nspaces, &nspace);
 }

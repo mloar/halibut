@@ -151,12 +151,15 @@ struct line_data_Tag {
      * its starting x position, and by how much the width of spaces
      * needs to be adjusted for paragraph justification.
      * 
-     * (`last' may be NULL if it's more convenient.)
+     * (Unlike most of the `last' pointers defined in this file,
+     * this `end' pointer points to the word _after_ the last one
+     * that should be displayed on the line. This is how it's
+     * returned from wrap_para().)
      */
     word *first;
-    word *last;
+    word *end;
     int xpos;
-    int space_adjust;		       /* for justifying paragraphs */
+    int hshortfall, nspaces;	       /* for justifying paragraphs */
     /*
      * Auxiliary text: a section number in a margin, or a list item
      * bullet or number. Also mention where to display this text
@@ -179,7 +182,7 @@ struct line_data_Tag {
      * These fields are used in the page breaking algorithm.
      */
     int bestcost;
-    int shortfall, text, space;
+    int vshortfall, text, space;
     line_data *page_last;	       /* last line on a page starting here */
     /*
      * After page breaking, we can assign an actual y-coordinate on
