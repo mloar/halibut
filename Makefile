@@ -6,7 +6,11 @@
 # `make BUILDDIR=foo' from top level will build in directory foo
 ifndef REALBUILD
 ifndef BUILDDIR
+ifdef TEST
+BUILDDIR := test
+else
 BUILDDIR := build
+endif
 endif
 all:
 	@test -d $(BUILDDIR) || mkdir $(BUILDDIR)
@@ -20,8 +24,9 @@ else
 
 CFLAGS += -Wall -W
 
-ifdef LOGALLOC
+ifdef TEST
 CFLAGS += -DLOGALLOC
+LIBS += -lefence
 endif
 
 ifdef RELEASE
@@ -51,7 +56,7 @@ OBJECTS := $(addsuffix .o,$(MODULES))
 DEPS := $(addsuffix .d,$(MODULES))
 
 buttress: $(OBJECTS)
-	$(CC) $(LFLAGS) -o buttress $(OBJECTS)
+	$(CC) $(LFLAGS) -o buttress $(OBJECTS) $(LIBS)
 
 %.o: $(SRC)%.c
 	$(CC) $(CFLAGS) -MD -c $<
