@@ -214,7 +214,7 @@ static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
 				htmlconfig *cfg);
 static void html_section_title(htmloutput *ho, htmlsect *s,
 			       htmlfile *thisfile, keywordlist *keywords,
-			       htmlconfig *cfg);
+			       htmlconfig *cfg, int real);
 
 static htmlconfig html_configure(paragraph *source) {
     htmlconfig ret;
@@ -994,7 +994,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    element_attr(&ho, "name", s->fragment);
 		    element_close(&ho, "a");
 
-		    html_section_title(&ho, s, f, keywords, &conf);
+		    html_section_title(&ho, s, f, keywords, &conf, TRUE);
 
 		    element_close(&ho, htag);
 
@@ -1883,13 +1883,14 @@ static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
 
     element_open(ho, "li");
     html_href(ho, thisfile, s->file, s->fragment);
-    html_section_title(ho, s, thisfile, keywords, cfg);
+    html_section_title(ho, s, thisfile, keywords, cfg, FALSE);
     element_close(ho, "a");
     element_close(ho, "li");
 }
 
 static void html_section_title(htmloutput *ho, htmlsect *s, htmlfile *thisfile,
-			       keywordlist *keywords, htmlconfig *cfg)
+			       keywordlist *keywords, htmlconfig *cfg,
+			       int real)
 {
     if (s->title) {
 	sectlevel *sl;
@@ -1918,7 +1919,7 @@ static void html_section_title(htmloutput *ho, htmlsect *s, htmlfile *thisfile,
 	    html_text(ho, sl->number_suffix);
 	}
 
-	html_words(ho, s->title->words, MARKUP,
+	html_words(ho, s->title->words, real ? ALL : MARKUP,
 		   thisfile, keywords, cfg);
     } else {
 	assert(s->type != NORMAL);
