@@ -62,6 +62,11 @@ struct xhtmlindex_Struct {
 };
 
 typedef struct {
+    int just_numbers;
+    wchar_t *number_suffix;
+} xhtmlheadfmt;
+
+typedef struct {
   int contents_depth[6];
   int leaf_contains_contents;
   int leaf_level;
@@ -70,6 +75,8 @@ typedef struct {
   wchar_t *author, *description;
   wchar_t *head_end, *body, *body_start, *body_end, *address_start, *address_end, *nav_attrs;
   int suppress_address;
+  xhtmlheadfmt fchapter, *fsect;
+  int nfsect;
 } xhtmlconfig;
 
 /*static void xhtml_level(paragraph *, int);
@@ -135,6 +142,15 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   ret.nav_attrs = NULL;
   ret.suppress_address = FALSE;
 
+  ret.fchapter.just_numbers = FALSE;
+  ret.fchapter.number_suffix = ustrdup(L": ");
+  ret.nfsect = 2;
+  ret.fsect = mknewa(xhtmlheadfmt, ret.nfsect);
+  ret.fsect[0].just_numbers = FALSE;
+  ret.fsect[0].number_suffix = ustrdup(L": ");
+  ret.fsect[1].just_numbers = TRUE;
+  ret.fsect[1].number_suffix = ustrdup(L" ");
+
   for (; source; source = source->next)
   {
     if (source->type == para_Config)
@@ -179,6 +195,40 @@ static xhtmlconfig xhtml_configure(paragraph *source)
         ret.address_end = uadv(source->keyword);
       } else if (!ustricmp(source->keyword, L"xhtml-navigation-attributes")) {
         ret.nav_attrs = uadv(source->keyword);
+      } else if (!ustricmp(source->keyword, L"xhtml-chapter-numeric")) {
+	ret.fchapter.just_numbers = utob(uadv(source->keyword));
+      } else if (!ustricmp(source->keyword, L"xhtml-chapter-suffix")) {
+	ret.fchapter.number_suffix = uadv(source->keyword);
+      } else if (!ustricmp(source->keyword, L"xhtml-section-numeric")) {
+	wchar_t *p = uadv(source->keyword);
+	int n = 0;
+	if (uisdigit(*p)) {
+	  n = utoi(p);
+	  p = uadv(p);
+	}
+	if (n >= ret.nfsect) {
+	  int i;
+	  ret.fsect = resize(ret.fsect, n+1);
+	  for (i = ret.nfsect; i <= n; i++)
+	    ret.fsect[i] = ret.fsect[ret.nfsect-1];
+	  ret.nfsect = n+1;
+	}
+	ret.fsect[n].just_numbers = utob(p);
+      } else if (!ustricmp(source->keyword, L"xhtml-section-suffix")) {
+	wchar_t *p = uadv(source->keyword);
+	int n = 0;
+	if (uisdigit(*p)) {
+	  n = utoi(p);
+	  p = uadv(p);
+	}
+	if (n >= ret.nfsect) {
+	  int i;
+	  ret.fsect = resize(ret.fsect, n+1);
+	  for (i = ret.nfsect; i <= n; i++)
+	    ret.fsect[i] = ret.fsect[ret.nfsect-1];
+	  ret.nfsect = n+1;
+	}
+	ret.fsect[n].number_suffix = p;
       }
     }
   }
@@ -308,7 +358,7 @@ void xhtml_fixup_layout(xhtmlfile* file)
  * |                 |                 |
  * X            +----X----+           (1)
  *              |         |
- *              Y        (3)
+ *              Y        (2)
  *              |
  *             (3)
  *
@@ -837,7 +887,11 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
   xhtml_do_contents(fp, file);
   xhtml_do_sections(fp, file->sections);
 
-  if (count234(idx->entries) > 0) {
+  /*
+   * Put the index in the top file if we're in single-file mode
+   * (leaf-level 0).
+   */
+  if (conf.leaf_level == 0 && count234(idx->entries) > 0) {
     fprintf(fp, "<a name=\"index\"></a><h1>Index</h1>\n");
     xhtml_do_index_body(fp);
   }
@@ -973,7 +1027,7 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
 {
   if (!section || section->level > limit)
     return FALSE;
-  if (fp==NULL || !section->parent)
+  if (fp==NULL || section->level < 0)
     return TRUE;
   while (last_level > section->level) {
     last_level--;
@@ -1431,6 +1485,7 @@ static void xhtml_heading(FILE *fp, paragraph *p)
     word *text = p->words;
     int level = xhtml_para_level(p);
     xhtmlsection *sect = xhtml_find_section(p);
+    xhtmlheadfmt *fmt;
     char *fragment;
     if (sect) {
       fragment = sect->fragment;
@@ -1443,12 +1498,33 @@ static void xhtml_heading(FILE *fp, paragraph *p)
       }
     }
 
-    if (level>2 && nprefix) { /* FIXME: configurability on the level thing */
+    if (p->type == para_Title)
+	fmt = NULL;
+    else if (level == 1)
+	fmt = &conf.fchapter;
+    else if (level-1 < conf.nfsect)
+	fmt = &conf.fsect[level-1];
+    else
+	fmt = &conf.fsect[conf.nfsect-1];
+
+    if (fmt && fmt->just_numbers && nprefix) {
 	xhtml_rdaddwc(&t, nprefix, NULL);
-	rdaddc(&t, ' ');	       /* FIXME: as below */
-    } else if (tprefix) {
+	if (fmt) {
+	    char *c;
+	    if (xhtml_convert(fmt->number_suffix, &c, FALSE)) {
+		rdaddsc(&t, c);
+		sfree(c);
+	    }
+	}
+    } else if (fmt && !fmt->just_numbers && tprefix) {
 	xhtml_rdaddwc(&t, tprefix, NULL);
-	rdaddsc(&t, ": ");	       /* FIXME: configurability */
+	if (fmt) {
+	    char *c;
+	    if (xhtml_convert(fmt->number_suffix, &c, FALSE)) {
+		rdaddsc(&t, c);
+		sfree(c);
+	    }
+	}
     }
     xhtml_rdaddwc(&t, text, NULL);
     /*
