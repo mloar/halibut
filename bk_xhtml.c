@@ -47,12 +47,17 @@
  * 
  * %n, %b and %k will all default to %N if the section is
  * unnumbered (`Bibliography' is often a good example).
+ * 
+ * FRAGMENT_TEMPLATE is the same, but defines the <a name="foo">
+ * markers used to cross-reference to particular subsections of a
+ * file.
  */
 
 #define FILENAME_SINGLE "Manual.html"
 #define FILENAME_CONTENTS "Contents.html"
 #define FILENAME_INDEX "IndexPage.html"
 #define FILENAME_TEMPLATE "%n.html"
+#define FRAGMENT_TEMPLATE "%b"
 
 struct xhtmlsection_Struct {
     struct xhtmlsection_Struct *next; /* next sibling (NULL if split across files) */
@@ -101,7 +106,7 @@ typedef struct {
   xhtmlheadfmt fchapter, *fsect;
   int nfsect;
   char *contents_filename, *index_filename;
-  char *single_filename, *template_filename;
+  char *single_filename, *template_filename, *template_fragment;
 } xhtmlconfig;
 
 /*static void xhtml_level(paragraph *, int);
@@ -179,6 +184,7 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   ret.single_filename = strdup(FILENAME_SINGLE);
   ret.index_filename = strdup(FILENAME_INDEX);
   ret.template_filename = strdup(FILENAME_TEMPLATE);
+  ret.template_fragment = strdup(FRAGMENT_TEMPLATE);
 
   for (; source; source = source->next)
   {
@@ -196,6 +202,9 @@ static xhtmlconfig xhtml_configure(paragraph *source)
       } else if (!ustricmp(source->keyword, L"xhtml-template-filename")) {
 	sfree(ret.template_filename);
 	ret.template_filename = utoa_dup(uadv(source->keyword));
+      } else if (!ustricmp(source->keyword, L"xhtml-template-fragment")) {
+	sfree(ret.template_fragment);
+	ret.template_fragment = utoa_dup(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-contents-depth-0")) {
         ret.contents_depth[0] = utoi(uadv(source->keyword));
       } else if (!ustricmp(source->keyword, L"xhtml-contents-depth-1")) {
@@ -378,6 +387,62 @@ static xhtmlsection *xhtml_find_section(paragraph *p)
   return ret;
 }
 
+static void xhtml_format(paragraph *p, char *template_string, rdstringc *r)
+{
+    char *c, *t;
+    word *w;
+    wchar_t *ws;
+
+    t = template_string;
+    while (*t) {
+	if (*t == '%' && t[1]) {
+	    int fmt;
+
+	    t++;
+	    fmt = *t++;
+
+	    if (fmt == '%') {
+		rdaddc(r, fmt);
+		continue;
+	    }
+
+	    w = NULL;
+	    ws = NULL;
+
+	    if (p->kwtext && fmt == 'n')
+		w = p->kwtext;
+	    else if (p->kwtext2 && fmt == 'b')
+		w = p->kwtext2;
+	    else if (p->keyword && *p->keyword && fmt == 'k')
+		ws = p->keyword;
+	    else
+		w = p->words;
+
+	    while (w) {
+		switch (removeattr(w->type))
+		{
+		  case word_Normal:
+		    /*case word_Emph:
+		     case word_Code:
+		     case word_WeakCode:*/
+		    xhtml_utostr(w->text, &c);
+		    rdaddsc(r,c);
+		    sfree(c);
+		    break;
+		}
+		w = w->next;
+	    }
+	    if (ws) {
+		xhtml_utostr(ws, &c);
+		rdaddsc(r,c);
+		sfree(c);
+	    }
+	} else {
+	    rdaddc(r, *t++);
+	}
+    }
+}
+
 static xhtmlfile *xhtml_new_file(xhtmlsection *sect)
 {
   xhtmlfile *ret = mknew(xhtmlfile);
@@ -399,59 +464,7 @@ static xhtmlfile *xhtml_new_file(xhtmlsection *sect)
   } else {
     paragraph *p = sect->para;
     rdstringc fname_c = { 0, 0, NULL };
-    char *c, *t;
-    word *w;
-    wchar_t *ws;
-
-    t = conf.template_filename;
-    while (*t) {
-      if (*t == '%' && t[1]) {
-	int fmt;
-
-	t++;
-	fmt = *t++;
-
-	if (fmt == '%') {
-	  rdaddc(&fname_c, fmt);
-	  continue;
-	}
-
-	w = NULL;
-	ws = NULL;
-
-	if (p->kwtext && fmt == 'n')
-	  w = p->kwtext;
-	else if (p->kwtext2 && fmt == 'b')
-	  w = p->kwtext2;
-	else if (p->keyword && *p->keyword && fmt == 'k')
-	  ws = p->keyword;
-	else
-	  w = p->words;
-
-	while (w) {
-	  switch (removeattr(w->type))
-	  {
-	   case word_Normal:
-	    /*case word_Emph:
-	     case word_Code:
-	     case word_WeakCode:*/
-	    xhtml_utostr(w->text, &c);
-	    rdaddsc(&fname_c,c);
-	    sfree(c);
-	    break;
-	  }
-	  w = w->next;
-	}
-	if (ws) {
-	  xhtml_utostr(ws, &c);
-	  rdaddsc(&fname_c,c);
-	  sfree(c);
-	}
-      } else {
-	rdaddc(&fname_c, *t++);
-      }
-    }
-
+    xhtml_format(p, conf.template_filename, &fname_c);
     ret->filename = rdtrimc(&fname_c);
   }
   /*  printf(" ! new file '%s', is_leaf == %s\n", ret->filename, (ret->is_leaf)?("true"):("false"));*/
@@ -575,29 +588,14 @@ static void xhtml_ponder_layout(paragraph *p)
     if (level>0) /* actually a section */
     {
       xhtmlsection *sect;
-      word *w;
-      char *c;
-      rdstringc fname_c = { 0, 0, NULL };
+      rdstringc frag_c = { 0, 0, NULL };
 
       sect = xhtml_new_section(lastsection);
       lastsection = sect;
       sect->para = p;
-      for (w=(p->kwtext2)?(p->kwtext2):(p->words); w; w=w->next) /* kwtext2 because we want numbers only! */
-      {
-        switch (removeattr(w->type))
-        {
-        case word_Normal:
-         /*case word_Emph:
-         case word_Code:
-         case word_WeakCode:*/
-          xhtml_utostr(w->text, &c);
-          rdaddsc(&fname_c,c);
-          sfree(c);
-          break;
-        }
-      }
-/*      rdaddsc(&fname_c, ".html");*/
-      sect->fragment = rdtrimc(&fname_c);
+
+      xhtml_format(p, conf.template_fragment, &frag_c);
+      sect->fragment = rdtrimc(&frag_c);
       sect->level = level;
       /*      printf(" ! adding para @ %p as sect %s, level %i\n", sect->para, sect->fragment, level);*/
 
