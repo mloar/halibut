@@ -95,10 +95,10 @@ static int xhtml_para_level(paragraph *);
 static int xhtml_reservedchar(int);
 
 static int xhtml_convert(wchar_t *, int, char **, int);
-static void xhtml_rdaddwc(rdstringc *, word *, word *);
-static void xhtml_para(FILE *, word *);
+static void xhtml_rdaddwc(rdstringc *, word *, word *, int);
+static void xhtml_para(FILE *, word *, int);
 static void xhtml_codepara(FILE *, word *);
-static void xhtml_heading(FILE *, paragraph *);
+static void xhtml_heading(FILE *, paragraph *, int);
 
 /* File-global variables are much easier than passing these things
  * all over the place. Evil, but easier. We can replace this with a single
@@ -580,7 +580,7 @@ static void xhtml_ponder_layout(paragraph *p)
 static void xhtml_do_index();
 static void xhtml_do_file(xhtmlfile *file);
 static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform);
-static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end);
+static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end, int indexable);
 static int xhtml_do_contents_limit(FILE *fp, xhtmlfile *file, int limit);
 static int xhtml_do_contents_section_limit(FILE *fp, xhtmlsection *section, int limit);
 static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit);
@@ -767,7 +767,7 @@ static void xhtml_do_index_body(FILE *fp)
       xhtmlindex *xi;
 
       fprintf(fp, "<dt>");
-      xhtml_para(fp, y->text);
+      xhtml_para(fp, y->text, FALSE);
       fprintf(fp, "</dt>\n<dd>");
 
       xi = (xhtmlindex*) y->backend_data;
@@ -776,9 +776,9 @@ static void xhtml_do_index_body(FILE *fp)
 	if (sect) {
 	  fprintf(fp, "<a href='%s#%s'>", sect->file->filename, sect->fragment);
 	  if (sect->para->kwtext) {
-	    xhtml_para(fp, sect->para->kwtext);
+	    xhtml_para(fp, sect->para->kwtext, FALSE);
 	  } else if (sect->para->words) {
-	    xhtml_para(fp, sect->para->words);
+	    xhtml_para(fp, sect->para->words, FALSE);
 	  }
 	  fprintf(fp, "</a>");
 	  if (i+1<xi->nsection) {
@@ -867,7 +867,7 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
   for (p = sourceform; p; p = p->next)
   {
     if (p->type == para_Title) {
-      xhtml_heading(fp, p);
+      xhtml_heading(fp, p, FALSE);
       break;
     }
   }
@@ -882,7 +882,7 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
 	 * We've found the end of the preamble. Do every normal
 	 * paragraph up to there.
 	 */
-	xhtml_do_paras(fp, sourceform, p);
+	xhtml_do_paras(fp, sourceform, p, FALSE);
 	break;
     }
   }
@@ -891,7 +891,7 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
     if (p->type == para_Copyright)
     {
       fprintf(fp, "<p>");
-      xhtml_para(fp, p->words);
+      xhtml_para(fp, p->words, FALSE);
       fprintf(fp, "</p>\n");
     }
   }
@@ -1051,13 +1051,13 @@ static int xhtml_add_contents_entry(FILE *fp, xhtmlsection *section, int limit)
   }
   fprintf(fp, "<li><a href=\"%s#%s\">", section->file->filename, section->fragment);
   if (section->para->kwtext) {
-    xhtml_para(fp, section->para->kwtext);
+    xhtml_para(fp, section->para->kwtext, FALSE);
     if (section->para->words) {
       fprintf(fp, ": ");
     }
   }
   if (section->para->words) {
-    xhtml_para(fp, section->para->words);
+    xhtml_para(fp, section->para->words, FALSE);
   }
   fprintf(fp, "</a></li>\n");
   return TRUE;
@@ -1071,14 +1071,15 @@ static void xhtml_do_sections(FILE *fp, xhtmlsection *sections)
 {
   while (sections) {
     currentsection = sections;
-    xhtml_do_paras(fp, sections->para, NULL);
+    xhtml_do_paras(fp, sections->para, NULL, TRUE);
     xhtml_do_sections(fp, sections->child);
     sections = sections->next;
   }
 }
 
 /* Write this list of paragraphs. Close off all lists at the end. */
-static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end)
+static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
+			   int indexable)
 {
   int last_type = -1, ptype, first=TRUE;
   stack lcont_stack = stk_new();
@@ -1109,12 +1110,12 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end)
       case para_Chapter:
       case para_Appendix:
       case para_UnnumberedChapter:
-        xhtml_heading(fp, p);
+        xhtml_heading(fp, p, indexable);
         break;
 
       case para_Heading:
       case para_Subsect:
-        xhtml_heading(fp, p);
+        xhtml_heading(fp, p, indexable);
         break;
 
       case para_Rule:
@@ -1123,7 +1124,7 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end)
 
       case para_Normal:
         fprintf(fp, "\n<p>");
-        xhtml_para(fp, p->words);
+        xhtml_para(fp, p->words, indexable);
         fprintf(fp, "</p>\n");
         break;
 
@@ -1177,10 +1178,10 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end)
           fprintf(fp, "<dd>");
 	} else if (p->type == para_BiblioCited) {
           fprintf(fp, "<dt>");
-          xhtml_para(fp, p->kwtext);
+          xhtml_para(fp, p->kwtext, indexable);
           fprintf(fp, "</dt>\n<dd>");
         }
-        xhtml_para(fp, p->words);
+        xhtml_para(fp, p->words, indexable);
 	{
           paragraph *p2 = p->next;
           if (p2 && xhtml_para_level(p2)==-1 && p2->type == para_LcontPush)
@@ -1246,7 +1247,7 @@ static void xhtml_doheader(FILE *fp, word *title)
   if (title==NULL)
     fprintf(fp, "The thing with no name!");
   else
-    xhtml_para(fp, title);
+    xhtml_para(fp, title, FALSE);
   fprintf(fp, "</title>\n");
   fprintf(fp, "<meta name=\"generator\" content=\"Halibut %s xhtml-backend\" />\n", version);
   if (conf.author)
@@ -1302,7 +1303,7 @@ static void xhtml_versionid(FILE *fp, word *text, int started)
   rdstringc t = { 0, 0, NULL };
 
   rdaddc(&t, '[');		       /* FIXME: configurability */
-  xhtml_rdaddwc(&t, text, NULL);
+  xhtml_rdaddwc(&t, text, NULL, FALSE);
   rdaddc(&t, ']');		       /* FIXME: configurability */
 
   if (started)
@@ -1392,8 +1393,14 @@ static int xhtml_convert(wchar_t *s, int maxlen, char **result,
 
 /*
  * This formats the given words as XHTML.
+ * 
+ * `indexable', if FALSE, prohibits adding any index references.
+ * You might use this, for example, if an index reference occurred
+ * in a section title, to prevent phony index references when the
+ * section title is processed in strange places such as contents
+ * sections.
  */
-static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
+static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end, int indexable) {
     char *c;
     keyword *kwl;
     xhtmlsection *sect;
@@ -1440,6 +1447,9 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
 	/* what we _do_ need to do is to fix up the backend data
 	 * for any indexentry this points to.
 	 */
+	if (!indexable)
+	  break;
+
 	for (ti=0; (itag = (indextag *)index234(idx->tags, ti))!=NULL; ti++) {
 	  /* FIXME: really ustricmp() and not ustrcmp()? */
 	  if (ustricmp(itag->name, text->text)==0) {
@@ -1520,7 +1530,7 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
 	  if (xhtml_convert(text->text, 0, &c, TRUE)) /* spaces in the word are hard */
 	    rdaddsc(rs, c);
 	  else
-	    xhtml_rdaddwc(rs, text->alt, NULL);
+	    xhtml_rdaddwc(rs, text->alt, NULL, indexable);
 	  sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
 	  rdaddc(rs, ' ');
@@ -1543,7 +1553,7 @@ static void xhtml_rdaddwc(rdstringc *rs, word *text, word *end) {
 
 /* Output a heading, formatted as XHTML.
  */
-static void xhtml_heading(FILE *fp, paragraph *p)
+static void xhtml_heading(FILE *fp, paragraph *p, int indexable)
 {
     rdstringc t = { 0, 0, NULL };
     word *tprefix = p->kwtext;
@@ -1574,7 +1584,7 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 	fmt = &conf.fsect[conf.nfsect-1];
 
     if (fmt && fmt->just_numbers && nprefix) {
-	xhtml_rdaddwc(&t, nprefix, NULL);
+	xhtml_rdaddwc(&t, nprefix, NULL, indexable);
 	if (fmt) {
 	    char *c;
 	    if (xhtml_convert(fmt->number_suffix, 0, &c, FALSE)) {
@@ -1583,7 +1593,7 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 	    }
 	}
     } else if (fmt && !fmt->just_numbers && tprefix) {
-	xhtml_rdaddwc(&t, tprefix, NULL);
+	xhtml_rdaddwc(&t, tprefix, NULL, indexable);
 	if (fmt) {
 	    char *c;
 	    if (xhtml_convert(fmt->number_suffix, 0, &c, FALSE)) {
@@ -1592,7 +1602,7 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 	    }
 	}
     }
-    xhtml_rdaddwc(&t, text, NULL);
+    xhtml_rdaddwc(&t, text, NULL, indexable);
     /*
      * If we're outputting in single-file mode, we need to lower
      * the level of each heading by one, because the overall
@@ -1612,10 +1622,10 @@ static void xhtml_heading(FILE *fp, paragraph *p)
 /* Output a paragraph. Styles are handled by xhtml_rdaddwc().
  * This looks pretty simple; I may have missed something ...
  */
-static void xhtml_para(FILE *fp, word *text)
+static void xhtml_para(FILE *fp, word *text, int indexable)
 {
   rdstringc out = { 0, 0, NULL };
-  xhtml_rdaddwc(&out, text, NULL);
+  xhtml_rdaddwc(&out, text, NULL, indexable);
   fprintf(fp, "%s", out.text);
   sfree(out.text);
 }
