@@ -110,7 +110,7 @@ example, \cw{\\text-title-underline\{=\}} but
 You can also specify more than one underline setting, and Halibut
 will choose the first one that the output character set supports.
 So, for example, you could write
-\cw{\\text-chapter-underline\{\u203e\}\{\-\}}, and Halibut would use
+\cw{\\text-chapter-underline\{\\u203e\}\{\-\}}, and Halibut would use
 the Unicode \q{OVERLINE} character where possible and fall back to
 the ASCII minus sign otherwise.
 
