@@ -596,11 +596,14 @@ void xhtml_backend(paragraph *sourceform, keywordlist *in_keywords, index *in_id
   xhtml_do_index();
 
   /* release file, section, index data structures */
-  for (xsect = topsection; xsect!=NULL; xsect=xsect->chain) {
+  xsect = topsection;
+  while (xsect) {
+    xhtmlsection *tmp = xsect->chain;
     if (xsect->fragment) {
       sfree(xsect->fragment);
     }
     sfree(xsect);
+    xsect = tmp;
   }
   xhtml_free_file(topfile);
   for (ti = 0; (ientry=(indexentry *)index234(idx->entries, ti))!=NULL; ti++) {
