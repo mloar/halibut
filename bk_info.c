@@ -3,8 +3,6 @@
  * 
  * Possible future work:
  * 
- *  - configurable indentation, bullets, emphasis, quotes etc?
- * 
  *  - configurable choice of how to allocate node names?
  *     + possibly a template-like approach, choosing node names to
  * 	 be the full section title or perhaps the internal keyword?
@@ -34,6 +32,13 @@ typedef struct {
     char *filename;
     int maxfilesize;
     int charset;
+    int listindentbefore, listindentafter;
+    int indent_code, width, index_width;
+    wchar_t *bullet, *listsuffix;
+    wchar_t *startemph, *endemph;
+    wchar_t *lquote, *rquote;
+    wchar_t *sectsuffix, *underline;
+    wchar_t *rule;
 } infoconfig;
 
 typedef struct {
@@ -66,23 +71,24 @@ static int info_rdadds(info_data *, wchar_t const *);
 static int info_rdaddc(info_data *, char);
 static int info_rdaddsc(info_data *, char const *);
 
-static void info_heading(info_data *, word *, word *, int);
-static void info_rule(info_data *, int, int);
+static void info_heading(info_data *, word *, word *, int, infoconfig *);
+static void info_rule(info_data *, int, int, infoconfig *);
 static void info_para(info_data *, word *, wchar_t *, word *, keywordlist *,
-		      int, int, int);
+		      int, int, int, infoconfig *);
 static void info_codepara(info_data *, word *, int, int);
-static void info_versionid(info_data *, word *);
-static void info_menu_item(info_data *, node *, paragraph *);
+static void info_versionid(info_data *, word *, infoconfig *);
+static void info_menu_item(info_data *, node *, paragraph *, infoconfig *);
 static word *info_transform_wordlist(word *, keywordlist *);
 static int info_check_index(word *, node *, indexdata *);
 
-static int info_rdaddwc(info_data *, word *, word *, int);
+static int info_rdaddwc(info_data *, word *, word *, int, infoconfig *);
 
 static node *info_node_new(char *name, int charset);
-static char *info_node_name(paragraph *p, int charset);
+static char *info_node_name(paragraph *p, infoconfig *);
 
 static infoconfig info_configure(paragraph *source) {
     infoconfig ret;
+    paragraph *p;
 
     /*
      * Defaults.
@@ -90,21 +96,112 @@ static infoconfig info_configure(paragraph *source) {
     ret.filename = dupstr("output.info");
     ret.maxfilesize = 64 << 10;
     ret.charset = CS_ASCII;
+    ret.width = 70;
+    ret.listindentbefore = 1;
+    ret.listindentafter = 3;
+    ret.indent_code = 2;
+    ret.index_width = 40;
+    ret.listsuffix = L".";
+    ret.bullet = L"\x2022\0-\0\0";
+    ret.rule = L"\x2500\0-\0\0";
+    ret.startemph = L"_\0_\0\0";
+    ret.endemph = uadv(ret.startemph);
+    ret.lquote = L"\x2018\0\x2019\0`\0'\0\0";
+    ret.rquote = uadv(ret.lquote);
+    ret.sectsuffix = L": ";
+    ret.underline = L"\x203E\0-\0\0";
 
-    for (; source; source = source->next) {
-	if (source->type == para_Config) {
-	    if (!ustricmp(source->keyword, L"info-filename")) {
-		sfree(ret.filename);
-		ret.filename = dupstr(adv(source->origkeyword));
-	    } else if (!ustricmp(source->keyword, L"info-charset")) {
-		char *csname = utoa_dup(uadv(source->keyword), CS_ASCII);
-		ret.charset = charset_from_localenc(csname);
-		sfree(csname);
-	    } else if (!ustricmp(source->keyword, L"info-max-file-size")) {
-		ret.maxfilesize = utoi(uadv(source->keyword));
+    /*
+     * Two-pass configuration so that we can pick up global config
+     * (e.g. `quotes') before having it overridden by specific
+     * config (`info-quotes'), irrespective of the order in which
+     * they occur.
+     */
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
 	    }
 	}
     }
+
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"info-filename")) {
+		sfree(ret.filename);
+		ret.filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(p->keyword, L"info-charset")) {
+		char *csname = utoa_dup(uadv(p->keyword), CS_ASCII);
+		ret.charset = charset_from_localenc(csname);
+		sfree(csname);
+	    } else if (!ustricmp(p->keyword, L"info-max-file-size")) {
+		ret.maxfilesize = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"info-width")) {
+		ret.width = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"info-indent-code")) {
+		ret.indent_code = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"info-index-width")) {
+		ret.index_width = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"info-list-indent")) {
+		ret.listindentbefore = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"info-listitem-indent")) {
+		ret.listindentafter = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"info-section-suffix")) {
+		ret.sectsuffix = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"info-underline")) {
+		ret.underline = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"info-bullet")) {
+		ret.bullet = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"info-rule")) {
+		ret.rule = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"info-list-suffix")) {
+		ret.listsuffix = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"info-emphasis")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.startemph = uadv(p->keyword);
+		    ret.endemph = uadv(ret.startemph);
+		}
+	    } else if (!ustricmp(p->keyword, L"info-quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    }
+	}
+    }
+
+    /*
+     * Now process fallbacks on quote characters, underlines, the
+     * rule character, the emphasis characters, and bullets.
+     */
+    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
+	   (!cvt_ok(ret.charset, ret.lquote) ||
+	    !cvt_ok(ret.charset, ret.rquote))) {
+	ret.lquote = uadv(ret.rquote);
+	ret.rquote = uadv(ret.lquote);
+    }
+
+    while (*uadv(ret.endemph) && *uadv(uadv(ret.endemph)) &&
+	   (!cvt_ok(ret.charset, ret.startemph) ||
+	    !cvt_ok(ret.charset, ret.endemph))) {
+	ret.startemph = uadv(ret.endemph);
+	ret.endemph = uadv(ret.startemph);
+    }
+
+    while (*ret.underline && *uadv(ret.underline) &&
+	   !cvt_ok(ret.charset, ret.underline))
+	ret.underline = uadv(ret.underline);
+
+    while (*ret.bullet && *uadv(ret.bullet) &&
+	   !cvt_ok(ret.charset, ret.bullet))
+	ret.bullet = uadv(ret.bullet);
+
+    while (*ret.rule && *uadv(ret.rule) &&
+	   !cvt_ok(ret.charset, ret.rule))
+	ret.rule = uadv(ret.rule);
 
     return ret;
 }
@@ -130,12 +227,6 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     word bullet;
     FILE *fp;
 
-    /*
-     * FIXME: possibly configurability?
-     */
-    int width = 70, listindentbefore = 1, listindentafter = 3;
-    int indent_code = 2, index_width = 40;
-
     IGNORE(unused);
 
     conf = info_configure(sourceform);
@@ -158,7 +249,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    node *newnode, *upnode;
 	    char *nodename;
 
-	    nodename = info_node_name(p, conf.charset);
+	    nodename = info_node_name(p, &conf);
 	    newnode = info_node_new(nodename, conf.charset);
 	    sfree(nodename);
 
@@ -196,7 +287,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    ii->nnodes = ii->nodesize = 0;
 	    ii->nodes = NULL;
 
-	    ii->length = info_rdaddwc(&id, entry->text, NULL, FALSE);
+	    ii->length = info_rdaddwc(&id, entry->text, NULL, FALSE, &conf);
 
 	    ii->text = id.output.text;
 
@@ -259,11 +350,11 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_Copyright)
 	    info_para(&intro_text, NULL, NULL, p->words, keywords,
-		      0, 0, width);
+		      0, 0, conf.width, &conf);
 
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_VersionID)
-	    info_versionid(&intro_text, p->words);
+	    info_versionid(&intro_text, p->words, &conf);
 
     if (intro_text.output.text[intro_text.output.pos-1] != '\n')
 	info_rdaddc(&intro_text, '\n');
@@ -271,9 +362,9 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     /* Do the title */
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_Title)
-	    info_heading(&topnode->text, NULL, p->words, width);
+	    info_heading(&topnode->text, NULL, p->words, conf.width, &conf);
 
-    nestindent = listindentbefore + listindentafter;
+    nestindent = conf.listindentbefore + conf.listindentafter;
     nesting = 0;
 
     currnode = topnode;
@@ -325,15 +416,15 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    info_rdaddsc(&currnode->up->text, "* Menu:\n\n");
 	    currnode->up->started_menu = TRUE;
 	}
-	info_menu_item(&currnode->up->text, currnode, p);
+	info_menu_item(&currnode->up->text, currnode, p, &conf);
 
 	has_index |= info_check_index(p->words, currnode, idx);
-	info_heading(&currnode->text, p->kwtext, p->words, width);
+	info_heading(&currnode->text, p->kwtext, p->words, conf.width, &conf);
 	nesting = 0;
 	break;
 
       case para_Rule:
-	info_rule(&currnode->text, nesting, width - nesting);
+	info_rule(&currnode->text, nesting, conf.width - nesting, &conf);
 	break;
 
       case para_Normal:
@@ -348,21 +439,21 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    bullet.next = NULL;
 	    bullet.alt = NULL;
 	    bullet.type = word_Normal;
-	    bullet.text = L"-";	       /* FIXME: configurability */
+	    bullet.text = conf.bullet;
 	    prefix = &bullet;
 	    prefixextra = NULL;
-	    indentb = listindentbefore;
-	    indenta = listindentafter;
+	    indentb = conf.listindentbefore;
+	    indenta = conf.listindentafter;
 	} else if (p->type == para_NumberedList) {
 	    prefix = p->kwtext;
-	    prefixextra = L".";	       /* FIXME: configurability */
-	    indentb = listindentbefore;
-	    indenta = listindentafter;
+	    prefixextra = conf.listsuffix;
+	    indentb = conf.listindentbefore;
+	    indenta = conf.listindentafter;
 	} else if (p->type == para_Description) {
 	    prefix = NULL;
 	    prefixextra = NULL;
-	    indentb = listindentbefore;
-	    indenta = listindentafter;
+	    indentb = conf.listindentbefore;
+	    indenta = conf.listindentafter;
 	} else {
 	    prefix = NULL;
 	    prefixextra = NULL;
@@ -382,7 +473,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 	info_para(&currnode->text, prefix, prefixextra, body, keywords,
 		  nesting + indentb, indenta,
-		  width - nesting - indentb - indenta);
+		  conf.width - nesting - indentb - indenta, &conf);
 	if (wp) {
 	    wp->next = NULL;
 	    free_word_list(body);
@@ -391,8 +482,8 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 
       case para_Code:
 	info_codepara(&currnode->text, p->words,
-		      nesting + indent_code,
-		      width - nesting - 2 * indent_code);
+		      nesting + conf.indent_code,
+		      conf.width - nesting - 2 * conf.indent_code);
 	break;
     }
 
@@ -413,7 +504,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 
 	info_rdaddsc(&newnode->text, "Index\n-----\n\n");
 
-	info_menu_item(&topnode->text, newnode, NULL);
+	info_menu_item(&topnode->text, newnode, NULL, &conf);
 
 	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
 	    info_idx *ii = (info_idx *)entry->backend_data;
@@ -427,9 +518,9 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 		 */
 		if (j == 0)
 		    info_rdaddsc(&newnode->text, ii->text);
-		for (k = (j ? 0 : ii->length); k < index_width; k++)
+		for (k = (j ? 0 : ii->length); k < conf.index_width-2; k++)
 		    info_rdaddc(&newnode->text, ' ');
-		info_rdaddsc(&newnode->text, "   *Note ");
+		info_rdaddsc(&newnode->text, "  *Note ");
 		info_rdaddsc(&newnode->text, ii->nodes[j]->name);
 		info_rdaddsc(&newnode->text, "::\n");
 	    }
@@ -657,7 +748,8 @@ static word *info_transform_wordlist(word *words, keywordlist *keywords)
     return ret;
 }
 
-static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs) {
+static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs,
+			infoconfig *cfg) {
     int ret = 0;
 
     for (; words && words != end; words = words->next) switch (words->type) {
@@ -684,30 +776,30 @@ static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs) {
 	if (towordstyle(words->type) == word_Emph &&
 	    (attraux(words->aux) == attr_First ||
 	     attraux(words->aux) == attr_Only))
-	    ret += info_rdadd(id, L'_');      /* FIXME: configurability */
+	    ret += info_rdadds(id, cfg->startemph);
 	else if (towordstyle(words->type) == word_Code &&
 		 (attraux(words->aux) == attr_First ||
 		  attraux(words->aux) == attr_Only))
-	    ret += info_rdadd(id, L'`');      /* FIXME: configurability */
+	    ret += info_rdadds(id, cfg->lquote);
 	if (removeattr(words->type) == word_Normal) {
 	    if (cvt_ok(id->charset, words->text) || !words->alt)
 		ret += info_rdadds(id, words->text);
 	    else
-		ret += info_rdaddwc(id, words->alt, NULL, FALSE);
+		ret += info_rdaddwc(id, words->alt, NULL, FALSE, cfg);
 	} else if (removeattr(words->type) == word_WhiteSpace) {
 	    ret += info_rdadd(id, L' ');
 	} else if (removeattr(words->type) == word_Quote) {
-	    ret += info_rdadd(id, quoteaux(words->aux) == quote_Open ? L'`' : L'\'');
-				       /* FIXME: configurability */
+	    ret += info_rdadds(id, quoteaux(words->aux) == quote_Open ?
+			       cfg->lquote : cfg->rquote);
 	}
 	if (towordstyle(words->type) == word_Emph &&
 	    (attraux(words->aux) == attr_Last ||
 	     attraux(words->aux) == attr_Only))
-	    ret += info_rdadd(id, L'_');     /* FIXME: configurability */
+	    ret += info_rdadds(id, cfg->endemph);
 	else if (towordstyle(words->type) == word_Code &&
 		 (attraux(words->aux) == attr_Last ||
 		  attraux(words->aux) == attr_Only))
-	    ret += info_rdadd(id, L'\'');     /* FIXME: configurability */
+	    ret += info_rdadds(id, cfg->rquote);
 	break;
 
       case word_UpperXref:
@@ -727,18 +819,21 @@ static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs) {
     return ret;
 }
 
-static int info_width_internal(word *words, int xrefs, int charset);
+static int info_width_internal(word *words, int xrefs, infoconfig *cfg);
 
-static int info_width_internal_list(word *words, int xrefs, int charset) {
+static int info_width_internal_list(word *words, int xrefs, infoconfig *cfg) {
     int w = 0;
     while (words) {
-	w += info_width_internal(words, xrefs, charset);
+	w += info_width_internal(words, xrefs, cfg);
 	words = words->next;
     }
     return w;
 }
 
-static int info_width_internal(word *words, int xrefs, int charset) {
+static int info_width_internal(word *words, int xrefs, infoconfig *cfg) {
+    int wid;
+    int attr;
+
     switch (words->type) {
       case word_HyperLink:
       case word_HyperEnd:
@@ -746,18 +841,44 @@ static int info_width_internal(word *words, int xrefs, int charset) {
       case word_IndexRef:
 	return 0;
 
+      case word_UpperXref:
+      case word_LowerXref:
+	if (xrefs && words->private_data) {
+	    /* "*Note " plus "::" comes to 8 characters */
+	    return 8 + strwid(((node *)words->private_data)->name,
+			      cfg->charset);
+	} else
+	    return 0;
+    }
+
+    assert(words->type < word_internal_endattrs);
+
+    wid = 0;
+    attr = towordstyle(words->type);
+
+    if (attr == word_Emph || attr == word_Code) {
+	if (attraux(words->aux) == attr_Only ||
+	    attraux(words->aux) == attr_First)
+	    wid += ustrwid(attr == word_Emph ? cfg->startemph : cfg->lquote,
+			   cfg->charset);
+    }
+    if (attr == word_Emph || attr == word_Code) {
+	if (attraux(words->aux) == attr_Only ||
+	    attraux(words->aux) == attr_Last)
+	    wid += ustrwid(attr == word_Emph ? cfg->startemph : cfg->lquote,
+			   cfg->charset);
+    }
+
+    switch (words->type) {
       case word_Normal:
       case word_Emph:
       case word_Code:
       case word_WeakCode:
-	return (((words->type == word_Emph ||
-		  words->type == word_Code)
-		 ? (attraux(words->aux) == attr_Only ? 2 :
-		    attraux(words->aux) == attr_Always ? 0 : 1)
-		 : 0) +
-		(cvt_ok(charset, words->text) || !words->alt ?
-		 ustrwid(words->text, charset) :
-		 info_width_internal_list(words->alt, xrefs, charset)));
+	if (cvt_ok(cfg->charset, words->text) || !words->alt)
+	    wid += ustrwid(words->text, cfg->charset);
+	else
+	    wid += info_width_internal_list(words->alt, xrefs, cfg);
+	return wid;
 
       case word_WhiteSpace:
       case word_EmphSpace:
@@ -769,54 +890,50 @@ static int info_width_internal(word *words, int xrefs, int charset) {
       case word_WkCodeQuote:
 	assert(words->type != word_CodeQuote &&
 	       words->type != word_WkCodeQuote);
-	return (((towordstyle(words->type) == word_Emph ||
-		  towordstyle(words->type) == word_Code)
-		 ? (attraux(words->aux) == attr_Only ? 2 :
-		    attraux(words->aux) == attr_Always ? 0 : 1)
-		 : 0) + 1);
-
-      case word_UpperXref:
-      case word_LowerXref:
-	if (xrefs && words->private_data) {
-	    /* "*Note " plus "::" comes to 8 characters */
-	    return 8 + strwid(((node *)words->private_data)->name, charset);
-	}
-	break;
+	if (removeattr(words->type) == word_Quote) {
+	    if (quoteaux(words->aux) == quote_Open)
+		wid += ustrwid(cfg->lquote, cfg->charset);
+	    else
+		wid += ustrwid(cfg->rquote, cfg->charset);
+	} else
+	    wid++;		       /* space */
     }
-    return 0;			       /* should never happen */
+    return wid;
 }
 
 static int info_width_noxrefs(void *ctx, word *words)
 {
-    return info_width_internal(words, FALSE, *(int *)ctx);
+    return info_width_internal(words, FALSE, (infoconfig *)ctx);
 }
 static int info_width_xrefs(void *ctx, word *words)
 {
-    return info_width_internal(words, TRUE, *(int *)ctx);
+    return info_width_internal(words, TRUE, (infoconfig *)ctx);
 }
 
 static void info_heading(info_data *text, word *tprefix,
-			 word *words, int width) {
+			 word *words, int width, infoconfig *cfg) {
     int length;
     int firstlinewidth, wrapwidth;
     wrappedline *wrapping, *p;
 
     length = 0;
     if (tprefix) {
-	length += info_rdaddwc(text, tprefix, NULL, FALSE);
-	length += info_rdadds(text, L": ");/* FIXME: configurability */
+	length += info_rdaddwc(text, tprefix, NULL, FALSE, cfg);
+	length += info_rdadds(text, cfg->sectsuffix);
     }
 
     wrapwidth = width;
     firstlinewidth = width - length;
 
     wrapping = wrap_para(words, firstlinewidth, wrapwidth,
-			 info_width_noxrefs, &text->charset, 0);
+			 info_width_noxrefs, cfg, 0);
     for (p = wrapping; p; p = p->next) {
-	length += info_rdaddwc(text, p->begin, p->end, FALSE);
+	length += info_rdaddwc(text, p->begin, p->end, FALSE, cfg);
 	info_rdadd(text, L'\n');
-	while (length--)
-	    info_rdadd(text, L'-');  /* FIXME: configurability */
+	while (length > 0) {
+	    info_rdadds(text, cfg->underline);
+	    length -= ustrwid(cfg->underline, cfg->charset);
+	}
 	info_rdadd(text, L'\n');
 	length = 0;
     }
@@ -824,16 +941,20 @@ static void info_heading(info_data *text, word *tprefix,
     info_rdadd(text, L'\n');
 }
 
-static void info_rule(info_data *text, int indent, int width) {
+static void info_rule(info_data *text, int indent, int width, infoconfig *cfg)
+{
     while (indent--) info_rdadd(text, L' ');
-    while (width--) info_rdadd(text, L'-');
+    while (width > 0) {
+	info_rdadds(text, cfg->rule);
+	width -= ustrwid(cfg->rule, cfg->charset);
+    }
     info_rdadd(text, L'\n');
     info_rdadd(text, L'\n');
 }
 
 static void info_para(info_data *text, word *prefix, wchar_t *prefixextra,
-		      word *input, keywordlist *keywords,
-		      int indent, int extraindent, int width) {
+		      word *input, keywordlist *keywords, int indent,
+		      int extraindent, int width, infoconfig *cfg) {
     wrappedline *wrapping, *p;
     word *words;
     int e;
@@ -845,7 +966,7 @@ static void info_para(info_data *text, word *prefix, wchar_t *prefixextra,
     if (prefix) {
 	for (i = 0; i < indent; i++)
 	    info_rdadd(text, L' ');
-	e = info_rdaddwc(text, prefix, NULL, FALSE);
+	e = info_rdaddwc(text, prefix, NULL, FALSE, cfg);
 	if (prefixextra)
 	    e += info_rdadds(text, prefixextra);
 	/* If the prefix is too long, shorten the first line to fit. */
@@ -863,11 +984,11 @@ static void info_para(info_data *text, word *prefix, wchar_t *prefixextra,
 	e = indent + extraindent;
 
     wrapping = wrap_para(words, firstlinewidth, width, info_width_xrefs,
-			 &text->charset, 0);
+			 cfg, 0);
     for (p = wrapping; p; p = p->next) {
 	for (i = 0; i < e; i++)
 	    info_rdadd(text, L' ');
-	info_rdaddwc(text, p->begin, p->end, TRUE);
+	info_rdaddwc(text, p->begin, p->end, TRUE, cfg);
 	info_rdadd(text, L'\n');
 	e = indent + extraindent;
     }
@@ -893,9 +1014,9 @@ static void info_codepara(info_data *text, word *words,
     info_rdadd(text, L'\n');
 }
 
-static void info_versionid(info_data *text, word *words) {
-    info_rdadd(text, L'[');		       /* FIXME: configurability */
-    info_rdaddwc(text, words, NULL, FALSE);
+static void info_versionid(info_data *text, word *words, infoconfig *cfg) {
+    info_rdadd(text, L'[');
+    info_rdaddwc(text, words, NULL, FALSE, cfg);
     info_rdadds(text, L"]\n");
 }
 
@@ -913,13 +1034,14 @@ static node *info_node_new(char *name, int charset)
     return n;
 }
 
-static char *info_node_name(paragraph *par, int charset)
+static char *info_node_name(paragraph *par, infoconfig *cfg)
 {
     info_data id = EMPTY_INFO_DATA;
     char *p, *q;
 
-    id.charset = charset;
-    info_rdaddwc(&id, par->kwtext ? par->kwtext : par->words, NULL, FALSE);
+    id.charset = cfg->charset;
+    info_rdaddwc(&id, par->kwtext ? par->kwtext : par->words,
+		 NULL, FALSE, cfg);
     info_rdaddsc(&id, NULL);
 
     /*
@@ -940,7 +1062,8 @@ static char *info_node_name(paragraph *par, int charset)
     return id.output.text;
 }
 
-static void info_menu_item(info_data *text, node *n, paragraph *p)
+static void info_menu_item(info_data *text, node *n, paragraph *p,
+			   infoconfig *cfg)
 {
     /*
      * FIXME: Depending on how we're doing node names in this info
@@ -960,7 +1083,7 @@ static void info_menu_item(info_data *text, node *n, paragraph *p)
     info_rdaddsc(text, "::");
     if (p) {
 	info_rdaddc(text, ' ');
-	info_rdaddwc(text, p->words, NULL, FALSE);
+	info_rdaddwc(text, p->words, NULL, FALSE, cfg);
     }
     info_rdaddc(text, '\n');
 }
@@ -1026,7 +1149,7 @@ static int info_rdaddsc(info_data *d, char const *cs)
 
     if (cs) {
 	rdaddsc(&d->output, cs);
-	return strlen(cs);
+	return strwid(cs, d->charset);
     } else
 	return 0;
 }

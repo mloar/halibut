@@ -246,7 +246,7 @@ silly; I mention it only as an example.)
 
 \dt \I{\cw{\\cfg\{text-emphasis\}}}\cw{\\cfg\{text-emphasis\}\{}\e{start-emph}\cw{\}\{}\e{end-emph}\cw{\}}[\cw{\{}\e{start-emph}\cw{\}\{}\e{end-emph}...\cw{\}}]
 
-\dd This specifies the text which should be used to surround
+\dd This specifies the characters which should be used to surround
 emphasised text (written using the \c{\\e} command; see
 \k{input-emph}).
 
@@ -873,6 +873,86 @@ creation and remain useful.
 
 }
 
+\dt \I{\cw{\\cfg\{info-width\}}}\cw{\\cfg\{info-width\}\{}\e{width}\cw{\}}
+
+\dd Sets the \I{text width}width of the main part of the document,
+in characters. Works exactly like the \cw{\\cfg\{text-width\}}
+directive (see \k{output-text-dimensions}).
+
+\dt \I{\cw{\\cfg\{info-indent-code\}}}\cw{\\cfg\{info-indent-code\}\{}\e{indent}\cw{\}}
+
+\dd Specifies the extra indentation for \I{code paragraphs,
+indentation} code paragraphs. Works exactly like the
+\cw{\\cfg\{text-indent-code\}} directive (see
+\k{output-text-dimensions}).
+
+\dt \I{\cw{\\cfg\{info-index-width\}}}\cw{\\cfg\{info-index-width\}\{}\e{width}\cw{\}}
+
+\dd Specifies how much horizontal space to leave in the index node
+for the text of \i{index terms}, before displaying the sections the
+terms occur in.
+
+\dt \I{\cw{\\cfg\{info-list-indent\}}}\cw{\\cfg\{info-list-indent\}\{}\e{indent}\cw{\}}
+
+\dd Specifies the extra indentation before the bullet or number in a
+\I{bulletted list, indentation}\I{numbered list, indentation}list
+item. Works exactly like the \cw{\\cfg\{text-list-indent\}}
+directive (see \k{output-text-dimensions}).
+
+\dt \I{\cw{\\cfg\{info-listitem-indent\}}}\cw{\\cfg\{info-listitem-indent\}\{}\e{indent}\cw{\}}
+
+\dd Specifies the additional indentation before the body of a list
+item. Works exactly like the \cw{\\cfg\{text-listitem-indent\}}
+directive (see \k{output-text-dimensions}).
+
+\dt \I{\cw{\\cfg\{info-section-suffix\}}}\cw{\\cfg\{info-section-suffix\}\{}\e{text}\cw{\}}
+
+\dd Specifies the suffix text to be appended to each section number
+before displaying the section title. For example, if you set this to
+\q{\cw{:\_}}, then a typical section title might look something like
+\q{Section 3.1: Something Like This}.
+
+\dt \I{\cw{\\cfg\{info-underline\}}}\cw{\\cfg\{info-underline\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text to be used to underline section titles. Works
+very much like the \cw{\\cfg\{text-chapter-underline\}} directive
+(see \k{output-text-headings}). You can specify more than one
+option, and Halibut will choose the first one supported by the
+character set.
+
+\dt \I{\cw{\\cfg\{info-bullet\}}}\cw{\\cfg\{info-bullet\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text to use as the \i{bullet} in bulletted lists.
+You can specify multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-bullet\}} directive (see
+\k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{info-rule\}}}\cw{\\cfg\{info-rule\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies the text used to draw \i{horizontal rules}. You can
+specify multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-rule\}} directive (see \k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{info-quotes\}}}\cw{\\cfg\{info-quotes\}\{}\e{open-quote}\cw{\}\{}\e{close-quote}\cw{\}}[\cw{\{}\e{open-quote}\cw{\}\{}\e{close-quote}...\cw{\}}]
+
+\dd Specifies the quotation marks to use. You can specify multiple
+fallback options. Works exactly like the \cw{\\cfg\{text-quotes\}}
+directive (see \k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{info-emphasis\}}}\cw{\\cfg\{info-emphasis\}\{}\e{start-emph}\cw{\}\{}\e{end-emph}\cw{\}}[\cw{\{}\e{start-emph}\cw{\}\{}\e{end-emph}...\cw{\}}]
+
+\dd Specifies how to display emphasised text. You can specify
+multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-emphasis\}} directive (see
+\k{output-text-characters}).
+
+\dt \I{\cw{\\cfg\{info-list-suffix\}}}\cw{\\cfg\{info-list-suffix\}\{}\e{text}\cw{\}}
+
+\dd Specifies the text to append to the item numbers in a
+\i{numbered list}. Works exactly like the
+\cw{\\cfg\{text-list-suffix\}} directive (see
+\k{output-text-misc}).
+
 \dt \I{\cw{\\cfg\{info-max-file-size\}}}\cw{\\cfg\{info-max-file-size\}\{}\e{bytes}\cw{\}}
 
 \dd Sets the preferred \i{maximum file size} for each subsidiary
@@ -941,6 +1021,29 @@ if the output file were called \c{mygames.info} and the keyword
 \c{chess} had been used to define Chapter 3 of the document.
 
 }
+
+The \i{default settings} for the \c{info} output format are:
+
+\c \cfg{info-filename}{output.info}
+\c
+\c \cfg{info-width}{70}
+\c \cfg{info-indent-code}{2}
+\c \cfg{info-index-width}{40}
+\c \cfg{info-list-indent}{1}
+\c \cfg{info-listitem-indent}{3}
+\c
+\c \cfg{info-section-suffix}{: }
+\c
+\c \cfg{info-underline}{\u203e}{-}
+\c \cfg{info-bullet}{\u2022}{-}
+\c \cfg{info-rule}{\u2500}{-}
+\c \cfg{info-quotes}{\u2018}{\u2019}{`}{'}
+\c \cfg{info-emphasis}{_}{_}
+\c
+\c \cfg{info-list-suffix}{.}
+\c \cfg{info-max-file-size}{65536}
+
+and no \cw{\\cfg\{info-dir-entry\}} directives.
 
 \H{output-ps} \i{PostScript}
 

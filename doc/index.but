@@ -29,6 +29,49 @@
 \IM{\\cfg\{info-max-file-size\}} \c{info-max-file-size} configuration directive
 \IM{\\cfg\{info-max-file-size\}} \cw{\\cfg\{info-max-file-size\}}
 
+\IM{\\cfg\{info-width\}} \c{info-width} configuration directive
+\IM{\\cfg\{info-width\}} \cw{\\cfg\{info-width\}}
+
+\IM{\\cfg\{info-indent-code\}} \c{info-indent-code} configuration
+directive
+\IM{\\cfg\{info-indent-code\}} \cw{\\cfg\{info-indent-code\}}
+
+\IM{\\cfg\{info-index-width\}} \c{info-index-width} configuration
+directive
+\IM{\\cfg\{info-index-width\}} \cw{\\cfg\{info-index-width\}}
+
+\IM{\\cfg\{info-list-indent\}} \c{info-list-indent} configuration
+directive
+\IM{\\cfg\{info-list-indent\}} \cw{\\cfg\{info-list-indent\}}
+
+\IM{\\cfg\{info-listitem-indent\}} \c{info-listitem-indent}
+configuration directive
+\IM{\\cfg\{info-listitem-indent\}} \cw{\\cfg\{info-listitem-indent\}}
+
+\IM{\\cfg\{info-section-suffix\}} \c{info-section-suffix}
+configuration directive
+\IM{\\cfg\{info-section-suffix\}} \cw{\\cfg\{info-section-suffix\}}
+
+\IM{\\cfg\{info-underline\}} \c{info-underline} configuration
+directive
+\IM{\\cfg\{info-underline\}} \cw{\\cfg\{info-underline\}}
+
+\IM{\\cfg\{info-bullet\}} \c{info-bullet} configuration directive
+\IM{\\cfg\{info-bullet\}} \cw{\\cfg\{info-bullet\}}
+
+\IM{\\cfg\{info-rule\}} \c{info-rule} configuration directive
+\IM{\\cfg\{info-rule\}} \cw{\\cfg\{info-rule\}}
+
+\IM{\\cfg\{info-list-suffix\}} \c{info-list-suffix} configuration
+directive
+\IM{\\cfg\{info-list-suffix\}} \cw{\\cfg\{info-list-suffix\}}
+
+\IM{\\cfg\{info-emphasis\}} \c{info-emphasis} configuration directive
+\IM{\\cfg\{info-emphasis\}} \cw{\\cfg\{info-emphasis\}}
+
+\IM{\\cfg\{info-quotes\}} \c{info-quotes} configuration directive
+\IM{\\cfg\{info-quotes\}} \cw{\\cfg\{info-quotes\}}
+
 \IM{\\cfg\{winhelp-filename\}} \c{winhelp-filename} configuration directive
 \IM{\\cfg\{winhelp-filename\}} \cw{\\cfg\{winhelp-filename\}}
 
