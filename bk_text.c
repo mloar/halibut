@@ -93,7 +93,8 @@ static textconfig text_configure(paragraph *source) {
     ret.bullet.text = L"\x2022\0-\0\0";
     ret.rule = L"\x2500\0-\0\0";
     ret.filename = dupstr("output.txt");
-    ret.startemph = ret.endemph = L"_";
+    ret.startemph = L"_\0_\0\0";
+    ret.endemph = uadv(ret.startemph);
     ret.listsuffix = L".";
     ret.charset = CS_ASCII;
     /*
