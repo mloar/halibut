@@ -67,6 +67,22 @@ output \cw{man} page will be given that name. Otherwise, the name of
 the output \cw{man} page will be as specified in the input files, or
 \c{output.1} if none is specified at all.
 
+\dt \cw{--info}[\cw{=}\e{filename}]
+
+\dd Makes Halibut generate an \c{info} file. If the optional
+\e{filename} parameter is supplied, the output \c{info} file will be
+given that name. Otherwise, the name of the output \c{info} file
+will be as specified in the input files, or \c{output.info} if none
+is specified at all.
+
+\lcont{
+By default, unless configured otherwise using the
+\cw{\\cfg\{info-max-file-size\}\{0\}} directive, the \c{info} output
+will be split into multiple files. The main file will have the name
+you specify; the subsidiary files will have suffixes \c{-1}, \c{-2}
+etc.
+}
+
 \dt \cw{-C}\e{word}\cw{:}\e{word}[\cw{:}\e{word}...]
 
 \dd Adds a configuration directive to the input processed by
