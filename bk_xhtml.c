@@ -872,7 +872,7 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
     }
   }
 
-  /* Do the preamble and copyright */
+  /* Do the preamble */
   for (p = sourceform; p; p = p->next)
   {
     if (p->type == para_Chapter || p->type == para_Heading ||
@@ -884,15 +884,6 @@ static void xhtml_do_top_file(xhtmlfile *file, paragraph *sourceform)
 	 */
 	xhtml_do_paras(fp, sourceform, p, FALSE);
 	break;
-    }
-  }
-  for (p = sourceform; p; p = p->next)
-  {
-    if (p->type == para_Copyright)
-    {
-      fprintf(fp, "<p>");
-      xhtml_para(fp, p->words, FALSE);
-      fprintf(fp, "</p>\n");
     }
   }
 
@@ -1099,7 +1090,6 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
      case para_BR:
      case para_Biblio:		       /* only touch BiblioCited */
      case para_VersionID:
-     case para_Copyright:
      case para_NoCite:
      case para_Title:
        break;
@@ -1123,6 +1113,7 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
         break;
 
       case para_Normal:
+      case para_Copyright:
         fprintf(fp, "\n<p>");
         xhtml_para(fp, p->words, indexable);
         fprintf(fp, "</p>\n");

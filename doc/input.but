@@ -911,11 +911,11 @@ special paragraph type to point it out.
 
 \dd This command indicates that the paragraph attached to it
 contains a \i{copyright statement} for the document. This text is
-usually displayed inline, just before the first chapter title but
-after any preamble text before that; but in some output formats it
-is given additional special treatment. For example, Windows Help
-files have a standard slot in which to store a copyright notice, so
-that other software can display it prominently.
+displayed inline where it appears, exactly like a normal paragraph;
+but in some output formats it is given additional special treatment.
+For example, Windows Help files have a standard slot in which to
+store a copyright notice, so that other software can display it
+prominently.
 
 \dt \i\cw{\\versionid}
 

@@ -173,6 +173,21 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	/* FIXME: configurability in that string */
     }
 
+    /*
+     * Put the copyright into the system section.
+     */
+    {
+	rdstringc rs = {0, 0, NULL};
+	for (p = sourceform; p; p = p->next) {
+	    if (p->type == para_Copyright)
+		whlp_rdaddwc(&rs, p->words);
+	}
+	if (rs.text) {
+	    whlp_copyright(h, rs.text);
+	    sfree(rs.text);
+	}
+    }
+
     lastsect = NULL;
 
     /* ------------------------------------------------------------------
@@ -189,7 +204,6 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
       case para_BR:
       case para_Biblio:		       /* only touch BiblioCited */
       case para_VersionID:
-      case para_Copyright:
       case para_NoCite:
       case para_Title:
 	break;
@@ -220,32 +234,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	     * If this is the first section title we've seen, then
 	     * we're currently still in the contents topic. We
 	     * should therefore finish up the contents page by
-	     * writing the copyright notice and a nav menu.
-	     */
-
-	    /*
-	     * The copyright goes to two places, again: into the
-	     * contents page and also into the system section.
-	     */
-	    {
-		rdstringc rs = {0, 0, NULL};
-		for (p = sourceform; p; p = p->next) {
-		    if (p->type == para_Copyright) {
-			whlp_para_attr(h, WHLP_PARA_SPACEBELOW, 12);
-			whlp_begin_para(h, WHLP_PARA_SCROLL);
-			whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
-			whlp_end_para(h);
-			whlp_rdaddwc(&rs, p->words);
-		    }
-		}
-		if (rs.text) {
-		    whlp_copyright(h, rs.text);
-		    sfree(rs.text);
-		}
-	    }
-
-	    /*
-	     * Now do the primary navigation menu.
+	     * writing a nav menu.
 	     */
 	    for (p = sourceform; p; p = p->next) {
 		if (p->type == para_Chapter ||
@@ -363,6 +352,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Normal:
+      case para_Copyright:
       case para_DescribedThing:
       case para_Description:
       case para_BiblioCited:

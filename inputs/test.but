@@ -19,6 +19,8 @@ date \date{%Y.%m.%d} (default format is \date).
 \copyright Copyright 1999 Simon \#{second comment}Tatham. All rights
 reserved.
 
+Here's another paragraph, which goes after the copyright.
+
 \define{metacoopt} [this is a nested,
 multi-line macro, talking about \coopt
 a bit]
@@ -27,7 +29,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.23 2004/03/25 19:27:12 simon Exp $
+\versionid $Id: test.but,v 1.24 2004/03/30 19:40:56 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more

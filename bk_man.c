@@ -63,7 +63,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     paragraph *p;
     FILE *fp;
     manconfig conf;
-    int done_copyright;
 
     IGNORE(keywords);		       /* we don't happen to need this */
     IGNORE(idx);		       /* or this */
@@ -107,8 +106,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 
     fprintf(fp, ".UC\n");
 
-    done_copyright = FALSE;
-
     for (p = sourceform; p; p = p->next) switch (p->type) {
 	/*
 	 * Things we ignore because we've already processed them or
@@ -118,7 +115,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_BR:
       case para_Biblio:		       /* only touch BiblioCited */
       case para_VersionID:
-      case para_Copyright:
       case para_NoCite:
       case para_Title:
 	break;
@@ -131,21 +127,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
       case para_UnnumberedChapter:
       case para_Heading:
       case para_Subsect:
-
-	if (!done_copyright) {
-	    paragraph *p;
-
-	    /*
-	     * The copyright comes just before the first chapter
-	     * title.
-	     */
-	    for (p = sourceform; p; p = p->next)
-		if (p->type == para_Copyright) {
-		    fprintf(fp, ".PP\n");
-		    man_text(fp, p->words, TRUE, 0);
-		}
-	    done_copyright = TRUE;
-	}
 
 	{
 	    int depth;
@@ -179,6 +160,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	 * Normal paragraphs.
 	 */
       case para_Normal:
+      case para_Copyright:
 	fprintf(fp, ".PP\n");
 	man_text(fp, p->words, TRUE, 0);
 	break;

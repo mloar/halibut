@@ -184,7 +184,6 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     char *prefixextra;
     int nesting, nestindent;
     int indentb, indenta;
-    int done_copyright;
 
     IGNORE(keywords);		       /* we don't happen to need this */
     IGNORE(idx);		       /* or this */
@@ -211,7 +210,6 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 
     nestindent = conf.listindentbefore + conf.listindentafter;
     nesting = (conf.indent_preambles ? 0 : -conf.indent);
-    done_copyright = FALSE;
 
     /* Do the main document */
     for (p = sourceform; p; p = p->next) switch (p->type) {
@@ -240,7 +238,6 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
       case para_BR:
       case para_Biblio:		       /* only touch BiblioCited */
       case para_VersionID:
-      case para_Copyright:
       case para_NoCite:
       case para_Title:
 	break;
@@ -251,19 +248,6 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
       case para_Chapter:
       case para_Appendix:
       case para_UnnumberedChapter:
-	/*
-	 * The copyright should come after the preamble but before
-	 * the first chapter title.
-	 */
-	if (!done_copyright) {
-	    paragraph *p;
-
-	    for (p = sourceform; p; p = p->next)
-		if (p->type == para_Copyright)
-		    text_para(fp, NULL, NULL, p->words,
-			      conf.indent + nesting, 0, conf.width - nesting);
-	    done_copyright = TRUE;
-	}
 	text_heading(fp, p->kwtext, p->kwtext2, p->words,
 		     conf.achapter, conf.indent, conf.width);
 	nesting = 0;
@@ -281,6 +265,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Normal:
+      case para_Copyright:
       case para_DescribedThing:
       case para_Description:
       case para_BiblioCited:
