@@ -91,7 +91,7 @@ static textconfig text_configure(paragraph *source) {
 	    } else if (!ustricmp(source->keyword, L"text-chapter-underline")) {
 		ret.achapter.underline = *uadv(source->keyword);
 	    } else if (!ustricmp(source->keyword, L"text-chapter-numeric")) {
-		ret.achapter.underline = utob(uadv(source->keyword));
+		ret.achapter.just_numbers = utob(uadv(source->keyword));
 	    } else if (!ustricmp(source->keyword, L"text-section-align")) {
 		wchar_t *p = uadv(source->keyword);
 		int n = 0;
@@ -269,7 +269,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	    body = p->words;
 	}
 	text_para(fp, prefix, prefixextra, body,
-		  conf.indent + indentb, indenta, conf.width);
+		  conf.indent + indentb, indenta,
+		  conf.width - indentb - indenta);
 	if (wp) {
 	    wp->next = NULL;
 	    free_word_list(body);
@@ -535,15 +536,16 @@ static void text_para(FILE *fp, word *prefix, char *prefixextra, word *text,
 	if (prefixextra)
 	    rdaddsc(&pfx, prefixextra);
 	fprintf(fp, "%*s%s", indent, "", pfx.text);
+	/* If the prefix is too long, shorten the first line to fit. */
 	e = extraindent - strlen(pfx.text);
 	if (e < 0) {
-	    e = 0;
-	    firstlinewidth -= e;
+	    firstlinewidth += e;       /* this decreases it, since e < 0 */
 	    if (firstlinewidth < 0) {
 		e = indent + extraindent;
 		firstlinewidth = width;
 		fprintf(fp, "\n");
-	    }
+	    } else
+		e = 0;
 	}
 	sfree(pfx.text);
     } else
