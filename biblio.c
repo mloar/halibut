@@ -7,7 +7,7 @@
 
 static wchar_t *gentext(int num) {
     wchar_t text[22];
-    wchar_t *p = text + sizeof(text);
+    wchar_t *p = text + lenof(text);
     *--p = L'\0';
     *--p = L']';
     while (num != 0) {

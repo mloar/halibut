@@ -72,7 +72,7 @@ paragraph *whlp_config_filename(char *filename)
 }
 
 void whlp_backend(paragraph *sourceform, keywordlist *keywords,
-		  indexdata *idx) {
+		  indexdata *idx, void *unused) {
     WHLP h;
     char *filename, *cntname;
     paragraph *p, *lastsect;
@@ -82,6 +82,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     int nesting;
     indexentry *ie;
     int done_contents_topic = FALSE;
+
+    IGNORE(unused);
 
     h = state.h = whlp_new();
     state.keywords = keywords;

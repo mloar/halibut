@@ -209,7 +209,7 @@ paragraph *text_config_filename(char *filename)
 }
 
 void text_backend(paragraph *sourceform, keywordlist *keywords,
-		  indexdata *idx) {
+		  indexdata *idx, void *unused) {
     paragraph *p;
     textconfig conf;
     word *prefix, *body, *wp;
@@ -219,6 +219,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     int nesting, nestindent;
     int indentb, indenta;
 
+    IGNORE(unused);
     IGNORE(keywords);		       /* we don't happen to need this */
     IGNORE(idx);		       /* or this */
 
