@@ -12,7 +12,7 @@
 \c halibut [options] file1.but [file2.but ...]
 \e bbbbbbb  iiiiiii  iiiiiiiii  iiiiiiiii
 
-\S{manpage-description} DESCRIPTION
+\H{manpage-description} DESCRIPTION
 
 \c{halibut} reads the given set of input files, assembles them into
 a document, and outputs that document in one or more formats.
@@ -21,7 +21,7 @@ The available command-line options can configure what formats
 Halibut should output in, and can also configure other things about
 the way Halibut works.
 
-\S{manpage-options} OPTIONS
+\H{manpage-options} OPTIONS
 
 The command-line options supported by \c{halibut} are:
 
@@ -92,7 +92,7 @@ options.
 
 \dd Makes Halibut display its licence (MIT).
 
-\S{putty-manpage-more-information} MORE INFORMATION
+\H{putty-manpage-more-information} MORE INFORMATION
 
 For more information on Halibut, including full details of the input
 file format, look in the full manual. If this is not installed
@@ -100,7 +100,7 @@ locally on your system, you can also find it at the Halibut web site:
 
 \W{http://www.chiark.greenend.org.uk/~sgtatham/halibut/}\cw{http://www.chiark.greenend.org.uk/~sgtatham/halibut/}
 
-\S{putty-manpage-bugs} BUGS
+\H{putty-manpage-bugs} BUGS
 
 This man page isn't terribly complete.
 
