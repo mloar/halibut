@@ -11,6 +11,33 @@
 \IM{text width} line length
 \IM{text width} length of lines
 
+\IM{output file name} output file name
+\IM{output file name} file name, output
+
+\IM{\\cfg\{text-filename\}} \c{text-filename} configuration directive
+\IM{\\cfg\{text-filename\}} \cw{\\cfg\{text-filename\}}
+
+\IM{\\cfg\{man-filename\}} \c{man-filename} configuration directive
+\IM{\\cfg\{man-filename\}} \cw{\\cfg\{man-filename\}}
+
+\IM{\\cfg\{winhelp-filename\}} \c{winhelp-filename} configuration directive
+\IM{\\cfg\{winhelp-filename\}} \cw{\\cfg\{winhelp-filename\}}
+
+\IM{\\cfg\{xhtml-contents-filename\}} \c{xhtml-contents-filename} configuration directive
+\IM{\\cfg\{xhtml-contents-filename\}} \cw{\\cfg\{xhtml-contents-filename\}}
+
+\IM{\\cfg\{xhtml-index-filename\}} \c{xhtml-index-filename} configuration directive
+\IM{\\cfg\{xhtml-index-filename\}} \cw{\\cfg\{xhtml-index-filename\}}
+
+\IM{\\cfg\{xhtml-template-filename\}} \c{xhtml-template-filename} configuration directive
+\IM{\\cfg\{xhtml-template-filename\}} \cw{\\cfg\{xhtml-template-filename\}}
+
+\IM{\\cfg\{xhtml-single-filename\}} \c{xhtml-single-filename} configuration directive
+\IM{\\cfg\{xhtml-single-filename\}} \cw{\\cfg\{xhtml-single-filename\}}
+
+\IM{\\cfg\{xhtml-template-fragment\}} \c{xhtml-template-fragment} configuration directive
+\IM{\\cfg\{xhtml-template-fragment\}} \cw{\\cfg\{xhtml-template-fragment\}}
+
 \IM{\\cfg\{text-width\}} \c{text-width} configuration directive
 \IM{\\cfg\{text-width\}} \cw{\\cfg\{text-width\}}
 
@@ -304,3 +331,18 @@ directive
 \IM{renaming sections} sections, renaming
 \IM{renaming sections} appendices, renaming
 
+\IM{command-line options} command-line options
+\IM{command-line options} options, command-line
+
+\IM{--text} \c{--text} command-line option
+\IM{--html} \c{--html} command-line option
+\IM{--xhtml} \c{--xhtml} command-line option
+\IM{--winhelp} \c{--winhelp} command-line option
+\IM{--whlp} \c{--whlp} command-line option
+\IM{--hlp} \c{--hlp} command-line option
+\IM{--man} \c{--man} command-line option
+\IM{-C} \c{-C} command-line option
+\IM{--help} \c{--help} command-line option
+\IM{--version} \c{--version} command-line option
+\IM{--licence} \c{--licence} command-line option
+\IM{--precise} \c{--precise} command-line option

@@ -8,7 +8,7 @@ that format.
 \H{output-text} Plain text
 
 This output format generates the document as a single \i{plain text}
-file, under the name \i\c{output.txt}.
+file.
 
 The output file is currently assumed to be in the \i{ISO 8859-1}
 character set. Any Unicode characters representable in this set will
@@ -18,6 +18,15 @@ their \i{fallback text} (if any) will be used instead.
 The precise formatting of the text file can be controlled by a
 variety of configuration directives. They are listed in the
 following subsections.
+
+\S{output-text-file} Output file name
+
+\dt \I{\cw{\\cfg\{text-filename\}}}\cw{\\cfg\{text-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the text file.
+This directive is implicitly generated if you provide a file name
+parameter after the command-line option \i\c{--text} (see
+\k{running-options}).
 
 \S{output-text-dimensions} Indentation and line width
 
@@ -187,6 +196,8 @@ in bulletted lists. It can be one character
 
 The \i{default settings} for Halibut's plain text output format are:
 
+\c \cfg{text-filename}{output.txt}
+\c
 \c \cfg{text-width}{68}
 \c \cfg{text-indent}{7}
 \c \cfg{text-indent-code}{2}
@@ -223,12 +234,84 @@ default, this will be in multiple files, starting with
 and/or subsection. You can configure precisely how the text is split
 between HTML files using the configuration commands described in
 this section. In particular, you can configure Halibut to output one
-single HTML file instead of multiple ones, in which case it will be
-called \c{Manual.html} (but you can rename it easily enough).
+single HTML file instead of multiple ones.
 
 Strictly speaking, the output format is \i{XHTML} 1.0 Transitional,
 which is why all of the configuration directives start with the word
 \c{xhtml} rather than \c{html}.
+
+\S{output-html-file} Controlling the output file names
+
+\dt \I{\cw{\\cfg\{xhtml-contents-filename\}}}\cw{\\cfg\{xhtml-contents-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the top-level
+contents page. Since this is the first page a user ought to see when
+beginning to read the document, a good choice in many cases might be
+\c{index.html} (but this is not the default, for historical
+reasons).
+
+\dt \I{\cw{\\cfg\{xhtml-index-filename\}}}\cw{\\cfg\{xhtml-index-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the file name in which to store the document's index.
+
+\dt \I{\cw{\\cfg\{xhtml-template-filename\}}}\cw{\\cfg\{xhtml-template-filename\}\{}\e{template}\cw{\}}
+
+\dd Provides a \i{template} to be used when constructing the file
+names of each chapter or section of the document. This template
+should contain at least one \i\e{formatting command}, in the form of
+a per cent sign followed by a letter. (If you need a literal per
+cent sign, you can write \c{%%}.)
+
+\lcont{
+
+The formatting commands used in this template are:
+
+\dt \i\c{%N}
+
+\dd Expands to the visible title of the section, with white space
+removed. So in a chapter declared as \q{\cw{\\C\{fish\} Catching
+Fish}}, this formatting command would expand to
+\q{\cw{CatchingFish}}.
+
+\dt \i\c{%n}
+
+\dd Expands to the type and number of the section, without white
+space. So in chapter 1 this would expand to \q{\cw{Chapter1}}; in
+section A.4.3 it would expand to \q{\cw{SectionA.4.3}}, and so on.
+If the section has no number (an unnumbered chapter created using
+\c{\\U}), this directive falls back to doing the same thing as
+\c{%N}.
+
+\dt \i\c{%b}
+
+\dd Expands to the bare number of the section. So in chapter 1 this
+would expand to \q{\cw{1}}; in section A.4.3 it would expand to
+\q{\cw{A.4.3}}, and so on. If the section has no number (an
+unnumbered chapter created using \c{\\U}), this directive falls back
+to doing the same thing as \c{%N}.
+
+\dt \i\c{%k}
+
+\dd Expands to the internal keyword specified in the section title.
+So in a chapter declared as \q{\cw{\\C\{fish\} Catching Fish}}, this
+formatting command would expand to \q{\cw{fish}}. If the section has
+no keyword (an unnumbered chapter created using \c{\\U}), this
+directive falls back to doing the same thing as \c{%N}.
+
+These formatting directives can also be used in the
+\cw{\\cfg\{xhtml-template-fragment\}} configuration directive (see
+\k{output-html-misc}).
+
+}
+
+\dt \I{\cw{\\cfg\{xhtml-single-filename\}}}\cw{\\cfg\{xhtml-single-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the file name in which to store the entire document, if
+Halibut is configured (using \c{\\cfg\{xhtml-leaf-level\}\{0\}} to
+produce a single self-contained file. Both this directive \e{and}
+\c{\\cfg\{xhtml-leaf-level\}\{0\}} are implicitly generated if you
+provide a file name parameter after the command-line option
+\i\c{--html} (see \k{running-options}).
 
 \S{output-html-split} Controlling the splitting into HTML files
 
@@ -258,6 +341,12 @@ file, and the chapter files will mostly just contain links to their
 If you set this option to zero, then the whole document will appear
 in a single file. If you do this, Halibut will call that file
 \i\c{Manual.html} instead of \i\c{Contents.html}.
+
+This option is automatically set to zero if you provide a file name
+parameter after the command-line option \i\c{--html} (see
+\k{running-options}), because you have specified a single file name
+and so Halibut assumes you want the whole document to be placed in
+that file.
 
 }
 
@@ -395,6 +484,17 @@ particular level, before displaying the section title.
 
 \S{output-html-misc} Miscellaneous options
 
+\dt \I{\cw{\\cfg\{xhtml-template-fragment\}}}\cw{\\cfg\{xhtml-template-fragment\}\{}\e{template}\cw{\}}
+
+\dd This directive lets you specify a \i{template}, with exactly the
+same syntax used in \cw{\\cfg\{xhtml-template-filename\}} (see
+\k{output-html-file}), to be used for the anchor names (\i\cw{A
+NAME="..."}) used to allow URLs to refer to specific sections within
+a particular HTML file. So if you set this to \q{\cw{%k}}, for
+example, then each individual section in your document will be
+addressable by means of a URL ending in a \c{#} followed by your
+internal section keyword.
+
 \dt \I{\cw{\\cfg\{xhtml-versionid\}}}\cw{\\cfg\{xhtml-versionid\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, \i{version ID paragraphs} (defined using
@@ -428,6 +528,12 @@ document}description of the document.
 
 The \i{default settings} for Halibut's HTML output format are:
 
+\c \cfg{xhtml-contents-filename}{Contents.html}
+\c \cfg{xhtml-index-filename}{IndexPage.html}
+\c \cfg{xhtml-template-filename}{%n.html}
+\c \cfg{xhtml-single-filename}{Manual.html}
+\c \cfg{xhtml-template-fragment}{%b}
+\c
 \c \cfg{xhtml-leaf-level}{2}
 \c \cfg{xhtml-leaf-contains-contents}{false}
 \c \cfg{xhtml-leaf-smallest-contents}{4}
@@ -466,17 +572,26 @@ The \i{default settings} for Halibut's HTML output format are:
 \H{output-whlp} Windows Help
 
 This output format generates data that can be used by the \i{Windows
-Help} program \cw{WINHELP.EXE}. There are two actual files generated,
-called \c{output.hlp} and \c{output.cnt}. (You can rename them both
-with no problems; they don't depend on keeping those filenames. You
-just have to make sure that the two names are related in this way,
-so that \c{.hlp} on the end of one name is replaced by \c{.cnt} on
-the end of the other.)
+Help} program \cw{WINHELP.EXE}. There are two actual files
+generated, one ending in \c{.hlp} and the other ending in \c{.cnt}.
 
-The Windows Help output format is currently not configurable at all;
-all formatting decisions are fixed. However, there is one
-configuration directive you can use, which is not so much
-\e{configuration} as extra functionality:
+The Windows Help output format supports the following configuration
+directives:
+
+\dt \I{\cw{\\cfg\{winhelp-filename\}}}\cw{\\cfg\{winhelp-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the man page.
+This directive is implicitly generated if you provide a file name
+parameter after the command-line option \i\c{--winhelp} (see
+\k{running-options}).
+
+\lcont{
+
+Your output file name should end with \c{.hlp}; if it doesn't,
+Halibut will append it. Halibut will also generate a contents file
+(ending in \c{.cnt}) alongside the file name you specify.
+
+}
 
 \dt \I{\cw{\\cfg\{winhelp-topic\}}}\cw{\\cfg\{winhelp-topic\}\{}\e{topic-name}\cw{\}}
 
@@ -503,6 +618,12 @@ different help contexts which you can use in this way.
 
 }
 
+The \i{default settings} for the Windows Help output format are:
+
+\c \cfg{winhelp-filename}{output.hlp}
+
+and no \c{\\cfg\{winhelp-topic\}} directives anywhere.
+
 \H{output-man} Unix \cw{man} pages
 
 This output format generates a Unix \i{\cw{man} page}. That is to say,
@@ -510,6 +631,13 @@ it generates \i\c{nroff} input designed to work with the \c{-mandoc}
 macro package.
 
 The available configuration options for this format are as follows:
+
+\dt \I{\cw{\\cfg\{man-filename\}}}\cw{\\cfg\{man-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the man page.
+This directive is implicitly generated if you provide a file name
+parameter after the command-line option \i\c{--man} (see
+\k{running-options}).
 
 \dt \I{\cw{\\cfg\{man-identity\}}}\cw{\\cfg\{man-identity\}\{}\e{text}\cw{\}\{}\e{text...}\cw{\}}
 
@@ -608,6 +736,7 @@ expect.
 
 The \i{default settings} for the \cw{man} page output format are:
 
+\c \cfg{man-filename}{output.1}
 \c \cfg{man-identity}{}
 \c \cfg{man-headnumbers}{false}
 \c \cfg{man-mindepth}{0}
