@@ -14,4 +14,4 @@ halibut.1: manpage.but
 	$(HALIBUT) --man=halibut.1 manpage.but
 
 clean:
-	rm -f *.html *.txt *.hlp *.cnt *.1 *.info*
+	rm -f *.html *.txt *.hlp *.cnt *.1 *.info* *.ps *.pdf
