@@ -706,7 +706,7 @@ static word *info_transform_wordlist(word *words, keywordlist *keywords)
 		     * In Info, we do nothing special for xrefs to
 		     * numbered list items or bibliography entries.
 		     */
-                    break;
+                    continue;
 		} else {
 		    /*
 		     * An xref to a different section has its text
