@@ -103,6 +103,8 @@ static int get(input *in, filepos *pos, rdstringc *rsc) {
     }
     else if (in->stack) {
 	wchar_t c = in->stack->text[in->stack->ptr];
+        if (pos)
+            *pos = in->stack->pos;
 	if (in->stack->text[++in->stack->ptr] == L'\0') {
 	    macrostack *tmp = in->stack;
 	    in->stack = tmp->next;
