@@ -1,18 +1,19 @@
 \C{output} Halibut output formats
 
-This chapter describes each of Halibut's current output formats. It
-gives some general information about the format, and also describes
-all the configuration directives which are specific to that format.
+This chapter describes each of Halibut's current \i{output formats}.
+It gives some general information about the format, and also
+describes all the \i{configuration directives} which are specific to
+that format.
 
 \H{output-text} Plain text
 
-This output format generates the document as a single plain text
-file, under the name \c{output.txt}.
+This output format generates the document as a single \i{plain text}
+file, under the name \i\c{output.txt}.
 
-The output file is currently assumed to be in the ISO 8859-1
+The output file is currently assumed to be in the \i{ISO 8859-1}
 character set. Any Unicode characters representable in this set will
 be output verbatim; any other characters will not be output and
-their fallback text (if any) will be used instead.
+their \i{fallback text} (if any) will be used instead.
 
 The precise formatting of the text file can be controlled by a
 variety of configuration directives. They are listed in the
@@ -21,102 +22,106 @@ following subsections.
 \S{output-text-dimensions} Indentation and line width
 
 This section describes the configuration directives which control
-the horizontal dimensions of the output text file: how much
+the \i{horizontal dimensions} of the output text file: how much
 paragraphs are indented by and how long the lines are.
 
-\dt \cw{\\cfg\{text-width\}\{}\e{width}\cw{\}}
+\dt \I{\cw{\\cfg\{text-width\}}}\cw{\\cfg\{text-width\}\{}\e{width}\cw{\}}
 
-\dd Sets the width of the main part of the document, in characters.
-This width will be used for wrapping paragraphs and for centring
-titles (if you have asked for titles to be centred - see
-\k{output-text-headings}). This width does \e{not} include the left
-indentation set by \cw{\\cfg\{text-indent\}}; if you specify an
+\dd Sets the \I{text width}width of the main part of the document,
+in characters. This width will be used for wrapping paragraphs and
+for centring titles (if you have asked for titles to be centred -
+see \k{output-text-headings}). This width does \e{not} include the
+left indentation set by \cw{\\cfg\{text-indent\}}; if you specify an
 indent of 8 and a width of 64, your maximum output line length will
 be 72.
 
-\dt \cw{\\cfg\{text-indent\}\{}\e{indent}\cw{\}}
+\dt \I{\cw{\\cfg\{text-indent\}}}\cw{\\cfg\{text-indent\}\{}\e{indent}\cw{\}}
 
-\dd Sets the left indentation for the document. If you set this to
-zero, your document will look like an ordinary text file as someone
-with a text editor might have written it; if you set it above zero,
-the text file will have a margin down the left in the style of some
-printed manuals, and you can then configure the section numbers to
-appear in this margin (see \k{output-text-headings}).
+\dd Sets the left \i{indentation} for the document. If you set this
+to zero, your document will look like an ordinary text file as
+someone with a text editor might have written it; if you set it
+above zero, the text file will have a \i{margin} down the left in
+the style of some printed manuals, and you can then configure the
+section numbers to appear in this margin (see
+\k{output-text-headings}).
 
-\dt \cw{\\cfg\{text-indent-code\}\{}\e{indent}\cw{\}}
+\dt \I{\cw{\\cfg\{text-indent-code\}}}\cw{\\cfg\{text-indent-code\}\{}\e{indent}\cw{\}}
 
 \dd Specifies how many extra characters of indentation (on top of
-the normal left indent) should be given to code paragraphs.
+the normal left indent) should be given to \I{code paragraphs,
+indentation} code paragraphs.
 
-\dt \cw{\\cfg\{text-list-indent\}\{}\e{indent}\cw{\}}
+\dt \I{\cw{\\cfg\{text-list-indent\}}}\cw{\\cfg\{text-list-indent\}\{}\e{indent}\cw{\}}
 
 \dd Specifies how many extra spaces should be used to indent the
-bullet or number in a bulletted or numbered list. The actual body of
-the list item will be indented by this much \e{plus} the value
-configured by \cw{\\cfg\{text-listitem-indent\}}.
+bullet or number in a \I{bulletted list, indentation}bulletted or
+\I{numbered list, indentation}numbered \I{list, indentation}list.
+The actual body of the list item will be indented by this much
+\e{plus} the value configured by \cw{\\cfg\{text-listitem-indent\}}.
 
-\dt \cw{\\cfg\{text-listitem-indent\}\{}\e{indent}\cw{\}}
+\dt \I{\cw{\\cfg\{text-listitem-indent\}}}\cw{\\cfg\{text-listitem-indent\}\{}\e{indent}\cw{\}}
 
 \dd Specifies how many extra spaces should be used to indent the
 body of a list item, over and above the number configured in
 \cw{\\cfg\{text-list-indent\}}.
 
-\dt \cw{\\cfg\{text-indent-preamble\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{text-indent-preamble\}}}\cw{\\cfg\{text-indent-preamble\}\{}\e{boolean}\cw{\}}
 
-\dd When this is set to \c{true}, the document preamble (i.e. any
+\dd When this is set to \c{true}, the document \i{preamble} (i.e. any
 paragraphs appearing before the first chapter heading) will be
 indented to the level specified by \cw{\\cfg\{text-indent\}}. If
 this setting is \c{false}, the document preamble will not be
 indented at all from the left margin.
 
-\S{output-text-headings} Configuring heading display
+\S{output-text-headings} \ii{Configuring heading display}
 
 The directives in this section allow you to configure the appearance
 of the title, chapter and section headings in your text file.
 
-Several of the directives listed below specify the alignment of a
-heading. These alignment options have three possible values:
+Several of the directives listed below specify the \i{alignment} of
+a heading. These alignment options have three possible values:
 
-\dt \c{left}
+\dt \i\c{left}
 
 \dd Align the heading to the very left of the text file (column zero).
 
-\dt \c{leftplus}
+\dt \i\c{leftplus}
 
 \dd Align the section title to the left of the main display region
 (in other words, indented to the level specified by
 \cw{\\cfg\{text-indent\}}). The section \e{number} is placed to the
 left of that (so that it goes in the margin if there is room).
 
-\dt \c{centre}
+\dt \i\c{centre}
 
 \dd Centre the heading.
 
 Also, several of the directives below specify how a title should be
-underlined. The parameter to one of these directives should be
-either blank (\cw{\{\}}) or a single character. In the latter case,
-that character will be used to underline the title. So you might
-want to specify, for example, \cw{\\text-title-underline\{=\}} but
+\I{underlining}underlined. The parameter to one of these directives
+should be either blank (\cw{\{\}}) or a single character. In the
+latter case, that character will be used to underline the title. So
+you might want to specify, for example,
+\cw{\\text-title-underline\{=\}} but
 \cw{\\text-chapter-underline\{-\}}.
 
-\dt \cw{\\cfg\{text-title-align\}\{}\e{alignment}\cw{\}}
+\dt \I{\cw{\\cfg\{text-title-align\}}}\cw{\\cfg\{text-title-align\}\{}\e{alignment}\cw{\}}
 
 \dd Specifies the alignment of the overall document title: \c{left},
 \c{leftplus} or \c{centre}.
 
-\dt \cw{\\cfg\{text-title-underline\}\{}\e{underline-character}\cw{\}}
+\dt \I{\cw{\\cfg\{text-title-underline\}}}\cw{\\cfg\{text-title-underline\}\{}\e{underline-character}\cw{\}}
 
 \dd Specifies how the overall document title should be underlined.
 
-\dt \cw{\\cfg\{text-chapter-align\}\{}\e{alignment}\cw{\}}
+\dt \I{\cw{\\cfg\{text-chapter-align\}}}\cw{\\cfg\{text-chapter-align\}\{}\e{alignment}\cw{\}}
 
 \dd Specifies the alignment of chapter and appendix headings.
 
-\dt \cw{\\cfg\{text-chapter-underline\}\{}\e{underline-character}\cw{\}}
+\dt \I{\cw{\\cfg\{text-chapter-underline\}}}\cw{\\cfg\{text-chapter-underline\}\{}\e{underline-character}\cw{\}}
 
 \dd Specifies how chapter and appendix headings should be underlined.
 
-\dt \cw{\\cfg\{text-chapter-numeric\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{text-chapter-numeric\}}}\cw{\\cfg\{text-chapter-numeric\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, then chapter headings will not
 contain the word \q{Chapter} (or whatever other word you have
@@ -125,14 +130,14 @@ they will just contain the chapter \e{number}, followed by the
 chapter title. If you set this to \c{false}, chapter headings will
 be prefixed by \q{Chapter} or equivalent.
 
-\dt \cw{\\cfg\{text-chapter-suffix\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{text-chapter-suffix\}}}\cw{\\cfg\{text-chapter-suffix\}\{}\e{text}\cw{\}}
 
 \dd This specifies the suffix text to be appended to the chapter
 number, before displaying the chapter title. For example, if you set
 this to \q{\cw{:\_}}, then the chapter title might look something
 like \q{Chapter 2: Doing Things}.
 
-\dt \cw{\\cfg\{text-section-align\}\{}\e{level}\cw{\}\{}\e{alignment}\cw{\}}
+\dt \I{\cw{\\cfg\{text-section-align\}}}\cw{\\cfg\{text-section-align\}\{}\e{level}\cw{\}\{}\e{alignment}\cw{\}}
 
 \dd Specifies the alignment of section headings at a particular
 level. The \e{level} parameter specifies which level of section
@@ -141,34 +146,35 @@ headings you want to affect: 0 means first-level headings (\c{\\H}),
 that (\c{\\S2}), and so on. The \e{alignment} parameter is treated
 just like the other alignment directives listed above.
 
-\dt \cw{\\cfg\{text-section-underline\}\{}\e{level}\cw{\}\{}\e{underline-character}\cw{\}}
+\dt \I{\cw{\\cfg\{text-section-underline\}}}\cw{\\cfg\{text-section-underline\}\{}\e{level}\cw{\}\{}\e{underline-character}\cw{\}}
 
 \dd Specifies how to underline section headings at a particular level.
 
-\dt \cw{\\cfg\{text-section-numeric\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{text-section-numeric\}}}\cw{\\cfg\{text-section-numeric\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
 
 \dd Specifies whether section headings at a particular level should
 contain the word \q{Section} or equivalent (if \c{false}), or should
 be numeric only (if \c{true}).
 
-\dt \cw{\\cfg\{text-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{text-section-suffix\}}}\cw{\\cfg\{text-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
 
-\dd Specifies the suffix text to be appended to section numbers at a
-particular level, before displaying the section title.
+\dd Specifies the \I{suffix text, in section titles}suffix text to
+be appended to section numbers at a particular level, before
+displaying the section title.
 
 \S{output-text-misc} Miscellaneous configuration options
 
-\dt \cw{\\cfg\{text-versionid\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{text-versionid\}}}\cw{\\cfg\{text-versionid\}\{}\e{boolean}\cw{\}}
 
-\dd If this is set to \c{true}, version ID paragraphs (defined using the
-\c{\\versionid} command - see \k{input-blurb}) will be included at
-the bottom of the text file. If it is set to \c{false}, they will be
-omitted completely.
+\dd If this is set to \c{true}, \i{version ID paragraphs} (defined
+using the \i\c{\\versionid} command - see \k{input-blurb}) will be
+included at the bottom of the text file. If it is set to \c{false},
+they will be omitted completely.
 
-\dt \cw{\\cfg\{text-bullet\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{text-bullet\}}}\cw{\\cfg\{text-bullet\}\{}\e{text}\cw{\}}
 
-\dd This specifies the text which should be used as the bullet in
-bulletted lists. It can be one character
+\dd This specifies the text which should be used as the \i{bullet}
+in bulletted lists. It can be one character
 (\cw{\\cfg\{text-bullet\}\{-\}}), or more than one
 (\cw{\\cfg\{text-bullet\}\{(*)\}}).
 
@@ -179,7 +185,7 @@ bulletted lists. It can be one character
 
 \S{output-text-defaults} Default settings
 
-The default settings for Halibut's plain text output format are:
+The \i{default settings} for Halibut's plain text output format are:
 
 \c \cfg{text-width}{68}
 \c \cfg{text-indent}{7}
@@ -211,7 +217,7 @@ The default settings for Halibut's plain text output format are:
 
 \H{output-html} HTML
 
-This output format generates an HTML version of the document. By
+This output format generates an \i{HTML} version of the document. By
 default, this will be in multiple files, starting with
 \c{Contents.html} and splitting the document into files by chapter
 and/or subsection. You can configure precisely how the text is split
@@ -220,7 +226,7 @@ this section. In particular, you can configure Halibut to output one
 single HTML file instead of multiple ones, in which case it will be
 called \c{Manual.html} (but you can rename it easily enough).
 
-Strictly speaking, the output format is XHTML 1.0 Transitional,
+Strictly speaking, the output format is \i{XHTML} 1.0 Transitional,
 which is why all of the configuration directives start with the word
 \c{xhtml} rather than \c{html}.
 
@@ -237,27 +243,28 @@ sections in the file and/or the sections below it.
 The configuration directives listed below allow you to configure the
 splitting into files, and the details of the contents sections.
 
-\dt \cw{\\cfg\{xhtml-leaf-level\}\{}\e{depth}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-leaf-level\}}}\cw{\\cfg\{xhtml-leaf-level\}\{}\e{depth}\cw{\}}
 
 \dd This setting indicates the depth of section which should be
-given a \q{leaf} file (a file with no sub-files). So if you set it
-to 1, for example, then every chapter will be given its own HTML
-file, plus a top-level contents file. If you set this to 2, then
-each chapter \e{and} each \c{\\H} section will have a file, and the
-chapter files will mostly just contain links to their sub-files.
+given a \I{leaf file}\q{leaf} file (a file with no sub-files). So if
+you set it to 1, for example, then every chapter will be given its
+own HTML file, plus a top-level \i{contents file}. If you set this
+to 2, then each chapter \e{and} each \c{\\H} section will have a
+file, and the chapter files will mostly just contain links to their
+\i{sub-file}s.
 
 \lcont{
 
 If you set this option to zero, then the whole document will appear
 in a single file. If you do this, Halibut will call that file
-\c{Manual.html} instead of \c{Contents.html}.
+\i\c{Manual.html} instead of \i\c{Contents.html}.
 
 }
 
-\dt \cw{\\cfg\{xhtml-contents-depth-}\e{level}\cw{\}\{}\e{depth}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-contents-depth\}}}\cw{\\cfg\{xhtml-contents-depth-}\e{level}\cw{\}\{}\e{depth}\cw{\}}
 
-\dd This directive allows you to specify how deep the contents
-section in a particular file should go.
+\dd This directive allows you to specify how \I{depth of
+contents}deep the contents section in a particular file should go.
 
 \lcont{
 
@@ -282,12 +289,12 @@ to \c{\\S} level, but not to go into any more detail than that.
 \# the level as a separate argument, like the text section config
 \# directives. Secondly, it shouldn't be limited in depth!
 
-\dt \cw{\\cfg\{xhtml-leaf-contains-contents\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-leaf-contains-contents\}}}\cw{\\cfg\{xhtml-leaf-contains-contents\}\{}\e{boolean}\cw{\}}
 
 \dd If you set this to \c{true}, then each leaf file will contain
 its own contents section which summarises the text within it.
 
-\dt \cw{\\cfg\{xhtml-leaf-smallest-contents\}\{}\e{number}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-leaf-smallest-contents\}}}\cw{\\cfg\{xhtml-leaf-smallest-contents\}\{}\e{number}\cw{\}}
 
 \dd Contents sections in leaf files are not output at all if they
 contain very few entries (on the assumption that it just isn't worth
@@ -298,64 +305,65 @@ generating it at all.
 \S{output-html-html} Including pieces of your own HTML
 
 The directives in this section allow you to supply pieces of
-verbatim HTML code, which will be included in various parts of the
-output files.
+\I{HTML}\i{verbatim HTML} code, which will be included in various
+parts of the output files.
 
-\dt \cw{\\cfg\{xhtml-head-end\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-head-end\}}}\cw{\\cfg\{xhtml-head-end\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the end of
-the \cw{<HEAD>} section of each output HTML file. So this is a good
-place to put, for example, a link to a CSS stylesheet.
+the \i\cw{<HEAD>} section of each output HTML file. So this is a
+good place to put, for example, a link to a \i{CSS} \i{stylesheet}.
 
-\dt \cw{\\cfg\{xhtml-body-tag\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-body-tag\}}}\cw{\\cfg\{xhtml-body-tag\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is used in place of the
-\cw{<BODY>} tag in each output file. So if you wanted to define a
-background colour, for example, you could write
+\i\cw{<BODY>} tag in each output file. So if you wanted to define a
+\i{background colour}, for example, you could write
 \cw{\\cfg\{xhtml-body-tag\}\{<body bg="#123456">\}}.
 
-\dt \cw{\\cfg\{xhtml-body-start\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-body-start\}}}\cw{\\cfg\{xhtml-body-start\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the
-beginning of the \cw{<BODY>} section of each output HTML file. So if
-you intend your HTML files to be part of a web site with a standard
-house style, and the style needs a header at the top of every page,
-this is where you can add that header.
+beginning of the \i\cw{<BODY>} section of each output HTML file. So
+if you intend your HTML files to be part of a web site with a
+standard \i{house style}, and the style needs a \i{header} at the
+top of every page, this is where you can add that header.
 
-\dt \cw{\\cfg\{xhtml-body-end\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-body-end\}}}\cw{\\cfg\{xhtml-body-end\}\{}\e{HTML text}\cw{\}}
 
-\dd The text you provide in this directive is placed at the
-end of the \cw{<BODY>} section of each output HTML file. So if
-you intend your HTML files to be part of a web site with a standard
-house style, and the style needs a footer at the bottom of every page,
-this is where you can add that footer.
+\dd The text you provide in this directive is placed at the end of
+the \i\cw{<BODY>} section of each output HTML file. So if you intend
+your HTML files to be part of a web site with a standard \i{house
+style}, and the style needs a \i{footer} at the bottom of every
+page, this is where you can add that footer.
 
-\dt \cw{\\cfg\{xhtml-address-start\}\{}\e{HTML text}\cw{\}}
-
-\dd The text you provide in this directive is placed at the
-beginning of the \cw{<ADDRESS>} section at the bottom of each output
-HTML file. This might be a good place to put authors' contact
-details, for example.
-
-\dt \cw{\\cfg\{xhtml-address-end\}\{}\e{HTML text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-address-start\}}}\cw{\\cfg\{xhtml-address-start\}\{}\e{HTML text}\cw{\}}
 
 \dd The text you provide in this directive is placed at the
-end of the \cw{<ADDRESS>} section at the bottom of each output
-HTML file, after the version IDs (if present).
+beginning of the \i\cw{<ADDRESS>} section at the bottom of each
+output HTML file. This might be a good place to put authors'
+\i{contact details}, for example.
 
-\dt \cw{\\cfg\{xhtml-navigation-attributes\}\{}\e{HTML attributes}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-address-end\}}}\cw{\\cfg\{xhtml-address-end\}\{}\e{HTML text}\cw{\}}
+
+\dd The text you provide in this directive is placed at the end of
+the \i\cw{<ADDRESS>} section at the bottom of each output HTML file,
+after the version IDs (if present).
+
+\dt \I{\cw{\\cfg\{xhtml-navigation-attributes\}}}\cw{\\cfg\{xhtml-navigation-attributes\}\{}\e{HTML attributes}\cw{\}}
 
 \dd The text you provide in this directive is included inside the
-\cw{<P>} tag containing the navigation links at the top of each page
-(\q{Previous} / \q{Contents} / \q{Next}). So if you wanted the
-navigation links to have a particular CSS style, you could write
+\cw{<P>} tag containing the \i{navigation links} at the top of each
+page (\i{\q{Previous}} / \i{\q{Contents}} / \i{\q{Next}}). So if you
+wanted the navigation links to have a particular CSS style, you
+could write
 \cw{\\cfg\{xhtml-navigation-attributes\}\{class="foo"\}}, and the
 navigation-links paragraph would then begin with the tag \cw{<p
 class="foo">}.
 
-\S{output-html-headings} Configuring heading display
+\S{output-html-headings} \ii{Configuring heading display}
 
-\dt \cw{\\cfg\{xhtml-chapter-numeric\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-chapter-numeric\}}}\cw{\\cfg\{xhtml-chapter-numeric\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, then chapter headings will not
 contain the word \q{Chapter} (or whatever other word you have
@@ -364,14 +372,14 @@ they will just contain the chapter \e{number}, followed by the
 chapter title. If you set this to \c{false}, chapter headings will
 be prefixed by \q{Chapter} or equivalent.
 
-\dt \cw{\\cfg\{xhtml-chapter-suffix\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-chapter-suffix\}}}\cw{\\cfg\{xhtml-chapter-suffix\}\{}\e{text}\cw{\}}
 
 \dd This specifies the suffix text to be appended to the chapter
 number, before displaying the chapter title. For example, if you set
 this to \q{\cw{:\_}}, then the chapter title might look something
 like \q{Chapter 2: Doing Things}.
 
-\dt \cw{\\cfg\{xhtml-section-numeric\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-section-numeric\}}}\cw{\\cfg\{xhtml-section-numeric\}\{}\e{boolean}\cw{\}}
 
 \dd Specifies whether section headings at a particular level should
 contain the word \q{Section} or equivalent (if \c{false}), or should
@@ -380,44 +388,45 @@ which level of section headings you want to affect: 0 means
 first-level headings (\c{\\H}), 1 means second-level headings
 (\c{\\S}), 2 means the level below that (\c{\\S2}), and so on.
 
-\dt \cw{\\cfg\{xhtml-section-suffix\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-section-suffix\}}}\cw{\\cfg\{xhtml-section-suffix\}\{}\e{text}\cw{\}}
 
 \dd Specifies the suffix text to be appended to section numbers at a
 particular level, before displaying the section title.
 
 \S{output-html-misc} Miscellaneous options
 
-\dt \cw{\\cfg\{xhtml-versionid\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-versionid\}}}\cw{\\cfg\{xhtml-versionid\}\{}\e{boolean}\cw{\}}
 
-\dd If this is set to \c{true}, version ID paragraphs (defined using
-the \c{\\versionid} command - see \k{input-blurb}) will be included
-visibly in the \cw{<ADDRESS>} section at the bottom of each HTML
+\dd If this is set to \c{true}, \i{version ID paragraphs} (defined using
+the \i\c{\\versionid} command - see \k{input-blurb}) will be included
+visibly in the \i\cw{<ADDRESS>} section at the bottom of each HTML
 file. If it is set to \c{false}, they will be omitted completely.
 
 \# FIXME: surely it would be better to include them in HTML
 \# comments? The only question is whether they should be _visible_.
 
-\dt \cw{\\cfg\{xhtml-suppress-address\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-suppress-address\}}}\cw{\\cfg\{xhtml-suppress-address\}\{}\e{boolean}\cw{\}}
 
-\dd If this is set to \c{true}, the \cw{<ADDRESS>} section at the
+\dd If this is set to \c{true}, the \i\cw{<ADDRESS>} section at the
 bottom of each HTML file will be omitted completely. (This will
-therefore also cause version IDs not to be included.)
+therefore also cause \i{version IDs} not to be included.)
 
-\dt \cw{\\cfg\{xhtml-author\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-author\}}}\cw{\\cfg\{xhtml-author\}\{}\e{text}\cw{\}}
 
-\dd The text supplied here goes in a \cw{<META name="author">} tag
-in the output HTML files, so that browsers which support this can
-automatically identify the author of the document.
+\dd The text supplied here goes in a \I{\cw{<META>} tags}\cw{<META
+name="author">} tag in the output HTML files, so that browsers which
+support this can automatically identify the \i{author} of the document.
 
-\dt \cw{\\cfg\{xhtml-description\}\{}\e{text}\cw{\}}
+\dt \I{\cw{\\cfg\{xhtml-description\}}}\cw{\\cfg\{xhtml-description\}\{}\e{text}\cw{\}}
 
-\dd The text supplied here goes in a \cw{<META name="description">}
-tag in the output HTML files, so that browsers which support this
-can easily pick out a brief description of the document.
+\dd The text supplied here goes in a \I{\cw{<META>} tags}\cw{<META
+name="description">} tag in the output HTML files, so that browsers
+which support this can easily pick out a brief \I{description, of
+document}description of the document.
 
 \S{output-html-defaults} Default settings
 
-The default settings for Halibut's HTML output format are:
+The \i{default settings} for Halibut's HTML output format are:
 
 \c \cfg{xhtml-leaf-level}{2}
 \c \cfg{xhtml-leaf-contains-contents}{false}
@@ -456,8 +465,8 @@ The default settings for Halibut's HTML output format are:
 
 \H{output-whlp} Windows Help
 
-This output format generates data that can be used by the Windows
-Help program \cw{WINHELP.EXE}. There are two actual files generated,
+This output format generates data that can be used by the \i{Windows
+Help} program \cw{WINHELP.EXE}. There are two actual files generated,
 called \c{output.hlp} and \c{output.cnt}. (You can rename them both
 with no problems; they don't depend on keeping those filenames. You
 just have to make sure that the two names are related in this way,
@@ -469,12 +478,12 @@ all formatting decisions are fixed. However, there is one
 configuration directive you can use, which is not so much
 \e{configuration} as extra functionality:
 
-\dt \cw{\\cfg\{winhelp-topic\}\{}\e{topic-name}\cw{\}}
+\dt \I{\cw{\\cfg\{winhelp-topic\}}}\cw{\\cfg\{winhelp-topic\}\{}\e{topic-name}\cw{\}}
 
-\dd This directive defines a Windows Help topic name in the current
+\dd This directive defines a Windows \i{Help topic} name in the current
 section. Topic names can be used by the program invoking
 \cw{WINHELP.EXE} to jump straight to a particular section. So you
-can use this for context-sensitive help.
+can use this for \i{context-sensitive help}.
 
 \lcont{
 
@@ -496,18 +505,18 @@ different help contexts which you can use in this way.
 
 \H{output-man} Unix \cw{man} pages
 
-This output format generates a Unix \cw{man} page. That is to say,
-it generates \c{nroff} input designed to work with the \c{-mandoc}
+This output format generates a Unix \i{\cw{man} page}. That is to say,
+it generates \i\c{nroff} input designed to work with the \c{-mandoc}
 macro package.
 
 The available configuration options for this format are as follows:
 
-\dt \cw{\\cfg\{man-identity\}\{}\e{text}\cw{\}\{}\e{text...}\cw{\}}
+\dt \I{\cw{\\cfg\{man-identity\}}}\cw{\\cfg\{man-identity\}\{}\e{text}\cw{\}\{}\e{text...}\cw{\}}
 
-\dd This directive is used to generate the initial \c{.TH} directive
-that appears at the top of a \cw{man} page. It expects to be
-followed by some number of brace pairs containing text, which will
-be used in the headers and footers of the formatted output.
+\dd This directive is used to generate the initial \i{\c{.TH}
+directive} that appears at the top of a \cw{man} page. It expects to
+be followed by some number of brace pairs containing text, which will
+be used in the \i{headers} and \i{footers} of the formatted output.
 
 \lcont{
 
@@ -521,7 +530,7 @@ A traditional order for the arguments appears to be:
 
 \n The name of any containing suite of which the program is a part.
 
-\n The name of the author of the \cw{man} page.
+\n The name of the \i{author} of the \cw{man} page.
 
 For example, a typical \cw{man} page might contain
 
@@ -529,17 +538,17 @@ For example, a typical \cw{man} page might contain
 
 }
 
-\dt \cw{\\cfg\{man-headnumbers\}\{}\e{boolean}\cw{\}}
+\dt \I{\cw{\\cfg\{man-headnumbers\}}}\cw{\\cfg\{man-headnumbers\}\{}\e{boolean}\cw{\}}
 
-\dd If this is set to \c{true}, then section headings in the
-\cw{man} page will have their section numbers displayed as usual. If
+\dd If this is set to \c{true}, then \i{section headings} in the
+\cw{man} page will have their \i{section numbers} displayed as usual. If
 set to \c{false}, the section numbers will be omitted. (\cw{man}
 pages traditionally have section names such as \q{SYNOPSIS},
 \q{OPTIONS} and \q{BUGS}, and do not typically number them, so
 \c{false} is the setting which conforms most closely to normal
 \cw{man} style.)
 
-\dt \cw{\\cfg\{man-mindepth\}\{}\e{depth}\cw{\}}
+\dt \I{\cw{\\cfg\{man-mindepth\}}}\cw{\\cfg\{man-mindepth\}\{}\e{depth}\cw{\}}
 
 \dd If this is set to a number greater than 0, then section headings
 \e{higher} than the given depth will not be displayed. If it is set
@@ -597,7 +606,7 @@ expect.
 
 }
 
-The default settings for the \cw{man} page output format are:
+The \i{default settings} for the \cw{man} page output format are:
 
 \c \cfg{man-identity}{}
 \c \cfg{man-headnumbers}{false}

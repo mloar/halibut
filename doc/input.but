@@ -8,13 +8,13 @@ documents to be processed by Halibut.
 Halibut's input files mostly look like ordinary ASCII text files;
 you can edit them with any text editor you like.
 
-Writing paragraphs of ordinary text is very simple: you just write
-ordinary text in the ordinary way. You can wrap a paragraph across
-more than one line using line breaks in the text file, and Halibut
-will ignore this when it rewraps the paragraph for each output
-format. To separate paragraphs, use a blank line (i.e. two
-consecutive line breaks). For example, a fragment of Halibut input
-looking like this:
+Writing \i{paragraphs of ordinary text} is very simple: you just
+write ordinary text in the ordinary way. You can wrap a paragraph
+across more than one line using \i{line breaks} in the text file,
+and Halibut will ignore this when it \I{wrapping paragraphs}rewraps
+the paragraph for each output format. To separate paragraphs, use a
+\i{blank line} (i.e. two consecutive line breaks). For example, a
+fragment of Halibut input looking like this:
 
 \c This is a line of text.
 \c This is another line of text.
@@ -34,14 +34,15 @@ The first two lines of the input have been merged together into a
 single paragraph, and the line break in the input file was treated
 identically to the spaces between the individual words.
 
-Halibut is designed to have very few special characters. The only
-printable characters in Halibut input which will not be treated
-exactly literally in the output are the backslash (\c{\\}) and the
-braces (\c{\{} and \c{\}}). If you do not use these characters,
-\e{everything} else you might type in normal ASCII text is perfectly
-safe. If you do need to use any of those three characters in your
-document, you will have to precede each one with a backslash. Hence,
-for example, you could write
+Halibut is designed to have very few \I{escaping, special
+characters}\i{special characters}. The only printable characters in
+Halibut input which will not be treated exactly literally in the
+output are the \i{backslash} (\c{\\}) and the \i{braces} (\c{\{} and
+\c{\}}). If you do not use these characters, \e{everything} else you
+might type in normal ASCII text is perfectly safe. If you do need to
+use any of those three characters in your document, you will have to
+precede each one with a backslash. Hence, for example, you could
+write
 
 \c This \\ is a backslash, and these are \{braces\}.
 
@@ -51,7 +52,7 @@ and Halibut would generate the text
 This \\ is a backslash, and these are \{braces\}.
 }
 
-\H{input-inline} Simple inline formatting commands
+\H{input-inline} Simple \i{inline formatting commands}
 
 Halibut formatting commands all begin with a backslash, followed by
 a word or character identifying the command. Some of them then use
@@ -66,7 +67,7 @@ commands, which means you can use them in the middle of a paragraph.
 whole paragraph at a time.
 
 Many of these commands are followed by a pair of braces surrounding
-some text. In all cases, it is perfectly safe to have a line break
+some text. In all cases, it is perfectly safe to have a \i{line break}
 (in the input file) within those braces; Halibut will treat that
 exactly the same as a space. For example, these two paragraphs will
 be treated identically:
@@ -79,32 +80,32 @@ be treated identically:
 \S{input-emph} \c{\\e}: Emphasising text
 
 Possibly the most obvious piece of formatting you might want to use
-in a document is \e{emphasis}. To emphasise text, you use the
-\c{\\e} command, and follow it up with the text to be emphasised in
-braces. For example, the first sentence in this paragraph was
+in a document is \i\e{emphasis}. To emphasise text, you use the
+\i\c{\\e} command, and follow it up with the text to be emphasised
+in braces. For example, the first sentence in this paragraph was
 generated using the Halibut input
 
 \c Possibly the most obvious piece of formatting you might want to use
 \c in a document is \e{emphasis}.
 
-\S{input-code} \c{\\c} and \c{\\cw}: Displaying computer code inline
+\S{input-code} \c{\\c} and \c{\\cw}: Displaying \i{computer code} inline
 
 Halibut was primarily designed to produce software manuals. It can
 be used for other types of document as well, but software manuals
 are its speciality.
 
 In software manuals, you often want to format text in a way that
-indicates that it is something you might see displayed verbatim on
-a computer screen. In printed manuals, this is typically done by
-setting that text in a font which is obviously fixed-width. This
-provides a visual cue that the text being displayed is code, and it
-also ensures that punctuation marks are clearly separated and shown
-individually (so that a user can copy the text accurately and
-conveniently).
+indicates that it is something you might see displayed \i{verbatim}
+on a computer screen. In printed manuals, this is typically done by
+setting that text in a font which is obviously \I{fixed-width
+font}fixed-width. This provides a visual cue that the text being
+displayed is code, and it also ensures that punctuation marks are
+clearly separated and shown individually (so that a user can copy
+the text accurately and conveniently).
 
 Halibut provides \e{two} commands for this, which are subtly
-different. The names of those commands are \c{\\c} (\q{code}) and
-\c{\\cw} (\q{weak code}). You use them just like \c{\\e}, by
+different. The names of those commands are \i\c{\\c} (\q{code}) and
+\i\c{\\cw} (\q{\i{weak code}}). You use them just like \c{\\e}, by
 following them with some text in braces. For example, this...
 
 \c This sentence contains some \c{code} and some \cw{weak code}.
@@ -154,7 +155,7 @@ fixed-width font if possible, but it's not essential}.
 There is a separate mechanism for displaying computer code in an
 entire paragraph; see \k{input-codepara} for that one.
 
-\S{input-quotes} \c{\\q}: Quotation marks
+\S{input-quotes} \c{\\q}: \ii{Quotation marks}
 
 Halibut's various output formats don't all use the same conventions
 for displaying text in ordinary quotation marks (\q{like these}).
@@ -163,7 +164,7 @@ whereas others are restricted to using plain ASCII. Therefore, it is
 not ideal to use the ordinary ASCII double quote character in your
 document (although you can if you like).
 
-Halibut provides the formatting command \c{\\q} to indicate quoted
+Halibut provides the formatting command \i\c{\\q} to indicate quoted
 text. If you write
 
 \c Here is some \q{text in quotes}.
@@ -177,33 +178,33 @@ Here is some \q{text in quotes}.
 and in every output format Halibut generates, it will choose the
 best quote characters available to it in that format.
 
-You can still use ordinary ASCII double quotes if you prefer; or you
-could even use the \c{\\u} command (see \k{input-unicode}) to
-generate Unicode matched double quotes and fall back to the normal
-ASCII one if they aren't available. But I recommend using the
-built-in \c{\\q} command in most cases, because it's simple and does
-the best it can everywhere.
+You can still use ordinary ASCII \i{double quotes} if you prefer; or
+you could even use the \c{\\u} command (see \k{input-unicode}) to
+generate \i{Unicode matched quotes} (single or double) and fall back
+to the normal ASCII one if they aren't available. But I recommend
+using the built-in \c{\\q} command in most cases, because it's
+simple and does the best it can everywhere.
 
 (Note that if you're using the \c{\\c} or \c{\\cw} commands to
 display literal computer code, you probably \e{will} want to use
-literal ASCII quote characters, because it is likely to matter
+literal \i{ASCII quote characters}, because it is likely to matter
 precisely which quote character you use.)
 
-\S{input-nonbreaking} \c{\\-} and \c{\\_}: Non-breaking hyphens and
-spaces
+\S{input-nonbreaking} \c{\\-} and \c{\\_}: \ii{Non-breaking hyphens}
+and \I{non-breaking spaces}spaces
 
 If you use an ordinary hyphen in the middle of a word (such as
 \q{built-in}), Halibut's output formats will feel free to break a
-line after that hyphen when wrapping paragraphs. This is fine for a
-word like \q{built-in}, but if you were displaying some literal
-computer code such as the Emacs command
+line after that hyphen when \i{wrapping paragraphs}. This is fine
+for a word like \q{built-in}, but if you were displaying some
+literal computer code such as the Emacs command
 \c{M\-x\_psychoanalyze\-pinhead}, you might prefer to see the whole
 hyphenated word treated as an unbreakable block. In some cases, you
 might even want to prevent the \e{space} in that command from
 becoming a line break.
 
-For these purposes, Halibut provides the commands \c{\\-} and
-\c{\\_}, which generate a non-breaking hyphen and a non-breaking
+For these purposes, Halibut provides the commands \i\c{\\-} and
+\i\c{\\_}, which generate a non-breaking hyphen and a non-breaking
 space respectively. So the above Emacs command might be written as
 
 \c the Emacs command \c{M\-x\_psychoanalyze\-pinhead}
@@ -213,13 +214,13 @@ non-breaking hyphens, and others don't support \e{breaking} hyphens!
 So Halibut cannot promise to honour these commands in all situations.
 All it can do is make a best effort.
 
-\S{input-date} \c{\\date}: Automatic date generation
+\S{input-date} \c{\\date}: Automatic \i{date} generation
 
 Sometimes you might want your document to give an up-to-date
 indication of the date on which it was run through Halibut.
 
-Halibut supplies the \c{\\date} command to do this. In its simplest
-form, you simply say
+Halibut supplies the \i\c{\\date} command to do this. In its
+simplest form, you simply say
 
 \c This document was generated on \date.
 
@@ -232,14 +233,14 @@ This document was generated on \date.
 If you would prefer the date to be generated in a specific format,
 you can follow the \c{\\date} command with a format specification in
 braces. The format specification will be run through the standard C
-function \c{strftime}, so any format acceptable to that function is
-acceptable here as well. I won't document the format here, because
-the details vary from computer to computer (although there is a
-standard core which should be supported everywhere). You should look
-at your local system's manual for \c{strftime} for details.
+function \i\c{strftime}, so any format acceptable to that function
+is acceptable here as well. I won't document the format here,
+because the details vary from computer to computer (although there
+is a standard core which should be supported everywhere). You should
+look at your local system's manual for \c{strftime} for details.
 
 Here's an example which generates the date in the international
-standard ISO 8601 format:
+standard \i{ISO 8601} format:
 
 \c This document was generated on \date{%Y-%m-%d %H:%M:%S}.
 
@@ -249,16 +250,16 @@ And here's some sample output from that command:
 This document was generated on \date{%Y-%m-%d %H:%M:%S}.
 }
 
-\S{input-weblink} \c{\\W}: WWW hyperlinks
+\S{input-weblink} \c{\\W}: \i{WWW hyperlinks}
 
-Since one of Halibut's output formats is HTML, it's obviously useful
-to be able to provide links to arbitrary web sites in a Halibut
-document.
+Since one of Halibut's output formats is \i{HTML}, it's obviously
+useful to be able to provide \I{linking to web sites}links to
+arbitrary \i{web sites} in a Halibut document.
 
-This is done using the \c{\\W} command. \c{\\W} expects to be
+This is done using the \i\c{\\W} command. \c{\\W} expects to be
 followed by \e{two} sets of braces. In the first set of braces you
-put a URL; in the second set you put the text which should be a
-hyperlink. For example, you might write
+put a \i{URL}; in the second set you put the text which should be a
+\i{hyperlink}. For example, you might write
 
 \c Try searching on \W{http://www.google.com/}{Google}.
 
@@ -293,31 +294,32 @@ and Halibut would produce
 Google is located at \W{http://www.google.com/}\cw{www.google.com}.
 }
 
-\S{input-unicode} \c{\\u}: Specifying arbitrary Unicode characters
+\S{input-unicode} \c{\\u}: Specifying arbitrary \i{Unicode}
+characters
 
 When Halibut is finished, it should have full Unicode support. You
-should be able to specify any (reasonably well known) character set
-for your input document, and Halibut should convert it all to
+should be able to specify any (reasonably well known) \i{character
+set} for your input document, and Halibut should convert it all to
 Unicode as it reads it in. Similarly, you should be able to specify
 the character set you want for each output format and have all the
 conversion done automatically.
 
 Currently, none of this is actually supported. Input text files are
-assumed to be in ISO 8859-1, and each output format has its own
+assumed to be in \i{ISO 8859-1}, and each output format has its own
 non-configurable character set (although the HTML output can use the
 \c{&#1234;} mechanism to output any Unicode character it likes).
 
 If you need to specify a Unicode character in your input document
 which is not supported by the input character set, you can use the
-\c{\\u} command to do this. \c{\\u} expects to be followed by a
+\i\c{\\u} command to do this. \c{\\u} expects to be followed by a
 sequence of hex digits; so that \c{\\u0041}, for example, denotes
 the Unicode character \cw{0x0041}, which is the capital letter A.
 
 If a Unicode character specified in this way is not supported in a
 particular \e{output} format, you probably don't just want it to be
 omitted. So you can put a pair of braces after the \c{\\u} command
-containing fallback text. For example, to specify an amount of money
-in euros, you might write this:
+containing \i{fallback text}. For example, to specify an amount of
+money in euros, you might write this:
 
 \c This is likely to cost \u20AC{EUR\_}2500 at least.
 
@@ -331,12 +333,13 @@ This is likely to cost \u20AC{EUR\_}2500 at least.
 
 If you read it in other formats, you may see different results.
 
-\S{input-xref} \c{\\k} and \c{\\K}: Cross-references to other sections
+\S{input-xref} \i\c{\\k} and \i\c{\\K}: \ii{Cross-references} to
+other sections
 
-\K{intro-features} mentions that Halibut numbers the sections of
-your document automatically, and can generate cross-references to
-them on request. \c{\\k} and \c{\\K} are the commands used to
-generate those cross-references.
+\K{intro-features} mentions that Halibut \I{section numbers}numbers
+the sections of your document automatically, and can generate
+cross-references to them on request. \c{\\k} and \c{\\K} are the
+commands used to generate those cross-references.
 
 To use one of these commands, you simply follow it with a pair of
 braces containing the keyword for the section in question. For
@@ -350,10 +353,11 @@ and Halibut would generate something like
 \K{input-xref} expands on \k{intro-features}.
 }
 
-The keywords \c{input-xref} and \c{intro-features} are section
-keywords used in this manual itself. In your own document, you would
-have supplied a keyword for each one of your own sections, and you
-would provide your own keywords for the \c{\\k} command to work on.
+The \i{keywords} \c{input-xref} and \c{intro-features} are
+\i{section keywords} used in this manual itself. In your own
+document, you would have supplied a keyword for each one of your own
+sections, and you would provide your own keywords for the \c{\\k}
+command to work on.
 
 The difference between \c{\\k} and \c{\\K} is simply that \c{\\K}
 starts the cross-reference text with a capital letter; so you would
@@ -361,20 +365,20 @@ use \c{\\K} at the beginning of a sentence, and \c{\\k} everywhere
 else.
 
 In output formats which permit it, cross-references act as
-hyperlinks, so that clicking the mouse on a cross-reference takes
-you straight to the referenced section.
+\i{hyperlinks}, so that clicking the mouse on a cross-reference
+takes you straight to the referenced section.
 
 The \c{\\k} commands are also used for referring to entries in a
-bibliography (see \k{input-biblio} for more about bibliographies),
-and can also be used for referring to an element of a numbered list
-by its number (see \k{input-list-number} for more about numbered
-lists).
+\i{bibliography} (see \k{input-biblio} for more about
+bibliographies), and can also be used for referring to an element of
+a \i{numbered list} by its number (see \k{input-list-number} for
+more about numbered lists).
 
 See \k{input-sections} for more about chapters and sections.
 
-\S{input-inline-comment} \c{\\#}: Inline comments
+\S{input-inline-comment} \i\c{\\#}: Inline comments
 
-If you want to include comments in your Halibut input, to be seen
+If you want to include \i{comments} in your Halibut input, to be seen
 when reading it directly but not copied into the output text, then
 you can use \c{\\#} to do this. If you follow \c{\\#} with text in
 braces, that text will be ignored by Halibut.
@@ -393,19 +397,20 @@ The typical behaviour of an antelope \#{do I mean gazelle?} is...
 The \c{\\#} command can also be used to produce a whole-paragraph
 comment; see \k{input-commentpara} for details of that.
 
-\H{input-para} Paragraph-level commands
+\H{input-para} \ii{Paragraph-level commands}
 
 This section describes Halibut commands which affect an entire
 paragraph, or sometimes even \e{more} than one paragraph, at a time.
 
-\S{input-codepara} \c{\\c}: Displaying whole paragraphs of computer
-code
+\S{input-codepara} \i\c{\\c}: Displaying whole \I{code
+paragraphs}paragraphs of \i{computer code}
 
 \K{input-code} describes a mechanism for displaying computer code in
 the middle of a paragraph, a few words at a time.
 
 However, this is often not enough. Often, in a computer manual, you
-really want to show several lines of code in a display paragraph.
+really want to show several lines of code in a \i{display
+paragraph}.
 
 This is also done using the \c{\\c} command, in a slightly different
 way. Instead of using it in the middle of a paragraph followed by
@@ -447,17 +452,17 @@ commands inside a code paragraph. In particular, if you want to
 emphasise a particular word in the paragraph, you can't do that
 using \c{\\e} (\k{input-emph}) in the normal way.
 
-Therefore, Halibut provides an alternative means of emphasis in code
-paragraphs. Each line beginning with \c{\\c} can optionally be
+Therefore, Halibut provides an alternative means of \i{emphasis in
+code paragraphs}. Each line beginning with \c{\\c} can optionally be
 followed by a single line beginning with \c{\\e}, indicating the
 emphasis in that line. The emphasis line contains the letters \c{b}
 and \c{i} (for \q{bold} and \q{italic}, although some output formats
-might render \c{i} as underlining instead of italics), positioned
-to line up under the parts of the text that you want emphasised.
+might render \c{i} as underlining instead of italics), positioned to
+line up under the parts of the text that you want emphasised.
 
-For example, if you wanted to do syntax highlighting on the above C
-code by highlighting the preprocessor command in italic and the
-keywords in bold, you might do it like this:
+For example, if you wanted to do \i{syntax highlighting} on the
+above C code by highlighting the preprocessor command in italic and
+the keywords in bold, you might do it like this:
 
 \c \c #include <stdio.h>
 \c \e iiiiiiiiiiiiiiiiii
@@ -495,12 +500,13 @@ you know you are using a restricted range of output formats, you
 should use highlighting in code paragraphs \e{only} as a visual aid,
 and not rely on it to convey any vital semantic content.
 
-\S{input-lists} \c{\\b}, \c{\\n}, \c{\\dt}, \c{\\dd}, \c{\\lcont}: Lists
+\S{input-lists} \c{\\b}, \c{\\n}, \c{\\dt}, \c{\\dd}, \c{\\lcont}:
+\ii{Lists}
 
 Halibut supports bulletted lists, numbered lists and description
 lists.
 
-\S2{input-list-bullet} \c{\\b}: Bulletted lists
+\S2{input-list-bullet} \i\c{\\b}: \ii{Bulletted lists}
 
 To create a bulletted list, you simply prefix each paragraph
 describing a bullet point with the command \c{\\b}. For example, this
@@ -526,7 +532,7 @@ Here's a list:
 \b Three.
 }
 
-\S2{input-list-number} \c{\\n}: Numbered lists
+\S2{input-list-number} \i\c{\\n}: \ii{Numbered lists}
 
 Numbered lists are just as simple: instead of \c{\\b}, you use
 \c{\\n}, and Halibut takes care of getting the numbering right for
@@ -583,11 +589,12 @@ Here's a list:
 \n Now go back to step \k{this-one}.
 }
 
-\S2{input-list-description} \c{\\dt} and \c{\\dd}: Description lists
+\S2{input-list-description} \i\c{\\dt} and \i\c{\\dd}:
+\ii{Description lists}
 
-To wrie a description list, you prefix alternate paragraphs with the
-\c{\\dt} (\q{described thing}) and \c{\\dd} (description) commands.
-For example:
+To write a description list, you prefix alternate paragraphs with
+the \c{\\dt} (\q{described thing}) and \c{\\dd} (description)
+commands. For example:
 
 \c \dt Pelican
 \c
@@ -611,19 +618,19 @@ This produces the following output:
 
 }
 
-\S2{input-list-continuation} Continuing list items into further
+\S2{input-list-continuation} \ii{Continuing list items} into further
 paragraphs
 
 All three of the above list types assume that each list item is a
 single paragraph. For a short, snappy list in which each item is
 likely to be only one or two words, this is perfectly sufficient;
 but occasionally you will find you want to include several
-paragraphs in a single list item, or even to nest other types of
-paragraph (such as code paragraphs, or other lists) inside a list
-item.
+paragraphs in a single list item, or even to \I{nested lists}nest
+other types of paragraph (such as code paragraphs, or other lists)
+inside a list item.
 
-To do this, you use the \c{\\lcont} command. This is a command which
-can span \e{multiple} paragraphs.
+To do this, you use the \i\c{\\lcont} command. This is a command
+which can span \e{multiple} paragraphs.
 
 After the first paragraph of a list item, include the text
 \c{\\lcont\{}. This indicates that the subsequent paragraph(s) are a
@@ -713,7 +720,7 @@ making simple things simple, and difficult things possible.
 Note that \c{\\lcont} can only be used on \c{\\b}, \c{\\n} and
 \c{\\dd} paragraphs; it cannot be used on \c{\\dt}.
 
-\S{input-rule} \c{\\rule}: Horizontal rules
+\S{input-rule} \i\c{\\rule}: \ii{Horizontal rules}
 
 The command \c{\\rule}, appearing on its own as a paragraph, will
 cause a horizontal rule to be drawn, like this:
@@ -736,12 +743,13 @@ Some more text.
 
 }
 
-\S{input-quote} \c{\\quote}: Indenting multiple paragraphs as a long
-quotation
+\S{input-quote} \i\c{\\quote}: \ii{Indenting multiple paragraphs} as a
+long \i{quotation}
 
 Quoting verbatim text using a code paragraph (\k{input-codepara}) is
 not always sufficient for your quoting needs. Sometimes you need to
 quote some normally formatted text, possibly in multiple paragraphs.
+This is similar to HTML's \i\cw{<BLOCKQUOTE>} command.
 
 To do this, you can use the \c{\\quote} command. Like \c{\\lcont},
 this is a command which expects to enclose at least one paragraph
@@ -789,15 +797,15 @@ So now you know.
 
 }
 
-\S{input-sections} \c{\\C}, \c{\\H}, \c{\\S}, \c{\\A}, \c{\\U}:
-Chapter and section headings
+\S{input-sections} \i\c{\\C}, \i\c{\\H}, \i\c{\\S}, \i\c{\\A},
+\i\c{\\U}: Chapter and \i{section headings}
 
-\K{intro-features} mentions that Halibut numbers the sections of
-your document automatically, and can generate cross-references to
-them on request; \k{input-xref} describes the \c{\\k} and \c{\\K}
-commands used to generate the cross-references. This section
-describes the commands used to set up the sections in the first
-place.
+\K{intro-features} mentions that Halibut \I{section
+numbering}numbers the sections of your document automatically, and
+can generate cross-references to them on request; \k{input-xref}
+describes the \c{\\k} and \c{\\K} commands used to generate the
+cross-references. This section describes the commands used to set up
+the sections in the first place.
 
 A paragraph beginning with the \c{\\C} command defines a chapter
 heading. The \c{\\C} command expects to be followed by a pair of
@@ -839,8 +847,8 @@ there were other chapters before them). The sections \c{foo-intro},
 \c{foo-running} and \c{foo-trouble} would be referred to as Section
 1.1, Section 1.2 and Section 1.3 respectively; the subsections
 \c{foo-inter} and \c{foo-batch} would be Section 1.2.1 and Section
-1.2.2. If there had been a \c{\\S2} command within one of those, it
-would have been something like Section 1.2.1.1.
+1.2.2. If there had been a \i\c{\\S2} command within one of those,
+it would have been something like Section 1.2.1.1.
 
 If you don't like the switch from \c{\\H} to \c{\\S}, you can use
 \c{\\S1} as a synonym for \c{\\S} and \c{\\S0} as a synonym for
@@ -849,18 +857,19 @@ need to be distinguished from other types of chapter such as
 appendices. (Personally, I like the \c{\\C},\c{\\H},\c{\\S} notation
 because it encourages me to think of my document as a hard disk :-)
 
-You can define an appendix by using \c{\\A} in place of \c{\\C}.
+You can define an \i{appendix} by using \c{\\A} in place of \c{\\C}.
 This is no different from a chapter except that it's given a letter
 instead of a number, and cross-references to it will say \q{Appendix
 A} instead of \q{Chapter 9}. Subsections of an appendix will be
 numbered \q{A.1}, \q{A.2}, \q{A.2.1} and so on.
 
-If you want a particular section to be referred to as something
-other than a \q{chapter}, \q{section} or \q{appendix}, you can
-include a second pair of braces after the keyword. For example, if
-you're writing a FAQ chapter and you want cross-references between
-questions to refer to \q{question 1.2.3} instead of \q{section
-1.2.3}, you can write each section heading as
+\I{renaming sections}If you want a particular section to be referred
+to as something other than a \q{chapter}, \q{section} or
+\q{appendix}, you can include a second pair of braces after the
+keyword. For example, if you're \i{writing a FAQ} chapter and you
+want cross-references between questions to refer to \q{question
+1.2.3} instead of \q{section 1.2.3}, you can write each section
+heading as
 
 \c \S{question-about-fish}{Question} What about fish?
 
@@ -872,52 +881,54 @@ This technique allows you to change the designation of
 \e{particular} sections. To make an overall change in what \e{every}
 section is called, see \k{input-config}.
 
-Finally, the \c{\\U} command defines an \e{unnumbered} chapter.
-These sometimes occur in books, for specialist purposes such as
-\q{Bibliography} or \q{Acknowledgements}. \c{\\U} does not expect a
-keyword argument, because there is no sensible way to generate an
-automatic cross-reference to such a chapter anyway.
+Finally, the \c{\\U} command defines an \I{unnumbered
+chapter}\e{unnumbered} chapter. These sometimes occur in books, for
+specialist purposes such as \q{Bibliography} or
+\q{Acknowledgements}. \c{\\U} does not expect a keyword argument,
+because there is no sensible way to generate an automatic
+cross-reference to such a chapter anyway.
 
 \S{input-blurb} \c{\\copyright}, \c{\\title}, \c{\\versionid}:
-Miscellaneous blurb commands
+Miscellaneous \i{blurb commands}
 
-These three commands define a variety of special paragraph types.
-They are all used in the same way: you put the command at the start
-of a paragraph, and then just follow it with normal text, like this:
+These three commands define a variety of \i{special paragraph
+types}. They are all used in the same way: you put the command at
+the start of a paragraph, and then just follow it with normal text,
+like this:
 
 \c \title My First Manual
 
 The three special paragraph types are:
 
-\dt \cw{\\title}
+\dt \i\cw{\\title}
 
 \dd This defines the overall title of the entire document. This
 title is treated specially in some output formats (for example, it's
 used in a \cw{<title>} tag in the HTML output), so it needs a
 special paragraph type to point it out.
 
-\dt \cw{\\copyright}
+\dt \i\cw{\\copyright}
 
 \dd This command indicates that the paragraph attached to it
-contains a copyright statement for the document. This text is
+contains a \i{copyright statement} for the document. This text is
 usually displayed inline, just before the first chapter title but
 after any preamble text before that; but in some output formats it
 is given additional special treatment. For example, Windows Help
 files have a standard slot in which to store a copyright notice, so
 that other software can display it prominently.
 
-\dt \cw{\\versionid}
+\dt \i\cw{\\versionid}
 
 \dd This command indicates that the paragraph contains a version
 identifier, such as those produced by CVS (of the form \c{$\#{hope this
 defuses CVS}Id: thingy.but,v 1.6 2004/01/01 16:47:48 simon Exp $}).
 This text will be tucked away somewhere unobtrusive, so that anyone
 wanting to (for example) report errors to the document's author can
-pick out the version IDs and send them as part of the report, so
+pick out the \i{version IDs} and send them as part of the report, so
 that the author can tell at a glance which revision of the document
 is being discussed.
 
-\S{input-commentpara} \c{\\#}: Whole-paragraph comments
+\S{input-commentpara} \i\c{\\#}: Whole-paragraph \i{comments}
 
 \K{input-inline-comment} describes the use of the \c{\\#} command to
 put a short comment in the middle of a paragraph.
@@ -950,13 +961,13 @@ Here's another displayed paragraph.
 
 }
 
-\H{input-biblio} Creating a bibliography
+\H{input-biblio} Creating a \i{bibliography}
 
 If you need your document to refer to other documents (research
 papers, books, websites, whatever), you might find a bibliography
 feature useful.
 
-You can define a bibliography entry using the \c{\\B} command. This
+You can define a bibliography entry using the \i\c{\\B} command. This
 looks very like the \c{\\C} command and friends: it expects a
 keyword in braces, followed by some text describing the document
 being referred to. For example:
@@ -976,33 +987,33 @@ Published by Paperjam & Notoner, 1993.
 
 I say \q{if} above because not all bibliography entries defined
 using the \c{\\B} command will necessarily appear in the finished
-document. They only appear if they are referred to by a \c{\\k}
-command (see \k{input-xref}). This allows you to (for example)
-maintain a single Halibut source file with a centralised database of
-\e{all} the references you have ever needed in any of your writings,
-include that file in every document you feed to Halibut, and have it
-only produce the bibliography entries you actually need for each
-particular document. (In fact, you might even want this centralised
-source file to be created automatically by, say, a Perl script from
-BibTeX input, so that you can share the same bibliography with users
-of other formatting software.)
+document. They only appear if they are \I{citation}referred to by a
+\i\c{\\k} command (see \k{input-xref}). This allows you to (for
+example) maintain a single Halibut source file with a centralised
+database of \e{all} the references you have ever needed in any of
+your writings, include that file in every document you feed to
+Halibut, and have it only produce the bibliography entries you
+actually need for each particular document. (In fact, you might even
+want this centralised source file to be created automatically by,
+say, a Perl script from BibTeX input, so that you can share the same
+bibliography with users of other formatting software.)
 
 If you really want a bibliography entry to appear in the document
 even though no text explicitly refers to it, you can do that using
-the \c{\\nocite} command:
+the \i\c{\\nocite} command:
 
 \c \nocite{freds-book}
 
 Normally, each bibliography entry will be referred to (in citations
 and in the bibliography itself) by a simple reference number, such
 as \k{freds-book}. If you would rather use an alternative reference
-notation, such as [Fred1993], you can use the \c{\\BR}
+notation, such as [Fred1993], you can use the \i\c{\\BR}
 (\q{Bibliography Rewrite}) command to specify your own reference
 format for a particular book:
 
 \c \BR{freds-book} [Fred1993]
 
-\H{input-index} Creating an index
+\H{input-index} Creating an \i{index}
 
 Halibut contains a comprehensive indexing mechanism, which attempts
 to be reasonably easy to use in the common case in spite of its
@@ -1011,7 +1022,7 @@ power.
 \S{input-index-simple} Simple indexing
 
 In normal usage, you should be able to add index terms to your
-document simply by using the \c{\\i} command to wrap one or two
+document simply by using the \i\c{\\i} command to wrap one or two
 words at a time. For example, if you write
 
 \c The \i{hippopotamus} is a particularly large animal.
@@ -1027,7 +1038,7 @@ You can wrap more than one word in \c{\\i} as well:
 \S{input-index-special} Special cases of indexing
 
 If you need to index a computer-related term, you can use the
-special case \c{\\i\\c} (or \c{\\i\\cw} if you prefer):
+special case \i\c{\\i\\c} (or \i\c{\\i\\cw} if you prefer):
 
 \c The \i\c{grep} command is what you want here.
 
@@ -1036,7 +1047,7 @@ This will cause the word \q{grep} to appear in code style, as if the
 the word will also appear in code style in the actual index.
 
 If you want to simultaneously index and emphasise a word, there's
-another special case \c{\\i\\e}:
+another special case \i\c{\\i\\e}:
 
 \c This is what we call a \i\e{paper jam}.
 
@@ -1051,8 +1062,8 @@ index.
 Sometimes you might want to index a term which is not explicitly
 mentioned, but which is highly relevant to the text and you think
 that somebody looking up that term in the index might find it useful
-to be directed here. To do this you can use the \c{\\I} command, to
-create an \e{invisible} index tag:
+to be directed here. To do this you can use the \i\c{\\I} command,
+to create an \i{\e{invisible} index tag}:
 
 \c If your printer runs out of toner, \I{replacing toner
 \c cartridge}here is what to do:
@@ -1069,8 +1080,8 @@ only a shorthand for the latter.)
 
 Finally, if you want to index a word at the start of a sentence, you
 might very well not want it to show up with a capital letter in the
-index. For this, Halibut provides the \c{\\ii} command, for \q{index
-(case-)insensitively}. You use it like this:
+index. For this, Halibut provides the \i\c{\\ii} command, for
+\q{index (case-)insensitively}. You use it like this:
 
 \c \ii{Lions} are at the top of the food chain in this area.
 
@@ -1079,37 +1090,38 @@ text will say \q{Lions}, but it will show up in the index as
 \q{lions}. The text inside \c{\\ii} is converted entirely into lower
 case before being added to the index data.
 
-\S{input-index-rewrite} Fine-tuning the index
+\S{input-index-rewrite} \ii{Fine-tuning the index}
 
 Halibut's index mechanism as described so far still has a few
 problems left:
 
 \b In a reasonably large index, it's often difficult to predict
-which of several words a user will think of first when trying to
-look something up. For example, if they want to know how to replace
-a toner cartridge, they might look up \q{replacing} or they might
-look up \q{toner cartridge}. You probably don't really want to have
-to try to figure out which of those is more likely; instead, what
-you'd like is to be able to effortlessly index the same set of
-document locations under \e{both} terms.
+\I{replicating index terms}which of several words a user will think
+of first when trying to look something up. For example, if they want
+to know how to replace a toner cartridge, they might look up
+\q{replacing} or they might look up \q{toner cartridge}. You
+probably don't really want to have to try to figure out which of
+those is more likely; instead, what you'd like is to be able to
+effortlessly index the same set of document locations under \e{both}
+terms.
 
 \b Also, you may find you've indexed the same concept under multiple
-different index terms; for example, there might be several instances
-of \c{\\i\{frog\}} and several of \c{\\i\{frogs\}}, so that you'd
-end up with two separate index entries for what really ought to be
-the same concept.
+different \I{merging index terms}index terms; for example, there
+might be several instances of \c{\\i\{frog\}} and several of
+\c{\\i\{frogs\}}, so that you'd end up with two separate index
+entries for what really ought to be the same concept.
 
 \b You might well not want the word \q{\cw{grep}} to appear in the
 index without explanation; you might prefer it to say something more
-verbose such as \q{\cw{grep} command}, so that a user encountering
-it in the index has some idea of what it is \e{without} having to
-follow up the reference. However, you certainly don't want to have
-to write \c{\\I\{\\cw\{grep\} command\}\\c\{grep\}} every time you
-want to add an index term for this! You wanted to write
-\c{\\i\\c\{grep\}} as shown in the previous section, and tidy it all
-up afterwards.
+\I{rewriting index terms}verbose such as \q{\cw{grep} command}, so
+that a user encountering it in the index has some idea of what it is
+\e{without} having to follow up the reference. However, you
+certainly don't want to have to write \c{\\I\{\\cw\{grep\}
+command\}\\c\{grep\}} every time you want to add an index term for
+this! You wanted to write \c{\\i\\c\{grep\}} as shown in the
+previous section, and tidy it all up afterwards.
 
-All of these problems can be cleaned up by the \c{\\IM} (for
+All of these problems can be cleaned up by the \i\c{\\IM} (for
 \q{Index Modification}) command. \c{\\IM} expects to be followed by
 one or more pairs of braces containing index terms as seen in the
 document, and then a piece of text (not in braces) describing how it
@@ -1156,9 +1168,9 @@ default one (typically \c{\\IM\{foo\}\_foo}, although it might be
 Halibut discards its default implicit one, and you must then specify
 that one explicitly as well if you wanted to keep it.
 
-\H{input-config} Configuring Halibut
+\H{input-config} \ii{Configuring} Halibut
 
-Halibut uses the \c{\\cfg} command to allow you to configure various
+Halibut uses the \i\c{\\cfg} command to allow you to configure various
 aspects of its functionality.
 
 The \c{\\cfg} command expects to be followed by at least one pair of
@@ -1170,23 +1182,33 @@ first keyword.
 The current list of configuration keywords in the main Halibut code
 is quite small. Here it is in full:
 
-\dt \cw{\\cfg\{chapter\}\{}\e{new chapter name}\cw{\}}
+\dt \I\cw{\\cfg\{chapter\}}\cw{\\cfg\{chapter\}\{}\e{new chapter name}\cw{\}}
 
 \dd This tells Halibut that you don't want to call a chapter a
-chapter any more. For example, if you give the command
+\I{renaming sections}\I{configuring heading display}chapter any
+more. For example, if you give the command
 \cw{\\cfg\{chapter\}\{Book\}}, then any chapter defined with the
 \c{\\C} command will be labelled \q{Book} rather than \q{Chapter},
 both in the section headings and in cross-references. This is
 probably most useful if your document is not written in English.
 
-\dt \cw{\\cfg\{section\}\{}\e{new section name}\cw{\}}
+\lcont{
+
+Your replacement name should be given with a capital letter. Halibut
+will leave it alone if it appears at the start of a sentence (in a
+chapter title, or when \c{\\K} is used), and will lower-case it
+otherwise (when \c{\\k} is used).
+
+}
+
+\dt \I\cw{\\cfg\{section\}}\cw{\\cfg\{section\}\{}\e{new section name}\cw{\}}
 
 \dd Exactly like \c{chapter}, but changes the name given to
 subsections of a chapter.
 
-\dt \cw{\\cfg\{appendix\}\{}\e{new appendix name}\cw{\}}
+\dt \I\cw{\\cfg\{appendix\}}\cw{\\cfg\{appendix\}\{}\e{new appendix name}\cw{\}}
 
-\dd Exactly like \c{appendix}, but changes the name given to
+\dd Exactly like \c{chapter}, but changes the name given to
 appendices.
 
 In addition to these configuration commands, there are also
@@ -1194,7 +1216,13 @@ configuration commands provided by each individual output format.
 These configuration commands are discussed along with each output
 format, in \k{output}.
 
-\H{input-macro} Defining macros
+The \i{default settings} for the above options are:
+
+\c \cfg{chapter}{Chapter}
+\c \cfg{section}{Section}
+\c \cfg{appendix}{Appendix}
+
+\H{input-macro} Defining \i{macros}
 
 If there's a complicated piece of Halibut source which you think
 you're going to use a lot, you can define your own Halibut command
@@ -1208,7 +1236,7 @@ available:
 
 If your document quotes a \e{lot} of prices in Euros, you might not
 want to spend all your time typing that out. So you could define a
-macro, using the \c{\\define} command:
+macro, using the \i\c{\\define} command:
 
 \c \define{eur} \u20AC{EUR\_}
 
@@ -1218,9 +1246,9 @@ Then you can just write ...
 
 ... except that that's not terribly good, because you end up with a
 space between the Euro sign and the number. In this case, it's
-helpful to use the special \c{\\.} command, which is defined to do
-nothing at all! But it acts as a separator between your macro and
-the next character:
+helpful to use the special \i\c{\\.} command, which is defined to
+\I{NOP}\I{doing nothing}do nothing at all! But it acts as a
+separator between your macro and the next character:
 
 \c This is likely to cost \eur\.2500 at least.
 

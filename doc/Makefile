@@ -1,4 +1,4 @@
-CHAPTERS := $(SITE) blurb intro running input output licence
+CHAPTERS := $(SITE) blurb intro running input output licence index
 
 INPUTS = $(patsubst %,%.but,$(CHAPTERS))
 
@@ -6,7 +6,7 @@ HALIBUT = ../build/halibut
 
 all: Contents.html
 
-Contents.html: $(INPUTS)
+Contents.html: $(INPUTS) $(HALIBUT)
 	$(HALIBUT) $(INPUTS)
 	rm -f index.html
 	ln -s Contents.html index.html
