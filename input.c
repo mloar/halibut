@@ -219,6 +219,7 @@ enum {
     c_c,			       /* code */
     c_cfg,			       /* configuration directive */
     c_copyright,		       /* copyright statement */
+    c_cq,			       /* quoted code (sugar for \q{\cw{x}}) */
     c_cw,			       /* weak code */
     c_date,			       /* document processing date */
     c_dd,			       /* description list: description */
@@ -289,6 +290,7 @@ static void match_kw(token *tok) {
 	{"c", c_c},		       /* code */
 	{"cfg", c_cfg},		       /* configuration directive */
 	{"copyright", c_copyright},    /* copyright statement */
+	{"cq", c_cq},		       /* quoted code (sugar for \q{\cw{x}}) */
 	{"cw", c_cw},		       /* weak code */
 	{"date", c_date},	       /* document processing date */
 	{"dd", c_dd},		       /* description list: description */
@@ -996,10 +998,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 	 * Mid-paragraph commands:
 	 *
 	 *  \K \k
-	 *  \c \cw
+	 *  \c \cw \cq
 	 *  \e
 	 *  \i \ii
 	 *  \I
+         *  \q
 	 *  \u
 	 *  \W
 	 *  \date
@@ -1196,6 +1199,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		    }
 		    break;
 		  case c_q:
+                  case c_cq:
+                    type = t.cmd;
 		    dtor(t), t = get_token(in);
 		    if (t.type != tok_lbrace) {
 			error(err_explbr, &t.pos);
@@ -1233,6 +1238,15 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 			sitem = snew(struct stack_item);
 			sitem->fpos = t.pos;
 			sitem->type = stype;
+                        if (type == c_cq) {
+                            if (style != word_Normal) {
+                                error(err_nestedstyles, &t.pos);
+                            } else {
+                                style = word_WeakCode;
+                                spcstyle = tospacestyle(style);
+                                sitem->type |= stack_style;
+                            }
+                        }
 			stk_push(parsestk, sitem);
 		    }
 		    break;

@@ -140,12 +140,12 @@ I recommend using weak code for any application where it is
 example, if the text is capitalised, that's usually good enough. If
 I talk about the Pentium's \cw{EAX} and \cw{EDX} registers, for
 example, you don't need quotes to notice that those are special; so
-I would write that in Halibut as \q{\c{the Pentium's \\cw\{EAX\} and
-\\cw\{EDX\} registers}}. But if I'm talking about the Unix command
+I would write that in Halibut as \cq{the Pentium's \\cw\{EAX\} and
+\\cw\{EDX\} registers}. But if I'm talking about the Unix command
 \c{man}, which is an ordinary English word in its own right, a reader
 might be slightly confused if it appeared in the middle of a
-sentence undecorated; so I would write that as \q{\c{the Unix command
-\\c\{man\}}}.
+sentence undecorated; so I would write that as \cq{the Unix command
+\\c\{man\}}.
 
 In summary:
 
@@ -159,12 +159,18 @@ fixed-width font if possible, but it's not essential}.
 In really extreme cases, you might want Halibut to use \i{quotation
 marks} even in output formats which can change font. In
 \k{input-date}, for example, I mention the special formatting
-command \q{\cw{\\.}}. If that appeared at the end of a sentence
+command \cq{\\.}. If that appeared at the end of a sentence
 \e{without} the quotes, then the two adjacent full stops would look
-pretty strange even if they were obviously in different fonts. So I
-used the \c{\\q} command to provide my own set of quotes, and then
-used \c{\\cw} rather than \c{\\c} to ensure that none of Halibut's
-output formats would add another set of quotes:
+pretty strange even if they were obviously in different fonts.
+
+For this, Halibut supports the \i\c{\\cq} command, which is exactly
+equivalent to using \c{\\q} to provide quotes and then using
+\c{\\cw} inside the quotes. So in the paragraph above, for example,
+I wrote
+
+\c the special formatting command \cq{\\.}.
+
+and I could equivalently have written
 
 \c the special formatting command \q{\cw{\\.}}.
 
@@ -256,9 +262,9 @@ but if you try to follow it with an alphabetic or numeric character
 (such as writing \c{\\dateZ}) then Halibut will assume you are
 trying to invoke the name of a macro command you have defined
 yourself, and will complain if no such command exists. To get round
-this you can use the special \q{\cw{\\.}} do-nothing command. See
+this you can use the special \cq{\\.} do-nothing command. See
 \k{input-macro} for more about general Halibut command syntax and
-\q{\cw{\\.}}.
+\cq{\\.}.
 
 If you would prefer the date to be generated in a specific format,
 you can follow the \c{\\date} command with a format specification in
@@ -481,7 +487,7 @@ Note that the above paragraph makes use of a backslash and a pair of
 braces, and does \e{not} need to escape them in the way described in
 \k{input-basics}. This is because code paragraphs formatted in this
 way are a special case; the intention is that you can just copy and
-paste a lump of code out of your program, put \q{\cw{\\c }} at the
+paste a lump of code out of your program, put \cq{\\c } at the
 start of every line, and simply \e{not have to worry} about the
 details - you don't have to go through the whole block looking for
 characters to escape.
@@ -1176,7 +1182,7 @@ might be several instances of \c{\\i\{frog\}} and several of
 \c{\\i\{frogs\}}, so that you'd end up with two separate index
 entries for what really ought to be the same concept.
 
-\b You might well not want the word \q{\cw{grep}} to appear in the
+\b You might well not want the word \cq{grep} to appear in the
 index without explanation; you might prefer it to say something more
 \I{rewriting index terms}verbose such as \q{\cw{grep} command}, so
 that a user encountering it in the index has some idea of what it is
@@ -1197,8 +1203,8 @@ So to rewrite the \c{grep} example above, you might do this:
 \c \IM{grep} \cw{grep} command
 
 This will arrange that the set of places in the document where you
-asked Halibut to index \q{\cw{grep}} will be listed under
-\q{\cw{grep} command} rather than just under \q{\cw{grep}}.
+asked Halibut to index \cq{grep} will be listed under
+\q{\cw{grep} command} rather than just under \cq{grep}.
 
 You can specify more than one index term in a \c{\\IM} command; so
 to merge the index terms \q{frog} and \q{frogs} into a single term,

@@ -435,6 +435,7 @@ directive
 \IM{\\e} \c{\\e} command
 \IM{\\c} \c{\\c} command
 \IM{\\cw} \c{\\cw} command
+\IM{\\cq} \c{\\cq} command
 \IM{\\q} \c{\\q} command
 \IM{\\_} \c{\\_} command
 \IM{\\-} \c{\\-} command
