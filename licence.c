@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-static char *licencetext[] = {
+static const char *const licencetext[] = {
     "Halibut is copyright (c) 1999-2005 Simon Tatham and James Aylett.",
     "",
     "Permission is hereby granted, free of charge, to any person",
@@ -30,7 +30,7 @@ static char *licencetext[] = {
 };
 
 void licence(void) {
-    char **p;
+    const char *const *p;
     for (p = licencetext; *p; p++)
 	puts(*p);
 }

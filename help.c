@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "halibut.h"
 
-static char *helptext[] = {
+static const char *const helptext[] = {
     "usage:   halibut [options] files",
     "options: --text[=filename]     generate plain text output",
     "         --html[=filename]     generate XHTML output",
@@ -24,19 +24,19 @@ static char *helptext[] = {
     NULL
 };
 
-static char *usagetext[] = {
+static const char *const usagetext[] = {
     "usage: halibut [--format[=filename]] [options] file.but [file.but...]",
     NULL
 };
 
 void help(void) {
-    char **p;
+    const char *const *p;
     for (p = helptext; *p; p++)
 	puts(*p);
 }
 
 void usage(void) {
-    char **p;
+    const char *const *p;
     for (p = usagetext; *p; p++)
 	puts(*p);
 }
