@@ -96,14 +96,24 @@ else
 VDEF = `(cd $(SRC); md5sum -c manifest && cat version)`
 endif
 
+halibut:
+
 SRC := ../
+
+LIBCHARSET_SRCDIR = $(SRC)charset/
+LIBCHARSET_OBJDIR = ./#
+LIBCHARSET_OBJPFX = cs-#
+LIBCHARSET_GENPFX = charset-#
+MD = -MD
+CFLAGS += -I$(LIBCHARSET_SRCDIR) -I$(LIBCHARSET_OBJDIR)
+include $(LIBCHARSET_SRCDIR)Makefile
 
 MODULES := main malloc ustring error help licence version misc tree234
 MODULES += input keywords contents index style biblio
 MODULES += bk_text bk_xhtml bk_whlp bk_man bk_info bk_paper bk_ps bk_pdf
 MODULES += winhelp psdata
 
-OBJECTS := $(addsuffix .o,$(MODULES))
+OBJECTS := $(addsuffix .o,$(MODULES)) $(LIBCHARSET_OBJS)
 DEPS := $(addsuffix .d,$(MODULES))
 
 halibut: $(OBJECTS)
