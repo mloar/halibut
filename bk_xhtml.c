@@ -1173,7 +1173,7 @@ static void xhtml_do_paras(FILE *fp, paragraph *p, paragraph *end,
     return;
 
 /*  for (; p && (xhtml_para_level(p)>limit || xhtml_para_level(p)==-1 || first); p=p->next) {*/
-  for (; p && p != end && (xhtml_para_level(p)==-1 || first); p=p->next) {
+  for (; p && p != end && (xhtml_para_level(p)<=0 || first); p=p->next) {
     first=FALSE;
     switch (ptype = p->type)
     {
