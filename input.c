@@ -592,14 +592,17 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		     */
 		    dtor(t), t = get_token(in);
 		}
-		if (t.type == tok_eop || t.type == tok_eof)
+		if (t.type == tok_eop || t.type == tok_eof ||
+		    t.type == tok_rbrace) { /* might be } terminating \lcont */
+		    if (t.type == tok_rbrace)
+			already = TRUE;
 		    break;
-		else if (t.type == tok_cmd && t.cmd == c_c)
+		} else if (t.type == tok_cmd && t.cmd == c_c) {
 		    wtype = word_WeakCode;
-		else if (t.type == tok_cmd && t.cmd == c_e &&
-			 wtype == word_WeakCode)
+		} else if (t.type == tok_cmd && t.cmd == c_e &&
+			   wtype == word_WeakCode) {
 		    wtype = word_Emph;
-		else {
+		} else {
 		    error(err_brokencodepara, &t.pos);
 		    prev_para_type = par.type;
 		    addpara(par, ret);
@@ -632,6 +635,16 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx) {
 		error(err_explbr, &t.pos);
 		continue;
 	    }
+
+	    /*
+	     * Also expect, and swallow, any whitespace after that
+	     * (a newline before a code paragraph wouldn't be
+	     * surprising).
+	     */
+	    do {
+		dtor(t), t = get_token(in);
+	    } while (t.type == tok_white);
+	    already = TRUE;
 
 	    if (cmd == c_lcont) {
 		/*
