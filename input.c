@@ -617,7 +617,9 @@ static void read_file(paragraph ***ret, input *in, index *idx) {
 	      case c_B: needkw = 2; par.type = para_Biblio; break;
 	      case c_BR: needkw = 1; par.type = para_BR; break;
 	      case c_C: needkw = 2; par.type = para_Chapter; break;
-	      case c_H: needkw = 2; par.type = para_Heading; break;
+	      case c_H: needkw = 2; par.type = para_Heading;
+		par.aux = 0;
+		break;
 	      case c_IM: needkw = 2; par.type = para_IM; break;
 	      case c_S: needkw = 2; par.type = para_Subsect;
 		par.aux = t.aux; break;

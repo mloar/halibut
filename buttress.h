@@ -231,6 +231,9 @@ wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
 wchar_t utolower(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);
 int ustricmp(wchar_t *lhs, wchar_t *rhs);
+int utoi(wchar_t *);
+int utob(wchar_t *);
+int uisdigit(wchar_t);
 wchar_t *ustrlow(wchar_t *s);
 wchar_t *ustrftime(wchar_t *fmt, struct tm *timespec);
 
@@ -333,6 +336,7 @@ void index_debug(index *);
  * contents.c
  */
 numberstate *number_init(void);
+void number_cfg(numberstate *, paragraph *);
 word *number_mktext(numberstate *, int, int, int, word **);
 void number_free(numberstate *);
 

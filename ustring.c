@@ -94,6 +94,36 @@ wchar_t *ustrlow(wchar_t *s) {
     return s;
 }
 
+int utoi(wchar_t *s) {
+    int sign = +1;
+    int n;
+
+    if (*s == L'-') {
+	s++;
+	sign = -1;
+    }
+
+    n = 0;
+    while (*s && *s >= L'0' && *s <= L'9') {
+	n *= 10;
+	n += (*s - '0');
+	s++;
+    }
+
+    return n;
+}
+
+int utob(wchar_t *s) {
+    if (!ustricmp(s, L"yes") || !ustricmp(s, L"y") ||
+	!ustricmp(s, L"true") || !ustricmp(s, L"t"))
+	return TRUE;
+    return FALSE;
+}
+
+int uisdigit(wchar_t c) {
+    return c >= L'0' && c <= L'9';
+}
+
 #define USTRFTIME_DELTA 128
 wchar_t *ustrftime(wchar_t *wfmt, struct tm *timespec) {
     void *blk = NULL;
