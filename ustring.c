@@ -246,6 +246,15 @@ wchar_t *ustrcpy(wchar_t *dest, wchar_t const *source) {
     return ret;
 }
 
+wchar_t *ustrncpy(wchar_t *dest, wchar_t const *source, int n) {
+    wchar_t *ret = dest;
+    do {
+	*dest++ = *source;
+	if (*source) source++;
+    } while (n-- > 0);
+    return ret;
+}
+
 int ustrcmp(wchar_t *lhs, wchar_t *rhs) {
     if (!lhs && !rhs) return 0;
     if (!lhs) return -1;

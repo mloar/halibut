@@ -282,6 +282,7 @@ wchar_t *ufroma_locale_dup(char const *s);
 int ustrlen(wchar_t const *s);
 wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t const *source);
+wchar_t *ustrncpy(wchar_t *dest, wchar_t const *source, int n);
 wchar_t utolower(wchar_t);
 int uisalpha(wchar_t);
 int ustrcmp(wchar_t *lhs, wchar_t *rhs);

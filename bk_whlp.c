@@ -15,9 +15,17 @@ struct bk_whlp_state {
     indexdata *idx;
     keywordlist *keywords;
     WHLP_TOPIC curr_topic;
+    int charset;
+    charset_state cstate;
     FILE *cntfp;
     int cnt_last_level, cnt_workaround;
 };
+
+typedef struct {
+    int charset;
+    wchar_t *bullet, *lquote, *rquote, *titlepage, *sectsuffix, *listsuffix;
+    char *filename;
+} whlpconf;
 
 /*
  * Indexes of fonts in our standard font descriptor set.
@@ -34,24 +42,111 @@ enum {
     FONT_RULE
 };
 
-static void whlp_rdaddwc(rdstringc *rs, word *text);
-static int whlp_convert(wchar_t *s, int maxlen,
-			char **result, int hard_spaces);
+static void whlp_rdaddwc(rdstringc *rs, word *text, whlpconf *conf,
+			 charset_state *state);
+static void whlp_rdadds(rdstringc *rs, const wchar_t *text, whlpconf *conf,
+			charset_state *state);
 static void whlp_mkparagraph(struct bk_whlp_state *state,
-			     int font, word *text, int subsidiary);
-static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p);
+			     int font, word *text, int subsidiary,
+			     whlpconf *conf);
+static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p,
+			 whlpconf *conf);
 static void whlp_contents_write(struct bk_whlp_state *state,
 				int level, char *text, WHLP_TOPIC topic);
+static void whlp_wtext(struct bk_whlp_state *state, const wchar_t *text);
     
 paragraph *whlp_config_filename(char *filename)
 {
     return cmdline_cfg_simple("winhelp-filename", filename, NULL);
 }
 
+static whlpconf whlp_configure(paragraph *source) {
+    paragraph *p;
+    whlpconf ret;
+
+    /*
+     * Defaults.
+     */
+    ret.charset = CS_CP1252;
+    ret.bullet = L"\x2022\0-\0\0";
+    ret.lquote = L"\x2018\0\x2019\0\"\0\"\0\0";
+    ret.rquote = uadv(ret.lquote);
+    ret.filename = dupstr("output.hlp");
+    ret.titlepage = L"Title page";
+    ret.sectsuffix = L": ";
+    ret.listsuffix = L".";
+
+    /*
+     * Two-pass configuration so that we can pick up global config
+     * (e.g. `quotes') before having it overridden by specific
+     * config (`win-quotes'), irrespective of the order in which
+     * they occur.
+     */
+    for (p = source; p; p = p->next) {
+	if (p->type == para_Config) {
+	    if (!ustricmp(p->keyword, L"quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    }
+	}
+    }
+
+    for (p = source; p; p = p->next) {
+	p->private_data = NULL;
+	if (p->type == para_Config) {
+	    /*
+	     * In principle we should support a `winhelp-charset'
+	     * here. We don't, because my WinHelp output code
+	     * doesn't know how to change character set. Once I
+	     * find out, I'll support it.
+	     */
+	    if (p->parent && !ustricmp(p->keyword, L"winhelp-topic")) {
+		/* Store the topic name in the private_data field of the
+		 * containing section. */
+		p->parent->private_data = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"winhelp-filename")) {
+		sfree(ret.filename);
+		ret.filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(p->keyword, L"winhelp-bullet")) {
+		ret.bullet = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"winhelp-section-suffix")) {
+		ret.sectsuffix = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"winhelp-list-suffix")) {
+		ret.listsuffix = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"winhelp-contents-titlepage")) {
+		ret.titlepage = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"winhelp-quotes")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.lquote = uadv(p->keyword);
+		    ret.rquote = uadv(ret.lquote);
+		}
+	    }
+	}
+    }
+
+    /*
+     * Now process fallbacks on quote characters and bullets.
+     */
+    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
+	   (!cvt_ok(ret.charset, ret.lquote) ||
+	    !cvt_ok(ret.charset, ret.rquote))) {
+	ret.lquote = uadv(ret.rquote);
+	ret.rquote = uadv(ret.lquote);
+    }
+
+    while (*ret.bullet && *uadv(ret.bullet) &&
+	   !cvt_ok(ret.charset, ret.bullet))
+	ret.bullet = uadv(ret.bullet);
+
+    return ret;
+}
+
 void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		  indexdata *idx, void *unused) {
     WHLP h;
-    char *filename, *cntname;
+    char *cntname;
     paragraph *p, *lastsect;
     struct bk_whlp_state state;
     WHLP_TOPIC contents_topic;
@@ -59,6 +154,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     int nesting;
     indexentry *ie;
     int done_contents_topic = FALSE;
+    whlpconf conf;
 
     IGNORE(unused);
 
@@ -89,27 +185,9 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     whlp_create_font(h, "Courier New", WHLP_FONTFAM_SANS, 18,
 		     WHLP_FONT_STRIKEOUT, 0, 0, 0);
 
-    /*
-     * Loop over the source form finding out whether the user has
-     * specified particular help topic names for anything. Also
-     * pick out the output file name at this stage.
-     */
-    filename = dupstr("output.hlp");
-    for (p = sourceform; p; p = p->next) {
-	p->private_data = NULL;
-	if (p->type == para_Config) {
-	    if (p->parent && !ustricmp(p->keyword, L"winhelp-topic")) {
-		char *topicname;
-		whlp_convert(uadv(p->keyword), 0, &topicname, 0);
-		/* Store the topic name in the private_data field of the
-		 * containing section. */
-		p->parent->private_data = topicname;
-	    } else if (!ustricmp(p->keyword, L"winhelp-filename")) {
-		sfree(filename);
-		filename = dupstr(adv(p->origkeyword));
-	    }
-	}
-    }
+    conf = whlp_configure(sourceform);
+
+    state.charset = conf.charset;
 
     /*
      * Ensure the output file name has a .hlp extension. This is
@@ -117,20 +195,20 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
      * it.
      */
     {
-	int len = strlen(filename);
-	if (len < 4 || filename[len-4] != '.' ||
-	    tolower(filename[len-3] != 'h') ||
-	    tolower(filename[len-2] != 'l') ||
-	    tolower(filename[len-1] != 'p')) {
+	int len = strlen(conf.filename);
+	if (len < 4 || conf.filename[len-4] != '.' ||
+	    tolower(conf.filename[len-3] != 'h') ||
+	    tolower(conf.filename[len-2] != 'l') ||
+	    tolower(conf.filename[len-1] != 'p')) {
 	    char *newf;
 	    newf = mknewa(char, len + 5);
-	    sprintf(newf, "%s.hlp", filename);
-	    sfree(filename);
-	    filename = newf;
+	    sprintf(newf, "%s.hlp", conf.filename);
+	    sfree(conf.filename);
+	    conf.filename = newf;
 	    len = strlen(newf);
 	}
 	cntname = mknewa(char, len+1);
-	sprintf(cntname, "%.*s.cnt", len-4, filename);
+	sprintf(cntname, "%.*s.cnt", len-4, conf.filename);
     }
 
     state.cntfp = fopen(cntname, "wb");
@@ -149,15 +227,18 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    p->type == para_UnnumberedChapter ||
 	    p->type == para_Heading ||
 	    p->type == para_Subsect) {
-	    char *topicid = p->private_data;
+
+	    rdstringc rs = { 0, 0, NULL };
 	    char *errstr;
 
-	    p->private_data = whlp_register_topic(h, topicid, &errstr);
+	    whlp_rdadds(&rs, (wchar_t *)p->private_data, &conf, NULL);
+
+	    p->private_data = whlp_register_topic(h, rs.text, &errstr);
 	    if (!p->private_data) {
 		p->private_data = whlp_register_topic(h, NULL, NULL);
-		error(err_winhelp_ctxclash, &p->fpos, topicid, errstr);
+		error(err_winhelp_ctxclash, &p->fpos, rs.text, errstr);
 	    }
-	    sfree(topicid);
+	    sfree(rs.text);
 	}
     }
 
@@ -167,7 +248,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
      */
     for (i = 0; (ie = index234(idx->entries, i)) != NULL; i++) {
 	rdstringc rs = {0, 0, NULL};
-	whlp_rdaddwc(&rs, ie->text);
+	whlp_rdaddwc(&rs, ie->text, &conf, NULL);
 	ie->backend_data = rs.text;
     }
 
@@ -188,9 +269,11 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	for (p = sourceform; p; p = p->next) {
 	    if (p->type == para_Title) {
 		whlp_begin_para(h, WHLP_PARA_NONSCROLL);
-		whlp_mkparagraph(&state, FONT_TITLE, p->words, FALSE);
-		whlp_rdaddwc(&rs, p->words);
+		state.cstate = charset_init_state;
+		whlp_mkparagraph(&state, FONT_TITLE, p->words, FALSE, &conf);
+		whlp_wtext(&state, NULL);
 		whlp_end_para(h);
+		whlp_rdaddwc(&rs, p->words, &conf, NULL);
 	    }
 	}
 	if (rs.text) {
@@ -198,8 +281,12 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    fprintf(state.cntfp, ":Title %s\r\n", rs.text);
 	    sfree(rs.text);
 	}
-	whlp_contents_write(&state, 1, "Title page", contents_topic);
-	/* FIXME: configurability in that string */
+	{
+	    rdstringc rs2 = {0,0,NULL};
+	    whlp_rdadds(&rs2, conf.titlepage, &conf, NULL);
+	    whlp_contents_write(&state, 1, rs2.text, contents_topic);
+	    sfree(rs2.text);
+	}
     }
 
     /*
@@ -209,7 +296,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	rdstringc rs = {0, 0, NULL};
 	for (p = sourceform; p; p = p->next) {
 	    if (p->type == para_Copyright)
-		whlp_rdaddwc(&rs, p->words);
+		whlp_rdaddwc(&rs, p->words, &conf, NULL);
 	}
 	if (rs.text) {
 	    whlp_copyright(h, rs.text);
@@ -269,7 +356,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		if (p->type == para_Chapter ||
 		    p->type == para_Appendix ||
 		    p->type == para_UnnumberedChapter)
-		    whlp_navmenu(&state, p);
+		    whlp_navmenu(&state, p, &conf);
 	    }
 
 	    state.curr_topic = contents_topic;
@@ -284,22 +371,25 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	     * were in.
 	     */
 	    for (q = lastsect->child; q; q = q->sibling)
-		whlp_navmenu(&state, q);
+		whlp_navmenu(&state, q, &conf);
 	}
 	{
 	    rdstringc rs = {0, 0, NULL};
 	    WHLP_TOPIC new_topic, parent_topic;
 	    char *macro, *topicid;
+	    charset_state cstate = CHARSET_INIT_STATE;
 
 	    new_topic = p->private_data;
 	    whlp_browse_link(h, state.curr_topic, new_topic);
 	    state.curr_topic = new_topic;
 
 	    if (p->kwtext) {
-		whlp_rdaddwc(&rs, p->kwtext);
-		rdaddsc(&rs, ": ");    /* FIXME: configurability */
+		whlp_rdaddwc(&rs, p->kwtext, &conf, &cstate);
+		whlp_rdadds(&rs, conf.sectsuffix, &conf, &cstate);
 	    }
-	    whlp_rdaddwc(&rs, p->words);
+	    whlp_rdaddwc(&rs, p->words, &conf, &cstate);
+	    whlp_rdadds(&rs, NULL, &conf, &cstate);
+
 	    if (p->parent == NULL)
 		parent_topic = contents_topic;
 	    else
@@ -351,12 +441,14 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    sfree(rs.text);
 
 	    whlp_begin_para(h, WHLP_PARA_NONSCROLL);
+	    state.cstate = charset_init_state;
 	    if (p->kwtext) {
-		whlp_mkparagraph(&state, FONT_TITLE, p->kwtext, FALSE);
+		whlp_mkparagraph(&state, FONT_TITLE, p->kwtext, FALSE, &conf);
 		whlp_set_font(h, FONT_TITLE);
-		whlp_text(h, ": ");    /* FIXME: configurability */
+		whlp_wtext(&state, conf.sectsuffix);
 	    }
-	    whlp_mkparagraph(&state, FONT_TITLE, p->words, FALSE);
+	    whlp_mkparagraph(&state, FONT_TITLE, p->words, FALSE, &conf);
+	    whlp_wtext(&state, NULL);
 	    whlp_end_para(h);
 
 	    lastsect = p;
@@ -368,11 +460,14 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	whlp_para_attr(h, WHLP_PARA_ALIGNMENT, WHLP_ALIGN_CENTRE);
 	whlp_begin_para(h, WHLP_PARA_SCROLL);
 	whlp_set_font(h, FONT_RULE);
-#define TEN "\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0"
+	state.cstate = charset_init_state;
+#define TEN L"\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0"
 #define TWENTY TEN TEN
 #define FORTY TWENTY TWENTY
 #define EIGHTY FORTY FORTY
-	whlp_text(h, EIGHTY);
+	state.cstate = charset_init_state;
+	whlp_wtext(&state, EIGHTY);
+	whlp_wtext(&state, NULL);
 #undef TEN
 #undef TWENTY
 #undef FORTY
@@ -394,12 +489,14 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    whlp_set_tabstop(h, 72, WHLP_ALIGN_LEFT);
 	    whlp_begin_para(h, WHLP_PARA_SCROLL);
 	    whlp_set_font(h, FONT_NORMAL);
+	    state.cstate = charset_init_state;
 	    if (p->type == para_Bullet) {
-		whlp_text(h, "\x95");
+		whlp_wtext(&state, conf.bullet);
 	    } else {
-		whlp_mkparagraph(&state, FONT_NORMAL, p->kwtext, FALSE);
-		whlp_text(h, ".");
+		whlp_mkparagraph(&state, FONT_NORMAL, p->kwtext, FALSE, &conf);
+		whlp_wtext(&state, conf.listsuffix);
 	    }
+	    whlp_wtext(&state, NULL);
 	    whlp_tab(h);
 	} else {
 	    whlp_para_attr(h, WHLP_PARA_LEFTINDENT,
@@ -407,12 +504,15 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    whlp_begin_para(h, WHLP_PARA_SCROLL);
 	}
 
+	state.cstate = charset_init_state;
+
 	if (p->type == para_BiblioCited) {
-	    whlp_mkparagraph(&state, FONT_NORMAL, p->kwtext, FALSE);
-	    whlp_text(h, " ");
+	    whlp_mkparagraph(&state, FONT_NORMAL, p->kwtext, FALSE, &conf);
+	    whlp_wtext(&state, L" ");
 	}
 
-	whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE);
+	whlp_mkparagraph(&state, FONT_NORMAL, p->words, FALSE, &conf);
+	whlp_wtext(&state, NULL);
 	whlp_end_para(h);
 	break;
 
@@ -425,8 +525,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	 */
 	{
 	    word *w;
-	    wchar_t *t, *e;
-	    char *c;
+	    wchar_t *t, *e, *tmp;
 
 	    for (w = p->words; w; w = w->next) if (w->type == word_WeakCode) {
 		t = w->text;
@@ -441,6 +540,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 
 		whlp_para_attr(h, WHLP_PARA_LEFTINDENT, 72*nesting);
 		whlp_begin_para(h, WHLP_PARA_SCROLL);
+		state.cstate = charset_init_state;
 		while (e && *e && *t) {
 		    int n;
 		    int ec = *e;
@@ -452,16 +552,19 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 			whlp_set_font(h, FONT_BOLD_CODE);
 		    else
 			whlp_set_font(h, FONT_CODE);
-		    whlp_convert(t, n, &c, FALSE);
-		    whlp_text(h, c);
-		    sfree(c);
+		    tmp = mknewa(wchar_t, n+1);
+		    ustrncpy(tmp, t, n);
+		    tmp[n] = L'\0';
+		    whlp_wtext(&state, tmp);
+		    whlp_wtext(&state, NULL);
+		    state.cstate = charset_init_state;
+		    sfree(tmp);
 		    t += n;
 		    e += n;
 		}
 		whlp_set_font(h, FONT_CODE);
-		whlp_convert(t, 0, &c, FALSE);
-		whlp_text(h, c);
-		sfree(c);
+		whlp_wtext(&state, t);
+		whlp_wtext(&state, NULL);
 		whlp_end_para(h);
 	    }
 	}
@@ -469,7 +572,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     fclose(state.cntfp);
-    whlp_close(h, filename);
+    whlp_close(h, conf.filename);
 
     /*
      * Loop over the index entries, cleaning up our final text
@@ -479,7 +582,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	sfree(ie->backend_data);
     }
 
-    sfree(filename);
+    sfree(conf.filename);
     sfree(cntname);
 }
 
@@ -508,27 +611,30 @@ static void whlp_contents_write(struct bk_whlp_state *state,
     fputc('\n', state->cntfp);
 }
 
-static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p) {
+static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p,
+			 whlpconf *conf) {
     whlp_begin_para(state->h, WHLP_PARA_SCROLL);
     whlp_start_hyperlink(state->h, (WHLP_TOPIC)p->private_data);
+    state->cstate = charset_init_state;
     if (p->kwtext) {
-	whlp_mkparagraph(state, FONT_NORMAL, p->kwtext, TRUE);
+	whlp_mkparagraph(state, FONT_NORMAL, p->kwtext, TRUE, conf);
 	whlp_set_font(state->h, FONT_NORMAL);
-	whlp_text(state->h, ": ");    /* FIXME: configurability */
+	whlp_wtext(state, conf->sectsuffix);
     }
-    whlp_mkparagraph(state, FONT_NORMAL, p->words, TRUE);
+    whlp_mkparagraph(state, FONT_NORMAL, p->words, TRUE, conf);
+    whlp_wtext(state, NULL);
     whlp_end_hyperlink(state->h);
     whlp_end_para(state->h);
 
 }
 
 static void whlp_mkparagraph(struct bk_whlp_state *state,
-			     int font, word *text, int subsidiary) {
+			     int font, word *text, int subsidiary,
+			     whlpconf *conf) {
     keyword *kwl;
     int deffont = font;
     int currfont = -1;
     int newfont;
-    char *c;
     paragraph *xref_target = NULL;
 
     for (; text; text = text->next) switch (text->type) {
@@ -605,24 +711,27 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
 	    whlp_set_font(state->h, newfont);
 	}
 	if (removeattr(text->type) == word_Normal) {
-	    if (whlp_convert(text->text, 0, &c, TRUE) || !text->alt)
-		whlp_text(state->h, c);
+	    if (cvt_ok(conf->charset, text->text) || !text->alt)
+		whlp_wtext(state, text->text);
 	    else
-		whlp_mkparagraph(state, deffont, text->alt, FALSE);
-	    sfree(c);
+		whlp_mkparagraph(state, deffont, text->alt, FALSE, conf);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
-	    whlp_text(state->h, " ");
+	    whlp_wtext(state, L" ");
 	} else if (removeattr(text->type) == word_Quote) {
-	    whlp_text(state->h,
-		      quoteaux(text->aux) == quote_Open ? "\x91" : "\x92");
-				       /* FIXME: configurability */
+	    whlp_wtext(state,
+		       quoteaux(text->aux) == quote_Open ?
+		       conf->lquote : conf->rquote);
 	}
 	break;
     }
 }
 
-static void whlp_rdaddwc(rdstringc *rs, word *text) {
-    char *c;
+static void whlp_rdaddwc(rdstringc *rs, word *text, whlpconf *conf,
+			 charset_state *state) {
+    charset_state ourstate = CHARSET_INIT_STATE;
+
+    if (!state)
+	state = &ourstate;
 
     for (; text; text = text->next) switch (text->type) {
       case word_HyperLink:
@@ -648,77 +757,72 @@ static void whlp_rdaddwc(rdstringc *rs, word *text) {
 	assert(text->type != word_CodeQuote &&
 	       text->type != word_WkCodeQuote);
 	if (removeattr(text->type) == word_Normal) {
-	    if (whlp_convert(text->text, 0, &c, FALSE) || !text->alt)
-		rdaddsc(rs, c);
+	    if (cvt_ok(conf->charset, text->text) || !text->alt)
+		whlp_rdadds(rs, text->text, conf, state);
 	    else
-		whlp_rdaddwc(rs, text->alt);
-	    sfree(c);
+		whlp_rdaddwc(rs, text->alt, conf, state);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
-	    rdaddc(rs, ' ');
+	    whlp_rdadds(rs, L" ", conf, state);
 	} else if (removeattr(text->type) == word_Quote) {
-	    rdaddc(rs, quoteaux(text->aux) == quote_Open ? '\x91' : '\x92');
-				       /* FIXME: configurability */
+	    whlp_rdadds(rs, quoteaux(text->aux) == quote_Open ?
+			conf->lquote : conf->rquote, conf, state);
 	}
 	break;
     }
+
+    if (state == &ourstate)
+	whlp_rdadds(rs, NULL, conf, state);
 }
 
-/*
- * Convert a wide string into a string of chars. If `result' is
- * non-NULL, mallocs the resulting string and stores a pointer to
- * it in `*result'. If `result' is NULL, merely checks whether all
- * characters in the string are feasible for the output character
- * set.
- *
- * Return is nonzero if all characters are OK. If not all
- * characters are OK but `result' is non-NULL, a result _will_
- * still be generated!
- */
-static int whlp_convert(wchar_t *s, int maxlen,
-			char **result, int hard_spaces) {
-    wchar_t *s2;
-    char *ret;
-    int ok;
+static void whlp_rdadds(rdstringc *rs, const wchar_t *text, whlpconf *conf,
+			charset_state *state)
+{
+    charset_state ourstate = CHARSET_INIT_STATE;
+    int textlen = text ? ustrlen(text) : 0;
+    char outbuf[256];
+    int ret;
 
-    /*
-     * Enforce maxlen.
-     */
-    if (maxlen > 0 && ustrlen(s) > maxlen) {
-	s2 = mknewa(wchar_t, maxlen+1);
-	memcpy(s2, s, maxlen * sizeof(wchar_t));
-	s2[maxlen] = L'\0';
-	s = s2;
-    } else
-	s2 = NULL;
+    if (!state)
+	state = &ourstate;
 
-    /*
-     * We currently only support Win1252 in Windows Help files,
-     * because I don't know how to fiddle the character set
-     * designation in the |SYSTEM file to indicate anything else.
-     */
-
-    ret = utoa_careful_dup(s, CS_CP1252);
-    if (!ret) {
-	ok = FALSE;
-	ret = utoa_dup(s, CS_CP1252);
-    } else
-	ok = TRUE;
-
-    /*
-     * Enforce hard_spaces.
-     */
-    if (hard_spaces) {
-	char *p;
-
-	for (p = ret; *p; p++)
-	    if (*p == ' ')
-		*p = '\240';
+    while (textlen > 0 &&
+	   (ret = charset_from_unicode(&text, &textlen, outbuf,
+				       lenof(outbuf)-1,
+				       conf->charset, state, NULL)) > 0) {
+	outbuf[ret] = '\0';
+	rdaddsc(rs, outbuf);
     }
 
-    if (s2)
-	sfree(s2);
+    if (text == NULL || state == &ourstate) {
+	if ((ret = charset_from_unicode(NULL, 0, outbuf, lenof(outbuf)-1,
+					conf->charset, state, NULL)) > 0) {
+	    outbuf[ret] = '\0';
+	    rdaddsc(rs, outbuf);
+	}
+    }
+}
 
-    *result = ret;
+static void whlp_wtext(struct bk_whlp_state *state, const wchar_t *text)
+{
+    int textlen = text ? ustrlen(text) : 0;
+    char outbuf[256];
+    int ret;
 
-    return ok;
+    while (textlen > 0 &&
+	   (ret = charset_from_unicode(&text, &textlen, outbuf,
+				       lenof(outbuf)-1,
+				       state->charset, &state->cstate,
+				       NULL)) > 0) {
+	outbuf[ret] = '\0';
+	whlp_text(state->h, outbuf);
+    }
+
+    if (text == NULL) {
+	if ((ret = charset_from_unicode(NULL, 0, outbuf, lenof(outbuf)-1,
+					state->charset, &state->cstate,
+					NULL)) > 0) {
+	    outbuf[ret] = '\0';
+	    whlp_text(state->h, outbuf);
+	}
+    }
 }
