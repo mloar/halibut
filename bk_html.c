@@ -35,10 +35,11 @@
  *    fine; the ones for numbered list and bibliociteds are utter
  *    crap; the ones for indexes _might_ do but it might be worth
  *    giving some thought to how to do them better.
- *     + also set up a mechanism for ensuring that fragment IDs
- * 	 never clash.
  * 
- *  - nonbreaking spaces?
+ *  - nonbreaking spaces.
+ * 
+ *  - free up all the data we have allocated while running this
+ *    backend.
  */
 
 #include <stdio.h>
@@ -115,11 +116,17 @@ struct htmlsect {
 typedef struct {
     htmlfile *head, *tail;
     htmlfile *single, *index;
+    tree234 *frags;
 } htmlfilelist;
 
 typedef struct {
     htmlsect *head, *tail;
 } htmlsectlist;
+
+typedef struct {
+    htmlfile *file;
+    char *fragment;
+} htmlfragment;
 
 typedef struct {
     int nrefs, refsize;
@@ -151,6 +158,18 @@ typedef struct {
      */
     int contents_level;
 } htmloutput;
+
+static int html_fragment_compare(void *av, void *bv)
+{
+    htmlfragment *a = (htmlfragment *)av;
+    htmlfragment *b = (htmlfragment *)bv;
+    int cmp;
+
+    if ((cmp = strcmp(a->file->filename, b->file->filename)) != 0)
+	return cmp;
+    else
+	return strcmp(a->fragment, b->fragment);
+}
 
 static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
 			      htmlsect *sect, int depth);
@@ -187,7 +206,8 @@ static void html_href(htmloutput *ho, htmlfile *thisfile,
 		      htmlfile *targetfile, char *targetfrag);
 
 static char *html_format(paragraph *p, char *template_string);
-static void html_sanitise_fragment(char *text);
+static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
+				    char *text);
 
 static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
 				htmlfile *thisfile, keywordlist *keywords,
@@ -410,7 +430,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		  indexdata *idx, void *unused) {
     paragraph *p;
     htmlconfig conf;
-    htmlfilelist files = { NULL, NULL, NULL, NULL };
+    htmlfilelist files = { NULL, NULL, NULL, NULL, NULL };
     htmlsectlist sects = { NULL, NULL }, nonsects = { NULL, NULL };
 
     IGNORE(unused);
@@ -425,6 +445,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
      */
     for (p = sourceform; p; p = p->next)
 	p->private_data = NULL;
+
+    files.frags = newtree234(html_fragment_compare);
 
     /*
      * Start by figuring out into which file each piece of the
@@ -474,17 +496,19 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		html_file_section(&conf, &files, sect, d);
 
 		sect->fragment = html_format(p, conf.template_fragment);
-		html_sanitise_fragment(sect->fragment);
-		/* FIXME: clash checking? add to a tree of (file,frag)? */
+		sect->fragment = html_sanitise_fragment(&files, sect->file,
+							sect->fragment);
 	    }
 
 	/* And the index. */
 	sect = html_new_sect(&sects, NULL);
-	sect->fragment = dupstr("Index");   /* FIXME: this _can't_ be right */
 	sect->text = NULL;
 	sect->type = INDEX;
 	sect->parent = topsect;
 	html_file_section(&conf, &files, sect, 0);   /* peer of chapters */
+	sect->fragment = dupstr("Index");   /* FIXME: this _can't_ be right */
+	sect->fragment = html_sanitise_fragment(&files, sect->file,
+						sect->fragment);
 	files.index = sect->file;
     }
 
@@ -543,6 +567,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		 */
 		sect->fragment = snewn(40, char);
 		sprintf(sect->fragment, "frag%p", sect);
+		sect->fragment = html_sanitise_fragment(&files, sect->file,
+							sect->fragment);
 	    }
 	}
     }
@@ -583,11 +609,6 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	/*
 	 * Run over the document inventing fragments. Each fragment
 	 * is of the form `i' followed by an integer.
-	 * 
-	 * FIXME: Probably in the file-organisation pass we should
-	 * work out the fragment names of every section, so that we
-	 * could load them all into a tree and hence ensure these
-	 * index fragments don't clash with them.
 	 */
 	lastsect = NULL;
 	for (p = sourceform; p; p = p->next) {
@@ -601,12 +622,14 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    int i;
 
 		    hr->section = lastsect;
-		    /* FIXME: clash checking */
 		    {
 			char buf[40];
 			sprintf(buf, "i%d",
 				lastsect->file->last_fragment_number++);
 			hr->fragment = dupstr(buf);
+			hr->fragment =
+			    html_sanitise_fragment(&files, hr->section->file,
+						   hr->fragment);
 		    }
 		    w->private_data = hr;
 
@@ -1291,8 +1314,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     /*
-     * FIXME: Figure out a way to free the htmlindex and
-     * htmlindexref structures.
+     * FIXME: Free all the working data.
      */
 }
 
@@ -1787,7 +1809,8 @@ static char *html_format(paragraph *p, char *template_string)
     return rdtrimc(&rs);
 }
 
-static void html_sanitise_fragment(char *text)
+static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
+				    char *text)
 {
     /*
      * The HTML 4 spec's strictest definition of fragment names (<a
@@ -1802,18 +1825,43 @@ static void html_sanitise_fragment(char *text)
 
     while (*p && !((*p>='A' && *p<='Z') || (*p>='a' && *p<='z')))
 	p++;
-    if (!(*q++ = *p++))
-	return;
-    while (*p) {
-	if ((*p>='A' && *p<='Z') ||
-	    (*p>='a' && *p<='z') ||
-	    (*p>='0' && *p<='9') ||
-	    *p=='-' || *p=='_' || *p==':' || *p=='.')
-	    *q++ = *p;
-	p++;
+    if ((*q++ = *p++) != '\0') {
+	while (*p) {
+	    if ((*p>='A' && *p<='Z') ||
+		(*p>='a' && *p<='z') ||
+		(*p>='0' && *p<='9') ||
+		*p=='-' || *p=='_' || *p==':' || *p=='.')
+		*q++ = *p;
+	    p++;
+	}
+
+	*q = '\0';
     }
 
-    *q = '\0';
+    /*
+     * Now we check for clashes with other fragment names, and
+     * adjust this one if necessary by appending a hyphen followed
+     * by a number.
+     */
+    {
+	htmlfragment *frag = snew(htmlfragment);
+	int len = 0;		       /* >0 indicates we have resized */
+	int suffix = 1;
+
+	frag->file = file;
+	frag->fragment = text;
+
+	while (add234(files->frags, frag) != frag) {
+	    if (!len) {
+		len = strlen(text);
+		frag->fragment = text = sresize(text, len+20, char);
+	    }
+
+	    sprintf(text + len, "-%d", ++suffix);
+	}
+    }
+
+    return text;
 }
 
 static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,

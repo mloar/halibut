@@ -32,7 +32,7 @@ a bit]
 
 \define{eur} \u20AC{EUR }
 
-\versionid $Id: test.but,v 1.30 2004/04/22 18:01:31 simon Exp $
+\versionid $Id: test.but,v 1.31 2004/06/19 14:44:47 simon Exp $
 
 \C{ch\\ap} First chapter title; for similar wrapping reasons this
 chapter title will be ludicrously long. I wonder how much more
@@ -235,7 +235,15 @@ Err.
 
 Umm.
 
-\H{app-three} Or just Erd\u0151{\u00F6{o}}s?
+\# I'm going to label one of these with a carefully chosen fragment
+\# name "i1", because I know this will also be generated as an index
+\# fragment name and this allows me to test the fragment name clash
+\# detection.
+\#
+\# To actually run this test you need to configure html-leaf-level
+\# to 0 and html-template-fragment to %k.
+
+\H{i1} Or just Erd\u0151{\u00F6{o}}s?
 
 Ahh.
 
