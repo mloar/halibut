@@ -27,12 +27,6 @@
 #include "tree234.h"
 
 /*
- * FIXME: Charset temporary workarounds
- */
-#define CS_FIXME CS_ISO8859_1
-#define CS_LOCAL CS_ISO8859_1
-
-/*
  * Structure tags
  */
 typedef struct input_Tag input;
@@ -282,6 +276,8 @@ char *utoa_dup(wchar_t const *s, int charset);
 char *utoa_dup_len(wchar_t const *s, int charset, int *len);
 char *utoa_careful_dup(wchar_t const *s, int charset);
 wchar_t *ufroma_dup(char const *s, int charset);
+char *utoa_locale_dup(wchar_t const *s);
+wchar_t *ufroma_locale_dup(char const *s);
 int ustrlen(wchar_t const *s);
 wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t const *source);

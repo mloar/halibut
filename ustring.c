@@ -3,6 +3,8 @@
  */
 
 #include <wchar.h>
+#include <stdlib.h>
+#include <assert.h>
 #include <time.h>
 #include "halibut.h"
 
@@ -162,6 +164,68 @@ wchar_t *ufroma_dup(char const *s, int charset) {
 
     buf = resize(buf, ustrlen(buf)+1);
     return buf;
+}
+
+char *utoa_locale_dup(wchar_t const *s)
+{
+    /*
+     * This variant uses the C library locale.
+     */
+    char *ret;
+    int len;
+    size_t siz;
+
+    len = ustrlen(s);
+
+    ret = mknewa(char, 1 + MB_CUR_MAX * len);
+
+    siz = wcstombs(ret, s, len);
+
+    if (siz) {
+	assert(siz <= MB_CUR_MAX * len);
+	ret[siz] = '\0';
+	ret = resize(ret, siz+1);
+	return ret;
+    }
+
+    /*
+     * If that failed, try a different strategy (which we will also
+     * attempt in the total absence of wcstombs). Retrieve the
+     * locale's charset from nl_langinfo or equivalent, and use
+     * normal utoa_dup.
+     */
+    return utoa_dup(s, charset_from_locale());
+}
+
+wchar_t *ufroma_locale_dup(char const *s)
+{
+    /*
+     * This variant uses the C library locale.
+     */
+    wchar_t *ret;
+    int len;
+    size_t siz;
+
+    len = strlen(s);
+
+    ret = mknewa(wchar_t, 1 + 2*len);  /* be conservative */
+
+    siz = mbstowcs(ret, s, len);
+
+    if (siz) {
+	assert(siz <= (size_t)(2 * len));
+	ret[siz] = L'\0';
+	ret = resize(ret, siz+1);
+	return ret;
+    }
+
+    /*
+     * If that failed, try a different strategy (which we will also
+     * attempt in the total absence of wcstombs). Retrieve the
+     * locale's charset from nl_langinfo or equivalent, and use
+     * normal ufroma_dup.
+     */
+    return ufroma_dup(s, charset_from_locale());
 }
 
 int ustrlen(wchar_t const *s) {

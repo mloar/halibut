@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "halibut.h"
@@ -47,6 +48,8 @@ int main(int argc, char **argv) {
     int k, b;
     paragraph *cfg, *cfg_tail;
     void *pre_backend_data[16];
+
+    setlocale(LC_ALL, "");
 
     /*
      * Set up initial (default) parameters.
@@ -260,7 +263,7 @@ int main(int argc, char **argv) {
 	in.pushback = NULL;
 	in.reportcols = reportcols;
 	in.stack = NULL;
-	in.defcharset = CS_ASCII;
+	in.defcharset = locale_charset();
 
 	idx = make_index();
 

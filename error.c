@@ -15,7 +15,6 @@
 
 static void do_error(int code, va_list ap) {
     char error[1024];
-    char auxbuf[256];
     char c;
     char *sp, *sp2;
     wchar_t *wsp;
@@ -82,18 +81,20 @@ static void do_error(int code, va_list ap) {
 	break;
       case err_badparatype:
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "command `%.200s' unrecognised at start of"
 		" paragraph", sp);
 	flags = FILEPOS;
+	sfree(sp);
 	break;
       case err_badmidcmd:
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	fpos = *va_arg(ap, filepos *);
 	sprintf(error, "command `%.200s' unexpected in mid-paragraph", sp);
 	flags = FILEPOS;
+	sfree(sp);
 	break;
       case err_unexbrace:
 	fpos = *va_arg(ap, filepos *);
@@ -138,23 +139,26 @@ static void do_error(int code, va_list ap) {
       case err_nosuchkw:
 	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	sprintf(error, "unable to resolve cross-reference to `%.200s'", sp);
 	flags = FILEPOS;
+	sfree(sp);
 	break;
       case err_multiBR:
 	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	sprintf(error, "multiple `\\BR' entries given for `%.200s'", sp);
 	flags = FILEPOS;
+	sfree(sp);
 	break;
       case err_nosuchidxtag:
+	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	sprintf(error, "`\\IM' on unknown index tag `%.200s'", sp);
-	flags = 0;
-	/* FIXME: need to get a filepos to here somehow */
+	sfree(sp);
+	flags = FILEPOS;
 	break;
       case err_cantopenw:
 	sp = va_arg(ap, char *);
@@ -164,9 +168,10 @@ static void do_error(int code, va_list ap) {
       case err_macroexists:
 	fpos = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	sprintf(error, "macro `%.200s' already defined", sp);
 	flags = FILEPOS;
+	sfree(sp);
 	break;
       case err_sectjump:
 	fpos = *va_arg(ap, filepos *);
@@ -185,10 +190,11 @@ static void do_error(int code, va_list ap) {
 	fpos = *va_arg(ap, filepos *);
 	fpos2 = *va_arg(ap, filepos *);
 	wsp = va_arg(ap, wchar_t *);
-	sp = ustrtoa(wsp, auxbuf, sizeof(auxbuf), CS_LOCAL);
+	sp = utoa_locale_dup(wsp);
 	sprintf(error, "paragraph keyword `%.200s' already defined at ", sp);
 	sprintf(error + strlen(error), "%s:%d", fpos2.filename, fpos2.line);
 	flags = FILEPOS;
+	sfree(sp);
 	break;
       case err_misplacedlcont:
 	fpos = *va_arg(ap, filepos *);

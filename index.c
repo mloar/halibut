@@ -99,7 +99,7 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 	     * warn (and drop it, since it won't be referenced).
 	     */
 	    if (is_explicit) {
-		error(err_nosuchidxtag, tags);
+		error(err_nosuchidxtag, fpos, tags);
 		continue;
 	    }
 

@@ -497,7 +497,7 @@ void cmdline_cfg_add(paragraph *cfg, char *string)
     while (cfg->origkeyword[len])
 	len += 1 + strlen(cfg->origkeyword+len);
 
-    ustring = ufroma_dup(string, CS_FIXME);
+    ustring = ufroma_locale_dup(string);
 
     upos = ulen;
     ulen += 2 + ustrlen(ustring);
