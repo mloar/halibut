@@ -90,22 +90,20 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 
     /* .TH name-of-program manual-section */
-    {
+    fprintf(fp, ".TH");
+    if (conf.th && *conf.th) {
 	char *c;
-	if (conf.th && *conf.th) {
-	    wchar_t *wp;
-	    fprintf(fp, ".TH");
+	wchar_t *wp;
 
-	    for (wp = conf.th; *wp; wp = uadv(wp)) {
-		fputs(" \"", fp);
-		man_convert(wp, 0, &c, QUOTE_QUOTES);
-		fputs(c, fp);
-		sfree(c);
-		fputc('"', fp);
-	    }
-	    fputc('\n', fp);
+	for (wp = conf.th; *wp; wp = uadv(wp)) {
+	    fputs(" \"", fp);
+	    man_convert(wp, 0, &c, QUOTE_QUOTES);
+	    fputs(c, fp);
+	    sfree(c);
+	    fputc('"', fp);
 	}
     }
+    fputc('\n', fp);
 
     fprintf(fp, ".UC\n");
 
