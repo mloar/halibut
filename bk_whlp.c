@@ -43,6 +43,34 @@ static void whlp_navmenu(struct bk_whlp_state *state, paragraph *p);
 static void whlp_contents_write(struct bk_whlp_state *state,
 				int level, char *text, WHLP_TOPIC topic);
     
+paragraph *whlp_config_filename(char *filename)
+{
+    paragraph *p;
+    wchar_t *ufilename, *up;
+    int len;
+
+    p = mknew(paragraph);
+    memset(p, 0, sizeof(*p));
+    p->type = para_Config;
+    p->next = NULL;
+    p->fpos.filename = "<command line>";
+    p->fpos.line = p->fpos.col = -1;
+
+    ufilename = ufroma_dup(filename);
+    len = ustrlen(ufilename) + 2 + lenof(L"winhelp-filename");
+    p->keyword = mknewa(wchar_t, len);
+    up = p->keyword;
+    ustrcpy(up, L"winhelp-filename");
+    up = uadv(up);
+    ustrcpy(up, ufilename);
+    up = uadv(up);
+    *up = L'\0';
+    assert(up - p->keyword < len);
+    sfree(ufilename);
+
+    return p;
+}
+
 void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		  indexdata *idx) {
     WHLP h;

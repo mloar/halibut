@@ -14,15 +14,16 @@ static void dbg_prtkws(keywordlist *kws);
 static const struct backend {
     char *name;
     void (*func)(paragraph *, keywordlist *, indexdata *);
+    paragraph *(*filename)(char *filename);
     int bitfield;
 } backends[] = {
-    {"text", text_backend, 0x0001},
-    {"xhtml", xhtml_backend, 0x0002},
-    {"html", xhtml_backend, 0x0002},
-    {"hlp", whlp_backend, 0x0004},
-    {"whlp", whlp_backend, 0x0004},
-    {"winhelp", whlp_backend, 0x0004},
-    {"man", man_backend, 0x0008},
+    {"text", text_backend, text_config_filename, 0x0001},
+    {"xhtml", xhtml_backend, xhtml_config_filename, 0x0002},
+    {"html", xhtml_backend, xhtml_config_filename, 0x0002},
+    {"hlp", whlp_backend, whlp_config_filename, 0x0004},
+    {"whlp", whlp_backend, whlp_config_filename, 0x0004},
+    {"winhelp", whlp_backend, whlp_config_filename, 0x0004},
+    {"man", man_backend, man_config_filename, 0x0008},
 };
 
 int main(int argc, char **argv) {
@@ -83,6 +84,17 @@ int main(int argc, char **argv) {
 			for (k = 0; k < (int)lenof(backends); k++)
 			    if (!strcmp(opt+1, backends[k].name)) {
 				backendbits |= backends[k].bitfield;
+				if (val) {
+				    paragraph *p = backends[k].filename(val);
+				    assert(p);
+				    if (cfg_tail)
+					cfg_tail->next = p;
+				    else
+					cfg = p;
+				    while (p->next)
+					p = p->next;
+				    cfg_tail = p;
+				}
 				break;
 			    }
 			if (k < (int)lenof(backends)) {

@@ -180,6 +180,34 @@ static textconfig text_configure(paragraph *source) {
     return ret;
 }
 
+paragraph *text_config_filename(char *filename)
+{
+    paragraph *p;
+    wchar_t *ufilename, *up;
+    int len;
+
+    p = mknew(paragraph);
+    memset(p, 0, sizeof(*p));
+    p->type = para_Config;
+    p->next = NULL;
+    p->fpos.filename = "<command line>";
+    p->fpos.line = p->fpos.col = -1;
+
+    ufilename = ufroma_dup(filename);
+    len = ustrlen(ufilename) + 2 + lenof(L"text-filename");
+    p->keyword = mknewa(wchar_t, len);
+    up = p->keyword;
+    ustrcpy(up, L"text-filename");
+    up = uadv(up);
+    ustrcpy(up, ufilename);
+    up = uadv(up);
+    *up = L'\0';
+    assert(up - p->keyword < len);
+    sfree(ufilename);
+
+    return p;
+}
+
 void text_backend(paragraph *sourceform, keywordlist *keywords,
 		  indexdata *idx) {
     paragraph *p;

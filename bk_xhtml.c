@@ -39,7 +39,7 @@
  * formatting directive, %% is a literal %). Formatting directives
  * are:
  * 
- *  - %n is the section number, minus whitespace (`Chapter1.2').
+ *  - %n is the section type-plus-number, minus whitespace (`Chapter1.2').
  *  - %b is the section number on its own (`1.2').
  *  - %k is the section's _internal_ keyword.
  *  - %N is the section's visible title in the output, again minus
@@ -283,6 +283,57 @@ static xhtmlconfig xhtml_configure(paragraph *source)
   printf(" !!! contentdepth-5 = %i\n", ret.contents_depth[5]);
   printf(" !!! leaf_contains_contents = %i\n", ret.leaf_contains_contents);*/
   return ret;
+}
+
+paragraph *xhtml_config_filename(char *filename)
+{
+    /*
+     * If the user passes in a single filename as a parameter to
+     * the `--html' command-line option, then we should assume it
+     * to imply _two_ config directives:
+     * \cfg{xhtml-single-filename}{whatever} and
+     * \cfg{xhtml-leaf-level}{0}; the rationale being that the user
+     * wants their output _in that file_.
+     */
+
+    paragraph *p[2];
+    int i, len;
+    wchar_t *ufilename, *up;
+
+    for (i = 0; i < 2; i++) {
+	p[i] = mknew(paragraph);
+	memset(p[i], 0, sizeof(*p[i]));
+	p[i]->type = para_Config;
+	p[i]->next = NULL;
+	p[i]->fpos.filename = "<command line>";
+	p[i]->fpos.line = p[i]->fpos.col = -1;
+    }
+
+    ufilename = ufroma_dup(filename);
+    len = ustrlen(ufilename) + 2 + lenof(L"xhtml-single-filename");
+    p[0]->keyword = mknewa(wchar_t, len);
+    up = p[0]->keyword;
+    ustrcpy(up, L"xhtml-single-filename");
+    up = uadv(up);
+    ustrcpy(up, ufilename);
+    up = uadv(up);
+    *up = L'\0';
+    assert(up - p[0]->keyword < len);
+    sfree(ufilename);
+
+    len = lenof(L"xhtml-leaf-level") + lenof(L"0") + 1;
+    p[1]->keyword = mknewa(wchar_t, len);
+    up = p[1]->keyword;
+    ustrcpy(up, L"xhtml-leaf-level");
+    up = uadv(up);
+    ustrcpy(up, L"0");
+    up = uadv(up);
+    *up = L'\0';
+    assert(up - p[1]->keyword < len);
+
+    p[0]->next = p[1];
+
+    return p[0];
 }
 
 static xhtmlsection *xhtml_new_section(xhtmlsection *last)

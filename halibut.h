@@ -248,7 +248,9 @@ char *dupstr(char *s);
  */
 wchar_t *ustrdup(wchar_t *s);
 char *ustrtoa(wchar_t *s, char *outbuf, int size);
+wchar_t *ustrfroma(char *s, wchar_t *outbuf, int size);
 char *utoa_dup(wchar_t *s);
+wchar_t *ufroma_dup(char *s);
 int ustrlen(wchar_t *s);
 wchar_t *uadv(wchar_t *s);
 wchar_t *ustrcpy(wchar_t *dest, wchar_t *source);
@@ -413,20 +415,24 @@ struct userstyle_Tag {
  * bk_text.c
  */
 void text_backend(paragraph *, keywordlist *, indexdata *);
+paragraph *text_config_filename(char *filename);
 
 /*
  * bk_xhtml.c
  */
 void xhtml_backend(paragraph *, keywordlist *, indexdata *);
+paragraph *xhtml_config_filename(char *filename);
 
 /*
  * bk_whlp.c
  */
 void whlp_backend(paragraph *, keywordlist *, indexdata *);
+paragraph *whlp_config_filename(char *filename);
 
 /*
  * bk_man.c
  */
 void man_backend(paragraph *, keywordlist *, indexdata *);
+paragraph *man_config_filename(char *filename);
 
 #endif

@@ -33,6 +33,21 @@ char *ustrtoa(wchar_t *s, char *outbuf, int size) {
     return outbuf;
 }
 
+wchar_t *ustrfroma(char *s, wchar_t *outbuf, int size) {
+    wchar_t *p;
+    if (!s) {
+	*outbuf = L'\0';
+	return outbuf;
+    }
+    for (p = outbuf; *s && p < outbuf+size; p++,s++)
+	*p = *s;
+    if (p < outbuf+size)
+	*p = '\0';
+    else
+	outbuf[size-1] = '\0';
+    return outbuf;
+}
+
 char *utoa_dup(wchar_t *s) {
     int len;
     char *buf = NULL;
@@ -45,6 +60,21 @@ char *utoa_dup(wchar_t *s) {
     } while ((int)strlen(buf) >= len-1);
 
     buf = resize(buf, strlen(buf)+1);
+    return buf;
+}
+
+wchar_t *ufroma_dup(char *s) {
+    int len;
+    wchar_t *buf = NULL;
+
+    len = strlen(s) + 1;
+    do {
+	buf = resize(buf, len);
+	ustrfroma(s, buf, len);
+	len = (3 * len) / 2 + 1;       /* this guarantees a strict increase */
+    } while (ustrlen(buf) >= len-1);
+
+    buf = resize(buf, ustrlen(buf)+1);
     return buf;
 }
 
