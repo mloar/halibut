@@ -1529,7 +1529,19 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 	}
 	stk_free(parsestk);
 	prev_para_type = par.type;
-	addpara(par, ret);
+	/*
+	 * Before we add the paragraph to the output list, we
+	 * should check that there was any text in it at all; there
+	 * might not be if (for example) the paragraph contained
+	 * nothing but an unrecognised command sequence, and if we
+	 * put an empty paragraph on the list it may confuse the
+	 * back ends later on.
+	 */
+	if (par.words) {
+	    addpara(par, ret);
+	} else {
+	    error(err_emptypara, &par.fpos);
+	}
 	if (t.type == tok_eof)
 	    already = TRUE;
     }
