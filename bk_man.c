@@ -199,7 +199,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	{
 	    int depth;
 	    if (p->type == para_Subsect)
-		depth = p->aux + 2;
+		depth = p->aux + 1;
 	    else if (p->type == para_Heading)
 		depth = 1;
 	    else
