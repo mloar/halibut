@@ -164,8 +164,6 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     }
     fputc('\n', fp);
 
-    fprintf(fp, ".UC\n");
-
     had_described_thing = FALSE;
 #define cleanup_described_thing do { \
     if (had_described_thing) \
