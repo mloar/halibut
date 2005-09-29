@@ -1539,8 +1539,6 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 	 */
 	if (par.words) {
 	    addpara(par, ret);
-	} else {
-	    error(err_emptypara, &par.fpos);
 	}
 	if (t.type == tok_eof)
 	    already = TRUE;

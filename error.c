@@ -278,11 +278,6 @@ static void do_error(int code, va_list ap) {
 	flags = FILEPOS;
 	sfree(sp);
 	break;
-      case err_emptypara:
-	fpos = *va_arg(ap, filepos *);
-	sprintf(error, "found no text in paragraph");
-	flags = FILEPOS;
-	break;
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);

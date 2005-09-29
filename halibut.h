@@ -244,7 +244,6 @@ enum {
     err_text_codeline,		       /* \c line too long in text backend */
     err_htmlver,		       /* unrecognised HTML version keyword */
     err_charset,		       /* unrecognised character set name */
-    err_emptypara,		       /* paragraph contains no actual text */
     err_whatever                       /* random error of another type */
 };
 

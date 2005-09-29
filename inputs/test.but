@@ -43,6 +43,8 @@ has line\#{yet another one} breaks in   between words, multiple
   spaces (ignored), and \e{emphasised text} as well as \c{code
 fragments}.
 
+\#{This is an inline comment alone in a paragraph.}
+
 \cw{This} is weak code; \cq{this} is quoted code. And \k{head}
 contains some other stuff. \K{subhead} does too.
 
