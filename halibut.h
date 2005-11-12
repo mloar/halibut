@@ -35,7 +35,6 @@ typedef struct paragraph_Tag paragraph;
 typedef struct word_Tag word;
 typedef struct keywordlist_Tag keywordlist;
 typedef struct keyword_Tag keyword;
-typedef struct userstyle_Tag userstyle;
 typedef struct numberstate_Tag numberstate;
 typedef struct indexdata_Tag indexdata;
 typedef struct indextag_Tag indextag;
@@ -459,12 +458,6 @@ void number_free(numberstate *);
  * biblio.c
  */
 void gen_citations(paragraph *, keywordlist *);
-
-/*
- * style.c
- */
-struct userstyle_Tag {
-};
 
 /*
  * bk_text.c
