@@ -580,7 +580,7 @@ void whlp_browse_link(WHLP h, WHLP_TOPIC before, WHLP_TOPIC after)
 static void whlp_linkdata(WHLP h, int which, int c)
 {
     int *len = (which == 1 ? &h->link->len1 : &h->link->len2);
-    char *data = (which == 1 ? h->linkdata1 : h->linkdata2);
+    unsigned char *data = (which == 1 ? h->linkdata1 : h->linkdata2);
     assert(*len < TOPIC_BLKSIZE);
     data[(*len)++] = c;
 }
@@ -1275,7 +1275,7 @@ static void whlp_make_btree(struct file *f, int flags, int pagesize,
     int npages = 0, pagessize = 0;
     int npages_this_level, nentries, nlevels;
     int total_leaf_entries;
-    char btdata[MAX_PAGE_SIZE];
+    unsigned char btdata[MAX_PAGE_SIZE];
     int btlen;
     int page_start, fixups_offset, unused_bytes;
     void *element;

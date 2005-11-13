@@ -610,7 +610,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 	    stack_style = 2,	       /* \e, \c, \cw */
 	    stack_idx = 4,	       /* \I, \i, \ii */
 	    stack_hyper = 8,	       /* \W */
-	    stack_quote = 16,	       /* \q */
+	    stack_quote = 16	       /* \q */
 	} type;
 	word **whptr;		       /* to restore from \u alternatives */
 	word **idximplicit;	       /* to restore from \u alternatives */

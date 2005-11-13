@@ -71,7 +71,7 @@ else
 
 # The `real' makefile part.
 
-CFLAGS += -Wall -W
+CFLAGS += -Wall -W -ansi -pedantic
 
 ifdef TEST
 CFLAGS += -DLOGALLOC

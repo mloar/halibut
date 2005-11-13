@@ -177,13 +177,13 @@ enum {
     attr_First  = 0x0001,	       /* the first of a series */
     attr_Last   = 0x0002,	       /* the last of a series */
     attr_Always	= 0x0003,	       /* any other part of a series */
-    attr_mask   = 0x0003,
+    attr_mask   = 0x0003
 };
 /* aux values for quote-type words */
 enum {
     quote_Open  = 0x0010,
     quote_Close = 0x0020,
-    quote_mask  = 0x0030,
+    quote_mask  = 0x0030
 };
 #define isattr(x) ( ( (x) > word_Normal && (x) < word_WhiteSpace ) || \
                     ( (x) > word_WhiteSpace && (x) < word_internal_endattrs ) )
