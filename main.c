@@ -50,7 +50,16 @@ int main(int argc, char **argv) {
     paragraph *cfg, *cfg_tail;
     void *pre_backend_data[16];
 
+    /*
+     * Use the specified locale everywhere. It'll be used for
+     * output of error messages, and as the default character set
+     * for input files if one is not explicitly specified.
+     * 
+     * However, we need to use standard numeric formatting for
+     * output of things like PDF.
+     */
     setlocale(LC_ALL, "");
+    setlocale(LC_NUMERIC, "C");
 
     /*
      * Set up initial (default) parameters.
