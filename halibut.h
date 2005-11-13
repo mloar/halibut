@@ -325,7 +325,7 @@ void licence(void);
 /*
  * version.c
  */
-const char *const version;
+extern const char *const version;
 
 /*
  * misc.c
