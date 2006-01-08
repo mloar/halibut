@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 static const char *const licencetext[] = {
-    "Halibut is copyright (c) 1999-2005 Simon Tatham and James Aylett.",
+    "Halibut is copyright (c) 1999-2006 Simon Tatham and James Aylett.",
     "",
     "Permission is hereby granted, free of charge, to any person",
     "obtaining a copy of this software and associated documentation files",
