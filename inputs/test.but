@@ -215,7 +215,8 @@ Back to ASCII again.
 
 Oh, while I'm here: some special characters. The \\, \{ and \}
 characters, to be precise. And their code equivalents, \c{\\},
-\i\c{\{}, \c{\}}.
+\i\c{\{}, \c{\}}.  The ` and ' characters (grave and apostrophe)
+are special in some output formats.
 
 \S{subhead} First subheading
 
