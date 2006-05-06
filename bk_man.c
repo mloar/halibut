@@ -289,11 +289,12 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 
       case para_Rule:
 	/*
-	 * This isn't terribly good. Anyone who wants to do better
-	 * should feel free!
+	 * New paragraph containing a horizontal line 1/2em above the
+	 * baseline whose length is the line length minus the current
+	 * indent.
 	 */
 	cleanup_described_thing;
-	fprintf(fp, ".PP\n----------------------------------------\n");
+	fprintf(fp, ".PP\n\\u\\l'\\n(.lu-\\n(.iu'\\d\n");
 	break;
 
       case para_LcontPush:
