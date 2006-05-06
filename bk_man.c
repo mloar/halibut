@@ -475,9 +475,10 @@ static int man_convert(wchar_t const *s, int maxlen,
 		 */
 		rdaddc(&out, '\\');
 		rdaddc(&out, '&');
-	    } else if (*q == '\\' || *q == '`') {
+	    } else if (*q == '\\' || *q == '`' || *q == ' ') {
 		/*
-		 * Quote backslashes and backticks always.
+		 * Quote backslashes, backticks and nonbreakable
+		 * spaces always.
 		 */
 		rdaddc(&out, '\\');
 	    } else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
@@ -585,11 +586,8 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 	    }
 	    sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
-	    man_convert(L" ", 1, &c, quote_props, conf->charset, state);
-	    rdaddsc(rs, c);
-	    if (*c)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    sfree(c);
+	    rdaddc(rs, ' ');
+	    quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	} else if (removeattr(text->type) == word_Quote) {
 	    man_convert(quoteaux(text->aux) == quote_Open ?
 			conf->lquote : conf->rquote, 0,
