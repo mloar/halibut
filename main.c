@@ -459,6 +459,8 @@ static void dbg_prtwordlist(int level, word *w) {
 	    printf("\"");
 	} else
 	    printf("(no text)");
+	if (w->breaks)
+	    printf(" [breaks]");
 	if (w->alt) {
 	    printf(" alt = {\n");
 	    dbg_prtwordlist(level+1, w->alt);
