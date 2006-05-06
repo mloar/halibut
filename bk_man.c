@@ -13,7 +13,7 @@ typedef struct {
     int mindepth;
     char *filename;
     int charset;
-    wchar_t *bullet, *lquote, *rquote;
+    wchar_t *bullet, *rule, *lquote, *rquote;
 } manconfig;
 
 static void man_text(FILE *, word *,
@@ -127,6 +127,7 @@ static manconfig man_configure(paragraph *source) {
     ret.filename = dupstr("output.1");
     ret.charset = CS_ASCII;
     ret.bullet = L"\x2022\0o\0\0";
+    ret.rule = L"\x2500\0-\0\0";
     ret.lquote = L"\x2018\0\x2019\0\"\0\"\0\0";
     ret.rquote = uadv(ret.lquote);
 
@@ -170,6 +171,8 @@ static manconfig man_configure(paragraph *source) {
 		ret.filename = dupstr(adv(p->origkeyword));
 	    } else if (!ustricmp(p->keyword, L"man-bullet")) {
 		ret.bullet = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"man-rule")) {
+		ret.rule = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"man-quotes")) {
 		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
 		    ret.lquote = uadv(p->keyword);
@@ -180,7 +183,8 @@ static manconfig man_configure(paragraph *source) {
     }
 
     /*
-     * Now process fallbacks on quote characters and bullets.
+     * Now process fallbacks on quote characters, bullets, and the
+     * rule character.
      */
     while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
 	   (!troff_ok(ret.charset, ret.lquote) ||
@@ -192,6 +196,10 @@ static manconfig man_configure(paragraph *source) {
     while (*ret.bullet && *uadv(ret.bullet) &&
 	   !troff_ok(ret.charset, ret.bullet))
 	ret.bullet = uadv(ret.bullet);
+
+    while (*ret.rule && *uadv(ret.rule) &&
+	   !troff_ok(ret.charset, ret.rule))
+	ret.rule = uadv(ret.rule);
 
     return ret;
 }
@@ -379,13 +387,19 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
 
       case para_Rule:
-	/*
-	 * New paragraph containing a horizontal line 1/2em above the
-	 * baseline whose length is the line length minus the current
-	 * indent.
-	 */
-	cleanup_described_thing;
-	fprintf(fp, ".PP\n\\u\\l'\\n(.lu-\\n(.iu'\\d\n");
+	{
+	    char *ruletext;
+	    /*
+	     * New paragraph containing a horizontal line 1/2em above
+	     * the baseline, or a line of rule characters, whose
+	     * length is the line length minus the current indent.
+	     */
+	    cleanup_described_thing;
+	    man_convert(conf.rule, -1, &ruletext, 0, conf.charset, NULL);
+	    fprintf(fp, ".PP\n.ie t \\u\\l'\\n(.lu-\\n(.iu'\\d\n"
+		    ".el \\l'\\n(.lu-\\n(.iu\\&%s'\n", ruletext);
+	    sfree(ruletext);
+	}
 	break;
 
       case para_LcontPush:
