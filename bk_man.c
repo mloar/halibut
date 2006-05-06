@@ -481,6 +481,12 @@ static int man_convert(wchar_t const *s, int maxlen,
 		 * spaces always.
 		 */
 		rdaddc(&out, '\\');
+	    } else if (*q == '-') {
+		/*
+		 * Turn nonbreakable hyphens into \(hy.
+		 */
+		rdaddsc(&out, "\\(hy");
+		continue;
 	    } else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
 		/*
 		 * Double quote within double quotes. Quote it by
@@ -573,18 +579,32 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 
 	if (removeattr(text->type) == word_Normal) {
 	    charset_state s2 = *state;
+	    int len = ustrlen(text->text), hyphen = FALSE;
 
-	    if (man_convert(text->text, 0, &c, quote_props, conf->charset, &s2) ||
+	    if (text->breaks && text->text[len - 1] == '-') {
+		len--;
+		hyphen = TRUE;
+	    }
+	    if (len == 0 ||
+		man_convert(text->text, len, &c, quote_props, conf->charset,
+			    &s2) ||
 		!text->alt) {
-		rdaddsc(rs, c);
-		if (*c)
+		if (len != 0) {
+		    rdaddsc(rs, c);
+		    if (*c)
+			quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
+		    *state = s2;
+		}
+		if (hyphen) {
+		    rdaddc(rs, '-');
 		    quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-		*state = s2;
+		}
 	    } else {
 		quote_props = man_rdaddwc(rs, text->alt, NULL,
 					  quote_props, conf, state);
 	    }
-	    sfree(c);
+	    if (len != 0)
+		sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
 	    rdaddc(rs, ' ');
 	    quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
