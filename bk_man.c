@@ -23,6 +23,97 @@ static int man_convert(wchar_t const *s, int maxlen,
 		       char **result, int quote_props,
 		       int charset, charset_state *state);
 
+/*
+ * My TROFF reference is "NROFF/TROFF User's Manual", Joseph
+ * F. Ossana, October 11 1976.
+ *
+ * not yet used:
+ * \(ru  rule
+ * \(pl  math plus
+ * \(mi  math minus
+ * \(eq  math equals
+ * \(ga  grave accent
+ * \(ul  underrule
+ * \(sl  slash (matching bakslash)
+ * \(br  box vertical rule
+ * \(br  Bell System logo
+ * \(or  or
+ * all characters for constructing large brackets
+ */
+
+static struct {
+    unsigned short uni;
+    char const *troff;
+} const man_charmap[] = {
+    {0x00A2, "\\(ct"}, {0x00A7, "\\(sc"}, {0x00A9, "\\(co"}, {0x00AC, "\\(no"},
+    {0x00AE, "\\(rg"}, {0x00B0, "\\(de"}, {0x00B1, "\\(+-"}, {0x00B4, "\\(aa"},
+    {0x00BC, "\\(14"}, {0x00BD, "\\(12"}, {0x00BE, "\\(34"}, {0x00D7, "\\(mu"},
+    {0x00F7, "\\(di"},
+
+    {0x0391, "\\(*A"}, {0x0392, "\\(*B"}, {0x0393, "\\(*G"}, {0x0394, "\\(*D"},
+    {0x0395, "\\(*E"}, {0x0396, "\\(*Z"}, {0x0397, "\\(*Y"}, {0x0398, "\\(*H"},
+    {0x0399, "\\(*I"}, {0x039A, "\\(*K"}, {0x039B, "\\(*L"}, {0x039C, "\\(*M"},
+    {0x039D, "\\(*N"}, {0x039E, "\\(*C"}, {0x039F, "\\(*O"}, {0x03A0, "\\(*P"},
+    {0x03A1, "\\(*R"}, {0x03A3, "\\(*S"}, {0x03A4, "\\(*T"}, {0x03A5, "\\(*U"},
+    {0x03A6, "\\(*F"}, {0x03A7, "\\(*X"}, {0x03A8, "\\(*Q"}, {0x03A9, "\\(*W"},
+    {0x03B1, "\\(*a"}, {0x03B2, "\\(*b"}, {0x03B3, "\\(*g"}, {0x03B4, "\\(*d"},
+    {0x03B5, "\\(*e"}, {0x03B6, "\\(*z"}, {0x03B7, "\\(*y"}, {0x03B8, "\\(*h"},
+    {0x03B9, "\\(*i"}, {0x03BA, "\\(*k"}, {0x03BB, "\\(*l"}, {0x03BC, "\\(*m"},
+    {0x03BD, "\\(*n"}, {0x03BE, "\\(*c"}, {0x03BF, "\\(*o"}, {0x03C0, "\\(*p"},
+    {0x03C1, "\\(*r"}, {0x03C2, "\\(ts"}, {0x03C3, "\\(*s"}, {0x03C4, "\\(*t"},
+    {0x03C5, "\\(*u"}, {0x03C6, "\\(*f"}, {0x03C7, "\\(*x"}, {0x03C8, "\\(*q"},
+    {0x03C9, "\\(*w"},
+
+    {0x2014, "\\(em"}, {0x2018, "`"},     {0x2019, "'"},     {0x2020, "\\(dg"},
+    {0x2021, "\\(dd"}, {0x2022, "\\(bu"}, {0x2032, "\\(fm"},
+
+    {0x2190, "\\(<-"}, {0x2191, "\\(ua"}, {0x2192, "\\(->"}, {0x2193, "\\(da"},
+
+    {0x2202, "\\(pd"}, {0x2205, "\\(es"}, {0x2207, "\\(gr"}, {0x2208, "\\(mo"},
+    {0x2212, "\\-"},   {0x2217, "\\(**"}, {0x221A, "\\(sr"}, {0x221D, "\\(pt"},
+    {0x221E, "\\(if"}, {0x2229, "\\(ca"}, {0x222A, "\\(cu"}, {0x222B, "\\(is"},
+    {0x223C, "\\(ap"}, {0x2245, "\\(~="}, {0x2260, "\\(!="}, {0x2261, "\\(=="},
+    {0x2264, "\\(<="}, {0x2265, "\\(>="}, {0x2282, "\\(sb"}, {0x2283, "\\(sp"},
+    {0x2286, "\\(ib"}, {0x2287, "\\(ip"},
+
+    {0x25A1, "\\(sq"},  {0x25CB, "\\(ci"},
+
+    {0x261C, "\\(lh"},  {0x261E, "\\(rh"},
+};
+
+static char const *troffchar(int unichar) {
+    int i, j, k;
+
+    i = -1;
+    j = lenof(man_charmap);
+    while (j-i > 1) {
+	k = (i + j) / 2;
+	if (man_charmap[k].uni == unichar)
+	    return man_charmap[k].troff;
+	else if (man_charmap[k].uni > unichar)
+	    j = k;
+	else
+	    i = k;
+    }
+    return NULL;
+}
+
+/*
+ * Return TRUE if we can represent the whole of the given string either
+ * in the output charset or as named characters; FALSE otherwise.
+ */
+static int troff_ok(int charset, wchar_t *string) {
+    wchar_t test[2];
+    while (*string) {
+	test[0] = *string;
+	test[1] = 0;
+	if (!cvt_ok(charset, test) && !troffchar(*string))
+	    return FALSE;
+	string++;
+    }
+    return TRUE;
+}
+
 static manconfig man_configure(paragraph *source) {
     paragraph *p;
     manconfig ret;
@@ -92,14 +183,14 @@ static manconfig man_configure(paragraph *source) {
      * Now process fallbacks on quote characters and bullets.
      */
     while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
-	   (!cvt_ok(ret.charset, ret.lquote) ||
-	    !cvt_ok(ret.charset, ret.rquote))) {
+	   (!troff_ok(ret.charset, ret.lquote) ||
+	    !troff_ok(ret.charset, ret.rquote))) {
 	ret.lquote = uadv(ret.rquote);
 	ret.rquote = uadv(ret.lquote);
     }
 
     while (*ret.bullet && *uadv(ret.bullet) &&
-	   !cvt_ok(ret.charset, ret.bullet))
+	   !troff_ok(ret.charset, ret.bullet))
 	ret.bullet = uadv(ret.bullet);
 
     return ret;
@@ -340,6 +431,7 @@ static int man_convert(wchar_t const *s, int maxlen,
     char *p = NULL, *q;
     int plen = 0, psize = 0;
     rdstringc out = {0, 0, NULL};
+    int anyerr = 0;
 
     if (!state)
 	state = &internal_state;
@@ -355,15 +447,44 @@ static int man_convert(wchar_t const *s, int maxlen,
     err = 0;
 
     while (slen > 0) {
-	int ret = charset_from_unicode(&s, &slen, p+plen, psize-plen,
-				   charset, state, (err ? NULL : &err));
-	if (ret > 0) {
-       	    plen += ret;
-	    if (psize - plen < 256) {
-		psize = plen + 256;
-		p = sresize(p, psize, char);
+	int ret = charset_from_unicode(&s, &slen, p, psize,
+				   charset, state, &err);
+	plen = ret;
+
+	for (q = p; q < p+plen; q++) {
+	    if (q == p && (*q == '.' || *q == '\'') &&
+		(quote_props & QUOTE_INITCTRL)) {
+		/*
+		 * Control character (. or ') at the start of a
+		 * line. Quote it by putting \& (troff zero-width
+		 * space) before it.
+		 */
+		rdaddc(&out, '\\');
+		rdaddc(&out, '&');
+	    } else if (*q == '\\' || *q == '`') {
+		/*
+		 * Quote backslashes and backticks always.
+		 */
+		rdaddc(&out, '\\');
+	    } else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
+		/*
+		 * Double quote within double quotes. Quote it by
+		 * doubling.
+		 */
+		rdaddc(&out, '"');
 	    }
+	    rdaddc(&out, *q);
 	}
+	if (err) {
+	    char const *tr = troffchar(*s);
+	    if (tr == NULL)
+		anyerr = TRUE;
+	    else
+		rdaddsc(&out, tr);
+	    s++; slen--;
+	}
+	/* Past start of string -- no more quoting needed */
+	quote_props &= ~QUOTE_INITCTRL;
     }
 
     if (state == &internal_state || s == NULL) {
@@ -373,31 +494,6 @@ static int man_convert(wchar_t const *s, int maxlen,
 	    plen += ret;
     }
 
-    for (q = p; q < p+plen; q++) {
-	if (q == p && (*q == '.' || *q == '\'') &&
-	    (quote_props & QUOTE_INITCTRL)) {
-	    /*
-	     * Control character (. or ') at the start of a
-	     * line. Quote it by putting \& (troff zero-width
-	     * space) before it.
-	     */
-	    rdaddc(&out, '\\');
-	    rdaddc(&out, '&');
-	} else if (*q == '\\') {
-	    /*
-	     * Quote backslashes by doubling them, always.
-	     */
-	    rdaddc(&out, '\\');
-	} else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
-	    /*
-	     * Double quote within double quotes. Quote it by
-	     * doubling.
-	     */
-	    rdaddc(&out, '"');
-	}
-	rdaddc(&out, *q);
-    }
-
     sfree(p);
 
     if (out.text)
@@ -405,7 +501,7 @@ static int man_convert(wchar_t const *s, int maxlen,
     else
 	*result = dupstr("");
 
-    return !err;
+    return !anyerr;
 }
 
 static int man_rdaddwc(rdstringc *rs, word *text, word *end,
