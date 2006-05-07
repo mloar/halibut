@@ -475,16 +475,15 @@ static int man_convert(wchar_t const *s, int maxlen,
 		 */
 		rdaddc(&out, '\\');
 		rdaddc(&out, '&');
-	    } else if (*q == '\\' || *q == '`' || *q == ' ') {
-		/*
-		 * Quote backslashes, backticks and nonbreakable
-		 * spaces always.
-		 */
+	    } else if (*q == '`' || *q == ' ') {
+		/* Quote backticks and nonbreakable spaces always. */
 		rdaddc(&out, '\\');
+	    } else if (*q == '\\') {
+		/* Turn backslashes into \e. */
+		rdaddsc(&out, "\\e");
+		continue;
 	    } else if (*q == '-') {
-		/*
-		 * Turn nonbreakable hyphens into \(hy.
-		 */
+		/* Turn nonbreakable hyphens into \(hy. */
 		rdaddsc(&out, "\\(hy");
 		continue;
 	    } else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
