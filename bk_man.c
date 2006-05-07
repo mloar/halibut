@@ -524,6 +524,19 @@ static int man_convert(wchar_t const *s, int maxlen,
     return !anyerr;
 }
 
+static int man_rdaddwc_reset(rdstringc *rs, int quote_props, manconfig *conf,
+			     charset_state *state) {
+    char *c;
+
+    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
+    rdaddsc(rs, c);
+    if (*c)
+	quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
+    sfree(c);
+    *state = charset_init_state;
+    return quote_props;
+}
+
 static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 		       int quote_props, manconfig *conf,
 		       charset_state *state) {
@@ -556,23 +569,13 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 	if (towordstyle(text->type) == word_Emph &&
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only)) {
-	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
-	    rdaddsc(rs, c);
-	    if (*c)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    sfree(c);
-	    *state = charset_init_state;
+	    quote_props = man_rdaddwc_reset(rs, quote_props, conf, state);
 	    rdaddsc(rs, "\\fI");
 	} else if ((towordstyle(text->type) == word_Code ||
 		    towordstyle(text->type) == word_WeakCode) &&
 		   (attraux(text->aux) == attr_First ||
 		    attraux(text->aux) == attr_Only)) {
-	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
-	    rdaddsc(rs, c);
-	    if (*c)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    sfree(c);
-	    *state = charset_init_state;
+	    quote_props = man_rdaddwc_reset(rs, quote_props, conf, state);
 	    rdaddsc(rs, "\\fB");
 	}
 
@@ -595,6 +598,8 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 		    *state = s2;
 		}
 		if (hyphen) {
+		    quote_props =
+			man_rdaddwc_reset(rs, quote_props, conf, state);
 		    rdaddc(rs, '-');
 		    quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 		}
@@ -605,6 +610,7 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 	    if (len != 0)
 		sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
+	    quote_props = man_rdaddwc_reset(rs, quote_props, conf, state);
 	    rdaddc(rs, ' ');
 	    quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 	} else if (removeattr(text->type) == word_Quote) {
@@ -619,21 +625,12 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 	if (towordstyle(text->type) != word_Normal &&
 	    (attraux(text->aux) == attr_Last ||
 	     attraux(text->aux) == attr_Only)) {
-	    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
-	    rdaddsc(rs, c);
-	    if (*c)
-		quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-	    sfree(c);
-	    *state = charset_init_state;
+	    quote_props = man_rdaddwc_reset(rs, quote_props, conf, state);
 	    rdaddsc(rs, "\\fP");
 	}
 	break;
     }
-    man_convert(NULL, 0, &c, quote_props, conf->charset, state);
-    rdaddsc(rs, c);
-    if (*c)
-	quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
-    sfree(c);
+    quote_props = man_rdaddwc_reset(rs, quote_props, conf, state);
 
     return quote_props;
 }
