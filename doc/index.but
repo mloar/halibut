@@ -352,6 +352,9 @@ directive
 \IM{\\cfg\{man-bullet\}} \c{man-bullet} configuration directive
 \IM{\\cfg\{man-bullet\}} \cw{\\cfg\{man-bullet\}}
 
+\IM{\\cfg\{man-rule\}} \c{man-rule} configuration directive
+\IM{\\cfg\{man-rule\}} \cw{\\cfg\{man-rule\}}
+
 \IM{\\cfg\{man-quotes\}} \c{man-quotes} configuration directive
 \IM{\\cfg\{man-quotes\}} \cw{\\cfg\{man-quotes\}}
 
