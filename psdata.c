@@ -12,7 +12,7 @@
  * 
  * Generated from the Adobe Glyph List at
  * 
- *   http://partners.adobe.com/asn/tech/type/glyphlist.txt
+ *   http://partners.adobe.com/public/developer/en/opentype/glyphlist.txt
  * 
  * by a succession of Perl/sh fragments, quoted alongside each
  * array.
@@ -1792,7 +1792,7 @@ const char *const ps_std_glyphs[] = {
  * Character width information from the standard PS fonts.
  * Units are UNITS_PER_PT defined in paper.h.
  * Extracted from the (non-free) AFM files in
- * <http://partners.adobe.com/asn/acrobat/download/fontinfo/Core14_AFMs.tar>
+ * <http://partners.adobe.com/public/developer/en/pdf/Core14_AFMs.tar>
  * by the following script:
 
 fonts="Times-Roman Times-Italic Times-Bold Times-BoldItalic \
