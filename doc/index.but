@@ -430,8 +430,35 @@ directive
 \IM{\\cfg\{paper-footer-distance\}} \c{paper-footer-distance} configuration directive
 \IM{\\cfg\{paper-footer-distance\}} \cw{\\cfg\{paper-footer-distance\}}
 
+\IM{\\cfg\{paper-base-fonts\}} \c{paper-base-fonts} configuration directive
+\IM{\\cfg\{paper-base-fonts\}} \cw{\\cfg\{paper-base-fonts\}}
+
 \IM{\\cfg\{paper-base-font-size\}} \c{paper-base-font-size} configuration directive
 \IM{\\cfg\{paper-base-font-size\}} \cw{\\cfg\{paper-base-font-size\}}
+
+\IM{\\cfg\{paper-title-fonts\}} \c{paper-title-fonts} configuration directive
+\IM{\\cfg\{paper-title-fonts\}} \cw{\\cfg\{paper-title-fonts\}}
+
+\IM{\\cfg\{paper-title-font-size\}} \c{paper-title-font-size} configuration directive
+\IM{\\cfg\{paper-title-font-size\}} \cw{\\cfg\{paper-title-font-size\}}
+
+\IM{\\cfg\{paper-chapter-fonts\}} \c{paper-chapter-fonts} configuration directive
+\IM{\\cfg\{paper-chapter-fonts\}} \cw{\\cfg\{paper-chapter-fonts\}}
+
+\IM{\\cfg\{paper-chapter-font-size\}} \c{paper-chapter-font-size} configuration directive
+\IM{\\cfg\{paper-chapter-font-size\}} \cw{\\cfg\{paper-chapter-font-size\}}
+
+\IM{\\cfg\{paper-section-fonts\}} \c{paper-section-fonts} configuration directive
+\IM{\\cfg\{paper-section-fonts\}} \cw{\\cfg\{paper-section-fonts\}}
+
+\IM{\\cfg\{paper-section-font-size\}} \c{paper-section-font-size} configuration directive
+\IM{\\cfg\{paper-section-font-size\}} \cw{\\cfg\{paper-section-font-size\}}
+
+\IM{\\cfg\{paper-code-fonts\}} \c{paper-code-fonts} configuration directive
+\IM{\\cfg\{paper-code-fonts\}} \cw{\\cfg\{paper-code-fonts\}}
+
+\IM{\\cfg\{paper-code-font-size\}} \c{paper-code-font-size} configuration directive
+\IM{\\cfg\{paper-code-font-size\}} \cw{\\cfg\{paper-code-font-size\}}
 
 \IM{\\cfg\{paper-index-columns\}} \c{paper-index-columns} configuration directive
 \IM{\\cfg\{paper-index-columns\}} \cw{\\cfg\{paper-index-columns\}}

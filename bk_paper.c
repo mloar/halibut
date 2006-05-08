@@ -85,6 +85,11 @@
 typedef struct paper_conf_Tag paper_conf;
 typedef struct paper_idx_Tag paper_idx;
 
+typedef struct {
+    font_data *fonts[NFONTS];
+    int font_size;
+} font_cfg;
+
 struct paper_conf_Tag {
     int paper_width;
     int paper_height;
@@ -103,7 +108,8 @@ struct paper_conf_Tag {
     int chapter_underline_depth;
     int chapter_underline_thickness;
     int rule_thickness;
-    int base_font_size;
+    font_cfg fbase, fcode, ftitle, fchapter, *fsect;
+    int nfsect;
     int contents_indent_step;
     int contents_margin;
     int leader_separation;
@@ -117,8 +123,6 @@ struct paper_conf_Tag {
     int base_width;
     int page_height;
     int index_colwidth;
-    /* Fonts used in the configuration */
-    font_data *tr, *ti, *hr, *hi, *cr, *co, *cb;
 };
 
 struct paper_idx_Tag {
@@ -192,6 +196,23 @@ static int fonts_ok(wchar_t *string, ...)
     return ret;
 }
 
+static void paper_cfg_fonts(font_data **fonts, font_list *fontlist,
+			    wchar_t *wp, filepos *fpos) {
+    font_data *f;
+    char *fn;
+    int i;
+
+    for (i = 0; i < NFONTS && *wp; i++, wp = uadv(wp)) {
+	fn = utoa_dup(wp, CS_ASCII);
+	f = make_std_font(fontlist, fn);
+	if (f)
+	    fonts[i] = f;
+	else
+	    /* FIXME: proper error */
+	    error(err_nofont, fpos, wp);
+    }
+}
+
 static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     paragraph *p;
     paper_conf ret;
@@ -215,7 +236,41 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     ret.chapter_underline_depth = 14 * UNITS_PER_PT;
     ret.chapter_underline_thickness = 3 * UNITS_PER_PT;
     ret.rule_thickness = 1 * UNITS_PER_PT;
-    ret.base_font_size = 12;
+    ret.fbase.font_size = 12;
+    ret.fbase.fonts[FONT_NORMAL] = make_std_font(fontlist, "Times-Roman");
+    ret.fbase.fonts[FONT_EMPH] = make_std_font(fontlist, "Times-Italic");
+    ret.fbase.fonts[FONT_CODE] = make_std_font(fontlist, "Courier");
+    ret.fcode.font_size = 12;
+    ret.fcode.fonts[FONT_NORMAL] = make_std_font(fontlist, "Courier-Bold");
+    ret.fcode.fonts[FONT_EMPH] = make_std_font(fontlist, "Courier-Oblique");
+    ret.fcode.fonts[FONT_CODE] = make_std_font(fontlist, "Courier");
+    ret.ftitle.font_size = 24;
+    ret.ftitle.fonts[FONT_NORMAL] = make_std_font(fontlist, "Helvetica-Bold");
+    ret.ftitle.fonts[FONT_EMPH] =
+	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.ftitle.fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
+    ret.fchapter.font_size = 20;
+    ret.fchapter.fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
+    ret.fchapter.fonts[FONT_EMPH] =
+	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fchapter.fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
+    ret.nfsect = 3;
+    ret.fsect = snewn(ret.nfsect, font_cfg);
+    ret.fsect[0].font_size = 16;
+    ret.fsect[0].fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
+    ret.fsect[0].fonts[FONT_EMPH] =
+	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fsect[0].fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
+    ret.fsect[1].font_size = 14;
+    ret.fsect[1].fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
+    ret.fsect[1].fonts[FONT_EMPH] =
+	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fsect[1].fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
+    ret.fsect[2].font_size = 13;
+    ret.fsect[2].fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
+    ret.fsect[2].fonts[FONT_EMPH] =
+	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fsect[2].fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
     ret.contents_indent_step = 24 * UNITS_PER_PT;
     ret.contents_margin = 84 * UNITS_PER_PT;
     ret.leader_separation = 12 * UNITS_PER_PT;
@@ -322,15 +377,60 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 		ret.footer_distance =
 		    (int) 0.5 + FUNITS_PER_PT * utof(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-base-font-size")) {
-		ret.base_font_size =
-		    utoi(uadv(p->keyword));
+		ret.fbase.font_size = utoi(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-index-columns")) {
-		ret.index_cols =
-		    utoi(uadv(p->keyword));
+		ret.index_cols = utoi(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-pagenum-font-size")) {
-		ret.pagenum_fontsize =
-		    utoi(uadv(p->keyword));
-	    }
+		ret.pagenum_fontsize = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-base-fonts")) {
+		paper_cfg_fonts(ret.fbase.fonts, fontlist, uadv(p->keyword),
+				&p->fpos);
+	    } else if (!ustricmp(p->keyword, L"paper-code-font-size")) {
+		ret.fcode.font_size = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-code-fonts")) {
+		paper_cfg_fonts(ret.fcode.fonts, fontlist, uadv(p->keyword),
+				&p->fpos);
+	    } else if (!ustricmp(p->keyword, L"paper-title-font-size")) {
+		ret.ftitle.font_size = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-title-fonts")) {
+		paper_cfg_fonts(ret.ftitle.fonts, fontlist, uadv(p->keyword),
+				&p->fpos);
+	    } else if (!ustricmp(p->keyword, L"paper-chapter-font-size")) {
+		ret.ftitle.font_size = utoi(uadv(p->keyword));
+	    } else if (!ustricmp(p->keyword, L"paper-chapter-fonts")) {
+		paper_cfg_fonts(ret.ftitle.fonts, fontlist, uadv(p->keyword),
+				&p->fpos);
+	    } else if (!ustricmp(p->keyword, L"paper-section-font-size")) {
+		wchar_t *q = uadv(p->keyword);
+		int n = 0;
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
+		}
+		if (n >= ret.nfsect) {
+		    int i;
+		    ret.fsect = sresize(ret.fsect, n+1, font_cfg);
+		    for (i = ret.nfsect; i <= n; i++)
+			ret.fsect[i] = ret.fsect[ret.nfsect-1];
+		    ret.nfsect = n+1;
+		}
+		ret.fsect[n].font_size = utoi(q);
+	    } else if (!ustricmp(p->keyword, L"paper-section-fonts")) {
+		wchar_t *q = uadv(p->keyword);
+		int n = 0;
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
+		}
+		if (n >= ret.nfsect) {
+		    int i;
+		    ret.fsect = sresize(ret.fsect, n+1, font_cfg);
+		    for (i = ret.nfsect; i <= n; i++)
+			ret.fsect[i] = ret.fsect[ret.nfsect-1];
+		    ret.nfsect = n+1;
+		}
+		paper_cfg_fonts(ret.fsect[n].fonts, fontlist, q, &p->fpos);
+	    } 
 	}
     }
 
@@ -348,17 +448,6 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 	/ ret.index_cols;
 
     /*
-     * Set up the font structures.
-     */
-    ret.tr = make_std_font(fontlist, "Times-Roman");
-    ret.ti = make_std_font(fontlist, "Times-Italic");
-    ret.hr = make_std_font(fontlist, "Helvetica-Bold");
-    ret.hi = make_std_font(fontlist, "Helvetica-BoldOblique");
-    ret.cr = make_std_font(fontlist, "Courier");
-    ret.co = make_std_font(fontlist, "Courier-Oblique");
-    ret.cb = make_std_font(fontlist, "Courier-Bold");
-
-    /*
      * Now process fallbacks on quote characters and bullets. We
      * use string_width() to determine whether all of the relevant
      * fonts contain the same character, and fall back whenever we
@@ -367,9 +456,31 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 
     /* Quote characters need not be supported in the fixed code fonts,
      * but must be in the title and body fonts. */
-    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote)) &&
-	   (!fonts_ok(ret.lquote, ret.tr, ret.ti, ret.hr, ret.hi, NULL) ||
-	    !fonts_ok(ret.rquote, ret.tr, ret.ti, ret.hr, ret.hi, NULL))) {
+    while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote))) {
+	int n;
+	if (!fonts_ok(ret.lquote,
+		      ret.fbase.fonts[FONT_NORMAL],
+		      ret.fbase.fonts[FONT_EMPH],
+		      ret.ftitle.fonts[FONT_NORMAL],
+		      ret.ftitle.fonts[FONT_EMPH],
+		      ret.fchapter.fonts[FONT_NORMAL],
+		      ret.fchapter.fonts[FONT_EMPH], NULL) ||
+	    !fonts_ok(ret.rquote,
+		      ret.fbase.fonts[FONT_NORMAL],
+		      ret.fbase.fonts[FONT_EMPH],
+		      ret.ftitle.fonts[FONT_NORMAL],
+		      ret.ftitle.fonts[FONT_EMPH],
+		      ret.fchapter.fonts[FONT_NORMAL],
+		      ret.fchapter.fonts[FONT_EMPH], NULL))
+	    break;
+	for (n = 0; n < ret.nfsect; n++)
+	    if (!fonts_ok(ret.lquote,
+			 ret.fsect[n].fonts[FONT_NORMAL],
+			 ret.fsect[n].fonts[FONT_EMPH], NULL) ||
+		 !fonts_ok(ret.rquote,
+			   ret.fsect[n].fonts[FONT_NORMAL],
+			   ret.fsect[n].fonts[FONT_EMPH], NULL))
+		break;
 	ret.lquote = uadv(ret.rquote);
 	ret.rquote = uadv(ret.lquote);
     }
@@ -377,7 +488,7 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     /* The bullet character only needs to be supported in the normal body
      * font (not even in italics). */
     while (*ret.bullet && *uadv(ret.bullet) &&
-	   !fonts_ok(ret.bullet, ret.tr, NULL))
+	   !fonts_ok(ret.bullet, ret.fbase.fonts[FONT_NORMAL], NULL))
 	ret.bullet = uadv(ret.bullet);
 
     return ret;
@@ -897,9 +1008,11 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	    int width;
 
 	    width = conf->pagenum_fontsize *
-		string_width(conf->tr, page->number, NULL);
+		string_width(conf->fbase.fonts[FONT_NORMAL], page->number,
+			     NULL);
 
-	    render_string(page, conf->tr, conf->pagenum_fontsize,
+	    render_string(page, conf->fbase.fonts[FONT_NORMAL],
+			  conf->pagenum_fontsize,
 			  conf->left_margin + (conf->base_width - width)/2,
 			  conf->bottom_margin - conf->footer_distance,
 			  page->number);
@@ -958,6 +1071,15 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     return doc;
 }
 
+static void setfont(para_data *p, font_cfg *f) {
+    int i;
+
+    for (i = 0; i < NFONTS; i++) {
+	p->fonts[i] = f->fonts[i];
+	p->sizes[i] = f->font_size;
+    }
+}
+
 static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 				 word *pkwtext, word *pkwtext2, word *pwords,
 				 paper_conf *conf)
@@ -976,42 +1098,24 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
 
     /*
      * Choose fonts for this paragraph.
-     *
-     * FIXME: All of this ought to be completely
-     * user-configurable.
      */
     switch (ptype) {
       case para_Title:
-	pdata->fonts[FONT_NORMAL] = conf->hr;
-	pdata->sizes[FONT_NORMAL] = 24;
-	pdata->fonts[FONT_EMPH] = conf->hi;
-	pdata->sizes[FONT_EMPH] = 24;
-	pdata->fonts[FONT_CODE] = conf->cb;
-	pdata->sizes[FONT_CODE] = 24;
+	setfont(pdata, &conf->ftitle);
 	pdata->outline_level = 0;
 	break;
 
       case para_Chapter:
       case para_Appendix:
       case para_UnnumberedChapter:
-	pdata->fonts[FONT_NORMAL] = conf->hr;
-	pdata->sizes[FONT_NORMAL] = 20;
-	pdata->fonts[FONT_EMPH] = conf->hi;
-	pdata->sizes[FONT_EMPH] = 20;
-	pdata->fonts[FONT_CODE] = conf->cb;
-	pdata->sizes[FONT_CODE] = 20;
+	setfont(pdata, &conf->fchapter);
 	pdata->outline_level = 1;
 	break;
 
       case para_Heading:
       case para_Subsect:
-	pdata->fonts[FONT_NORMAL] = conf->hr;
-	pdata->fonts[FONT_EMPH] = conf->hi;
-	pdata->fonts[FONT_CODE] = conf->cb;
-	pdata->sizes[FONT_NORMAL] =
-	    pdata->sizes[FONT_EMPH] =
-	    pdata->sizes[FONT_CODE] =
-	    (paux == 0 ? 16 : paux == 1 ? 14 : 13);
+	setfont(pdata,
+		&conf->fsect[paux >= conf->nfsect ? conf->nfsect - 1 : paux]);
 	pdata->outline_level = 2 + paux;
 	break;
 
@@ -1022,12 +1126,7 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
       case para_DescribedThing:
       case para_Description:
       case para_Copyright:
-	pdata->fonts[FONT_NORMAL] = conf->tr;
-	pdata->sizes[FONT_NORMAL] = 12;
-	pdata->fonts[FONT_EMPH] = conf->ti;
-	pdata->sizes[FONT_EMPH] = 12;
-	pdata->fonts[FONT_CODE] = conf->cr;
-	pdata->sizes[FONT_CODE] = 12;
+	setfont(pdata, &conf->fbase);
 	break;
     }
 
@@ -2278,12 +2377,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
      * pretend the three normal fonts are the three code paragraph
      * fonts.
      */
-    pdata->fonts[FONT_NORMAL] = conf->cb;
-    pdata->fonts[FONT_EMPH] = conf->co;
-    pdata->fonts[FONT_CODE] = conf->cr;
-    pdata->sizes[FONT_NORMAL] =
-	pdata->sizes[FONT_EMPH] =
-	pdata->sizes[FONT_CODE] = 12;
+    setfont(pdata, &conf->fcode);
 
     pdata->first = pdata->last = NULL;
     pdata->outline_level = -1;
@@ -2358,7 +2452,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
 	ldata->pdata = pdata;
 	ldata->first = lhead;
 	ldata->end = NULL;
-	ldata->line_height = conf->base_font_size * UNITS_PER_PT;
+	ldata->line_height = conf->fcode.font_size * UNITS_PER_PT;
 
 	ldata->xpos = indent;
 

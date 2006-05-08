@@ -1497,18 +1497,89 @@ columns.
 entry and its page number. If the gap is smaller, the page number is
 moved to the next line.
 
-\S2{output-paper-fonts} Fonts
+\S2{output-paper-fonts} \ii{Fonts}
+
+The directives in this section control which fonts Halibut uses for
+various kinds of text.  Directives for setting the font normally take
+three font names, the first of which is used for normal text, the
+second for emphasised text, and the third for code.  Any fonts which
+aren't specified are left unchanged.  Fonts are named using their
+PostScript names and must be ones whose metrics are compiled into
+Halibut.  These are:
+
+\b \cw{Times-Roman}
+
+\b \cw{Times-Italic}
+
+\b \cw{Times-Bold}
+
+\b \cw{Times-BoldItalic}
+
+\b \cw{Helvetica}
+
+\b \cw{Helvetica-Oblique}
+
+\b \cw{Helvetica-Bold}
+
+\b \cw{Helvetica-BoldOblique}
+
+\b \cw{Courier}
+
+\b \cw{Courier-Oblique}
+
+\b \cw{Courier-Bold}
+
+\b \cw{Courier-BoldOblique}
+
+\ii{Font sizes} are specified in PostScript \i{points} (72 to the inch).
+
+\dt \I{\cw{\\cfg\{paper-title-fonts\}}}\cw{\\cfg\{paper-title-fonts\}\{}\e{normal-font}\cw{\}}[\cw{\{}\e{emph-font}\cw{\}}[\cw{\{}\e{code-font}\cw{\}}]]
+
+\dd Specifies the fonts to use for text in the document title.
+
+\dt \I{\cw{\\cfg\{paper-title-font-size\}}}\cw{\\cfg\{paper-title-font-size\}\{}\e{points}\cw{\}}
+
+\dd Specifies the \i{font size} of the document title.
+
+\dt \I{\cw{\\cfg\{paper-chapter-fonts\}}}\cw{\\cfg\{paper-chapter-fonts\}\{}\e{normal-font}\cw{\}}[\cw{\{}\e{emph-font}\cw{\}}[\cw{\{}\e{code-font}\cw{\}}]]
+
+\dd Specifies the fonts to use for text in chapter titles.
+
+\dt \I{\cw{\\cfg\{paper-chapter-font-size\}}}\cw{\\cfg\{paper-chapter-font-size\}\{}\e{points}\cw{\}}
+
+\dd Specifies the \i{font size} of chapter titles.
+
+\dt \I{\cw{\\cfg\{paper-section-fonts\}}}\cw{\\cfg\{paper-section-fonts\}\{}\e{level}\cw{\}\{}\e{normal-font}\cw{\}}[\cw{\{}\e{emph-font}\cw{\}}[\cw{\{}\e{code-font}\cw{\}}]]
+
+\dd Specifies the fonts to use for text in section headings at the \e{level}
+specified.
+
+\dt \I{\cw{\\cfg\{paper-section-font-size\}}}\cw{\\cfg\{paper-section-font-size\}\{}\e{level}\cw{\}\{}\e{points}\cw{\}}
+
+\dd Specifies the \i{font size} of section headings at the \e{level}
+specified.
+
+\dt \I{\cw{\\cfg\{paper-base-fonts\}}}\cw{\\cfg\{paper-base-fonts\}\{}\e{normal-font}\cw{\}}[\cw{\{}\e{emph-font}\cw{\}}[\cw{\{}\e{code-font}\cw{\}}]]
+
+\dd Specifies the fonts to use for text in the body text.
 
 \dt \I{\cw{\\cfg\{paper-base-font-size\}}}\cw{\\cfg\{paper-base-font-size\}\{}\e{points}\cw{\}}
 
-\dd Specifies the font size of body text.
+\dd Specifies the \i{font size} of body text.
 
-\# FIXME: actually, this doesn't appear to do anything at all - most
-font sizes are still hardcoded.
+\dt \I{\cw{\\cfg\{paper-code-fonts\}}}\cw{\\cfg\{paper-code-fonts\}\{}\e{bold-font}\cw{\}}[\cw{\{}\e{italic-font}\cw{\}}[\cw{\{}\e{normal-font}\cw{\}}]]
+
+\dd Specifies the fonts to use for text in code paragraps.  The
+\e{bold-font} is used for bold text, the \e{italic-font} for
+emphasised text, and the \e{normal-font} for normal code.
+
+\dt \I{\cw{\\cfg\{paper-code-font-size\}}}\cw{\\cfg\{paper-code-font-size\}\{}\e{points}\cw{\}}
+
+\dd Specifies the \i{font size} of text in code paragraphs.
 
 \dt \I{\cw{\\cfg\{paper-pagenum-font-size\}}}\cw{\\cfg\{paper-pagenum-font-size\}\{}\e{points}\cw{\}}
 
-\dd Specifies the font size to use for page numbers.
+\dd Specifies the font size to use for \i{page numbers}.
 
 \S2{output-paper-misc} Miscellaneous
 
@@ -1567,7 +1638,23 @@ The default page size corresponds to 210\_\u00D7{x}\_297\_mm, i.e.,
 \c \cfg{paper-index-gutter}{36} 
 \c \cfg{paper-index-minsep}{18} 
 \c
+\c \cfg{paper-base-fonts}{Times-Roman}{Times-Italic}{Courier}
 \c \cfg{paper-base-font-size}{12} 
+\c \cfg{paper-code-fonts}{Courier-Bold}{Courier-Oblique}{Courier}
+\c \cfg{paper-code-font-size}{12}
+\c \cfg{paper-title-fonts}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-title-font-size}{24}
+\c \cfg{paper-chapter-fonts}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-chapter-font-size}{20}
+\c \cfg{paper-section-fonts}{0}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-section-font-size}{0}{16}
+\c \cfg{paper-section-fonts}{1}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-section-font-size}{1}{14}
+\c \cfg{paper-section-fonts}{2}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-section-font-size}{2}{13}
+\c ... and so on for all section levels below this ...
+\e iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+\c
 \c \cfg{paper-pagenum-font-size}{12} 
 \c
 \c \cfg{paper-rule-thickness}{1} 

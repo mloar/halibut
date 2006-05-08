@@ -278,6 +278,14 @@ static void do_error(int code, va_list ap) {
 	flags = FILEPOS;
 	sfree(sp);
 	break;
+      case err_nofont:
+	fpos = *va_arg(ap, filepos *);
+	wsp = va_arg(ap, wchar_t *);
+	sp = utoa_locale_dup(wsp);
+	sprintf(error, "font `%.200s' not recognised", sp);
+	flags = FILEPOS;
+	sfree(sp);
+	break;
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
