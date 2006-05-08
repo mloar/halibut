@@ -1791,7 +1791,7 @@ const char *const ps_std_glyphs[] = {
 /*
  * Character width information from the standard PS fonts.
  * Units are UNITS_PER_PT defined in paper.h.
- * Extracted from the (non-free) AFM files in
+ * Extracted from the AFM files in
  * <http://partners.adobe.com/public/developer/en/pdf/Core14_AFMs.tar>
  * by the following script:
 
@@ -1831,6 +1831,19 @@ while (<G>) { chomp; print "$m{$_}, " }; print "\n"' $i |\
 done
 printf '};\n'
 
+ * The AFM files have the following copyright and licence: 
+ *
+ * Copyright (c) 1985, 1987, 1989, 1990, 1991, 1992, 1993, 1997
+ * Adobe Systems Incorporated.  All Rights Reserved.
+ *
+ * This file and the 14 PostScript(R) AFM files it accompanies may be
+ * used, copied, and distributed for any purpose and without charge,
+ * with or without modification, provided that all copyright notices
+ * are retained; that the AFM files are not distributed without this
+ * file; that all modifications to this file or any of the AFM files
+ * are prominently noted in the modified file(s); and that this
+ * paragraph is not modified. Adobe Systems has no responsibility or
+ * obligation to support the use of the AFM files.
  */
 
 static const kern_pair times_roman_kerns[] = {
