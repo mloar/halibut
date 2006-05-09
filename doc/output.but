@@ -1611,7 +1611,7 @@ The default page size corresponds to 210\_\u00D7{x}\_297\_mm, i.e.,
 \i{A4 paper}.
 
 \c \cfg{paper-page-width}{595} 
-\c \cfg{paper-page-height}{841} 
+\c \cfg{paper-page-height}{842} 
 \c
 \c \cfg{paper-left-margin}{72} 
 \c \cfg{paper-top-margin}{72} 

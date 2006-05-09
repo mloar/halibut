@@ -221,7 +221,7 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
      * Defaults.
      */
     ret.paper_width = 595 * UNITS_PER_PT;
-    ret.paper_height = 841 * UNITS_PER_PT;
+    ret.paper_height = 842 * UNITS_PER_PT;
     ret.left_margin = 72 * UNITS_PER_PT;
     ret.top_margin = 72 * UNITS_PER_PT;
     ret.right_margin = 72 * UNITS_PER_PT;
