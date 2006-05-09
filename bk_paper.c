@@ -1371,6 +1371,10 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
     font_encoding *fe;
     int i;
 
+    for (fe = fontlist->head; fe; fe = fe->next)
+	if (strcmp(fe->font->name, name) == 0)
+	    return fe->font;
+
     /* XXXKERN */
     widths = ps_std_font_widths(name);
     kerns = ps_std_font_kerns(name);
