@@ -164,11 +164,20 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
 	{
 	    object *widths = new_object(&olist);
-	    objtext(font, "/FirstChar 0\n/LastChar 255\n/Widths ");
+	    int firstchar = -1, lastchar = -1;
+	    char buf[80];
+	    for (i = 0; i < 256; i++)
+		if (fe->indices[i] >= 0) {
+		    if (firstchar < 0) firstchar = i;
+		    lastchar = i;
+		}
+	    sprintf(buf, "/FirstChar %d\n/LastChar %d\n/Widths ",
+		    firstchar, lastchar);
+	    objtext(font, buf);
 	    objref(font, widths);
 	    objtext(font, "\n");
 	    objtext(widths, "[\n");
-	    for (i = 0; i < 256; i++) {
+	    for (i = firstchar; i <= lastchar; i++) {
 		char buf[80];
 		double width;
 		if (fe->indices[i] < 0)
