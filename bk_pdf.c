@@ -38,6 +38,7 @@ static void pdf_string(void (*add)(object *, char const *),
 static void pdf_string_len(void (*add)(object *, char const *),
 			   object *, char const *, int);
 static void objref(object *o, object *dest);
+static char *pdf_outline_convert(wchar_t *s, int *len);
 
 static void make_pages_node(object *node, object *parent, page_data *first,
 			    page_data *last, object *resources,
@@ -57,7 +58,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     char *filename;
     paragraph *p;
     objlist olist;
-    object *o, *cat, *outlines, *pages, *resources, *mediabox;
+    object *o, *info, *cat, *outlines, *pages, *resources, *mediabox;
     int fileoff;
 
     IGNORE(keywords);
@@ -75,6 +76,29 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
     olist.head = olist.tail = NULL;
     olist.number = 1;
+
+    {
+	char buf[256];
+
+	info = new_object(&olist);
+	objtext(info, "<<\n");
+	if (doc->n_outline_elements > 0) {
+	    char *title;
+	    int titlelen;
+
+	    title =
+	       pdf_outline_convert(doc->outline_elements->pdata->outline_title,
+					&titlelen);
+	    objtext(info, "/Title ");
+	    pdf_string_len(objtext, info, title, titlelen);
+	    sfree(title);
+	    objtext(info, "\n");
+	}
+	objtext(info, "/Producer ");
+	sprintf(buf, "Halibut, %s", version);
+	pdf_string(objtext, info, buf);
+	objtext(info, "\n>>\n");
+    }
 
     cat = new_object(&olist);
     if (doc->n_outline_elements > 0)
@@ -463,8 +487,8 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Trailer
      */
-    fprintf(fp, "trailer\n<<\n/Size %d\n/Root %d 0 R\n>>\n",
-	    olist.tail->number + 1, cat->number);
+    fprintf(fp, "trailer\n<<\n/Size %d\n/Root %d 0 R\n/Info %d 0 R\n>>\n",
+	    olist.tail->number + 1, cat->number, info->number);
     fprintf(fp, "startxref\n%d\n%%%%EOF\n", fileoff);
 
     fclose(fp);
@@ -665,6 +689,7 @@ static int make_outline(object *parent, outline_element *items, int n,
 	last = curr;
 	objtext(curr, "<<\n/Title ");
 	pdf_string_len(objtext, curr, title, titlelen);
+	sfree(title);
 	objtext(curr, "\n/Parent ");
 	objref(curr, parent);
 	objtext(curr, "\n/Dest [");
