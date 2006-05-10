@@ -40,7 +40,8 @@ static void pdf_string_len(void (*add)(object *, char const *),
 static void objref(object *o, object *dest);
 
 static void make_pages_node(object *node, object *parent, page_data *first,
-			    page_data *last, object *resources);
+			    page_data *last, object *resources,
+			    object *mediabox);
 static int make_outline(object *parent, outline_element *start, int n,
 			int open);
 static int pdf_versionid(FILE *fp, word *words);
@@ -56,7 +57,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     char *filename;
     paragraph *p;
     objlist olist;
-    object *o, *cat, *outlines, *pages, *resources;
+    object *o, *cat, *outlines, *pages, *resources, *mediabox;
     int fileoff;
 
     IGNORE(keywords);
@@ -160,6 +161,15 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     }
     objtext(resources, ">>\n>>\n");
 
+    {
+	char buf[255];
+	mediabox = new_object(&olist);
+	sprintf(buf, "[0 0 %g %g]\n",
+		doc->paper_width / FUNITS_PER_PT,
+		doc->paper_height / FUNITS_PER_PT);
+	objtext(mediabox, buf);
+    }
+
     /*
      * Define the page objects for each page, and get each one
      * ready to have a `Parent' specification added to it.
@@ -175,7 +185,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Recursively build the page tree.
      */
-    make_pages_node(pages, NULL, doc->pages, NULL, resources);
+    make_pages_node(pages, NULL, doc->pages, NULL, resources, mediabox);
 
     /*
      * Create and render the individual pages.
@@ -200,12 +210,9 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	 * that it's inheritable and may be omitted if it's present
 	 * in a Pages node. In our case it is: it's present in the
 	 * topmost /Pages node because we carefully put it there.
-	 * So we don't need a /Resources entry here.
+	 * So we don't need a /Resources entry here.  The same applies
+	 * to /MediaBox.
 	 */
-	sprintf(buf, "/MediaBox [0 0 %g %g]\n",
-		doc->paper_width / FUNITS_PER_PT,
-		doc->paper_height / FUNITS_PER_PT);
-	objtext(opage, buf);
 
 	/*
 	 * Now we're ready to define a content stream containing
@@ -509,7 +516,8 @@ static void objref(object *o, object *dest)
 }
 
 static void make_pages_node(object *node, object *parent, page_data *first,
-			    page_data *last, object *resources)
+			    page_data *last, object *resources,
+			    object *mediabox)
 {
     int count;
     page_data *page;
@@ -557,7 +565,8 @@ static void make_pages_node(object *node, object *parent, page_data *first,
 		objtext((object *)thisfirst->spare, "\n");
 	    } else {
 		object *newnode = new_object(node->list);
-		make_pages_node(newnode, node, thisfirst, thislast, NULL);
+		make_pages_node(newnode, node, thisfirst, thislast,
+				NULL, NULL);
 		objref(node, newnode);
 	    }
 	    objtext(node, "\n");
@@ -582,6 +591,11 @@ static void make_pages_node(object *node, object *parent, page_data *first,
     if (resources) {
 	objtext(node, "/Resources ");
 	objref(node, resources);
+	objtext(node, "\n");
+    }
+    if (mediabox) {
+	objtext(node, "/MediaBox ");
+	objref(node, mediabox);
 	objtext(node, "\n");
     }
 
