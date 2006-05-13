@@ -58,6 +58,9 @@ void read_afm_file(input *in) {
     fi->glyphs = NULL;
     fi->widths = NULL;
     fi->kerns = newtree234(kern_cmp);
+    fi->fontbbox[0] = fi->fontbbox[1] = fi->fontbbox[2] = fi->fontbbox[3] = 0;
+    fi->capheight = fi->xheight = fi->ascent = fi->descent = 0;
+    fi->stemh = fi->stemv = fi->italicangle = 0;
     in->pos.line = 0;
     line = afm_read_line(in);
     if (!line || !afm_require_key(line, "StartFontMetrics", in))
@@ -87,6 +90,63 @@ void read_afm_file(input *in) {
 		goto giveup;
 	    }
 	    fi->name = dupstr(val);
+	} else if (strcmp(key, "FontBBox") == 0) {
+	    int i;
+	    for (i = 0; i < 3; i++) {
+		if (!(val = strtok(NULL, " \t"))) {
+		    error(err_afmval, &in->pos, key, 4);
+		    goto giveup;
+		}
+		fi->fontbbox[i] = atof(val);
+	    }
+	} else if (strcmp(key, "CapHeight") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->capheight = atof(val);
+	} else if (strcmp(key, "XHeight") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->xheight = atof(val);
+	} else if (strcmp(key, "Ascender") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->ascent = atof(val);
+	} else if (strcmp(key, "Descender") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->descent = atof(val);
+	} else if (strcmp(key, "CapHeight") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->capheight = atof(val);
+	} else if (strcmp(key, "StdHW") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->stemh = atof(val);
+	} else if (strcmp(key, "StdVW") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->stemv = atof(val);
+	} else if (strcmp(key, "ItalicAngle") == 0) {
+	    if (!(val = strtok(NULL, " \t"))) {
+		error(err_afmval, &in->pos, key, 1);
+		goto giveup;
+	    }
+	    fi->italicangle = atof(val);
 	} else if (strcmp(key, "StartCharMetrics") == 0) {
 	    char const **glyphs;
 	    int *widths;

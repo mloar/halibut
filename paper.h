@@ -87,6 +87,18 @@ struct font_info_Tag {
      * it), whose elements are indices into the above two arrays.
      */
     unsigned short bmp[65536];
+    /*
+     * Various bits of metadata needed for the /FontDescriptor dictionary
+     * in PDF.
+     */
+    float fontbbox[4];
+    float capheight;
+    float xheight;
+    float ascent;
+    float descent;
+    float stemv;
+    float stemh;
+    float italicangle;
 };
 
 /*

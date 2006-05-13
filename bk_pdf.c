@@ -164,10 +164,23 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
 	objtext(font, "\n]\n>>\n");
 
+#define FF_FIXEDPITCH	0x00000001
+#define FF_SERIF	0x00000002
+#define FF_SYMBOLIC	0x00000004
+#define FF_SCRIPT	0x00000008
+#define FF_NONSYMBOLIC	0x00000020
+#define FF_ITALIC	0x00000040
+#define FF_ALLCAP	0x00010000
+#define FF_SMALLCAP	0x00020000
+#define FF_FORCEBOLD	0x00040000
+
 	if (!is_std_font(fe->font->info->name)){
 	    object *widths = new_object(&olist);
+	    object *fontdesc = new_object(&olist);
 	    int firstchar = -1, lastchar = -1;
 	    char buf[80];
+	    font_info const *fi = fe->font->info;
+	    int flags;
 	    for (i = 0; i < 256; i++)
 		if (fe->indices[i] >= 0) {
 		    if (firstchar < 0) firstchar = i;
@@ -180,19 +193,45 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(font, "\n");
 	    objtext(widths, "[\n");
 	    for (i = firstchar; i <= lastchar; i++) {
-		char buf[80];
 		double width;
 		if (fe->indices[i] < 0)
 		    width = 0.0;
 		else
-		    width = fe->font->info->widths[fe->indices[i]];
+		    width = fi->widths[fe->indices[i]];
 		sprintf(buf, "%g\n", 1000.0 * width / FUNITS_PER_PT);
 		objtext(widths, buf);
 	    }
 	    objtext(widths, "]\n");
+	    objtext(font, "/FontDescriptor ");
+	    objref(font, fontdesc);
+	    objtext(fontdesc, "<<\n/Type /FontDescriptor\n/Name /");
+	    objtext(fontdesc, fi->name);
+	    flags = 0;
+	    if (fi->italicangle) flags |= FF_ITALIC;
+	    flags |= FF_NONSYMBOLIC;
+	    sprintf(buf, "\n/Flags %d\n", flags);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/FontBBox [%g %g %g %g]\n", fi->fontbbox[0],
+		    fi->fontbbox[1], fi->fontbbox[2], fi->fontbbox[3]);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/ItalicAngle %g\n", fi->italicangle);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/Ascent %g\n", fi->ascent);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/Descent %g\n", fi->descent);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/CapHeight %g\n", fi->capheight);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/XHeight %g\n", fi->xheight);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/StemH %g\n", fi->stemh);
+	    objtext(fontdesc, buf);
+	    sprintf(buf, "/StemV %g\n", fi->stemv);
+	    objtext(fontdesc, buf);
+	    objtext(fontdesc, ">>\n");
 	}
 
-	objtext(font, ">>\n");
+	objtext(font, "\n>>\n");
     }
     objtext(resources, ">>\n>>\n");
 
