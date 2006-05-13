@@ -56,7 +56,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%DocumentNeededResources:\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
-	fprintf(fp, "%%%%+ font %s\n", fe->font->name);
+	fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
     fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 0\n");
     fprintf(fp, "%%%%EndComments\n");
 
@@ -96,7 +96,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
-	fprintf(fp, "%%%%IncludeResource: font %s\n", fe->font->name);
+	fprintf(fp, "%%%%IncludeResource: font %s\n", fe->font->info->name);
 
     /*
      * Re-encode the fonts.
@@ -109,7 +109,8 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	sprintf(fname, "f%d", font_index++);
 	fe->name = dupstr(fname);
 
-	fprintf(fp, "/%s findfont dup length dict begin\n", fe->font->name);
+	fprintf(fp, "/%s findfont dup length dict begin\n",
+	    fe->font->info->name);
 	fprintf(fp, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
 	fprintf(fp, "/Encoding [\n");
 	for (i = 0; i < 256; i++)

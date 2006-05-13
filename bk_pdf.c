@@ -148,7 +148,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	objtext(font, "<<\n/Type /Font\n/Subtype /Type1\n/Name /");
 	objtext(font, fe->name);
 	objtext(font, "\n/BaseFont /");
-	objtext(font, fe->font->name);
+	objtext(font, fe->font->info->name);
 	objtext(font, "\n/Encoding <<\n/Type /Encoding\n/Differences [");
 
 	for (i = 0; i < 256; i++) {
@@ -183,7 +183,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		if (fe->indices[i] < 0)
 		    width = 0.0;
 		else
-		    width = fe->font->widths[fe->indices[i]];
+		    width = fe->font->info->widths[fe->indices[i]];
 		sprintf(buf, "%g\n", 1000.0 * width / FUNITS_PER_PT);
 		objtext(widths, buf);
 	    }

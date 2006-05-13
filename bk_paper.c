@@ -78,6 +78,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "halibut.h"
 #include "paper.h"
@@ -396,9 +397,9 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 		paper_cfg_fonts(ret.ftitle.fonts, fontlist, uadv(p->keyword),
 				&p->fpos);
 	    } else if (!ustricmp(p->keyword, L"paper-chapter-font-size")) {
-		ret.ftitle.font_size = utoi(uadv(p->keyword));
+		ret.fchapter.font_size = utoi(uadv(p->keyword));
 	    } else if (!ustricmp(p->keyword, L"paper-chapter-fonts")) {
-		paper_cfg_fonts(ret.ftitle.fonts, fontlist, uadv(p->keyword),
+		paper_cfg_fonts(ret.fchapter.fonts, fontlist, uadv(p->keyword),
 				&p->fpos);
 	    } else if (!ustricmp(p->keyword, L"paper-section-font-size")) {
 		wchar_t *q = uadv(p->keyword);
@@ -458,29 +459,31 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
      * but must be in the title and body fonts. */
     while (*uadv(ret.rquote) && *uadv(uadv(ret.rquote))) {
 	int n;
-	if (!fonts_ok(ret.lquote,
-		      ret.fbase.fonts[FONT_NORMAL],
-		      ret.fbase.fonts[FONT_EMPH],
-		      ret.ftitle.fonts[FONT_NORMAL],
-		      ret.ftitle.fonts[FONT_EMPH],
-		      ret.fchapter.fonts[FONT_NORMAL],
-		      ret.fchapter.fonts[FONT_EMPH], NULL) ||
-	    !fonts_ok(ret.rquote,
-		      ret.fbase.fonts[FONT_NORMAL],
-		      ret.fbase.fonts[FONT_EMPH],
-		      ret.ftitle.fonts[FONT_NORMAL],
-		      ret.ftitle.fonts[FONT_EMPH],
-		      ret.fchapter.fonts[FONT_NORMAL],
-		      ret.fchapter.fonts[FONT_EMPH], NULL))
-	    break;
-	for (n = 0; n < ret.nfsect; n++)
-	    if (!fonts_ok(ret.lquote,
-			 ret.fsect[n].fonts[FONT_NORMAL],
-			 ret.fsect[n].fonts[FONT_EMPH], NULL) ||
-		 !fonts_ok(ret.rquote,
-			   ret.fsect[n].fonts[FONT_NORMAL],
-			   ret.fsect[n].fonts[FONT_EMPH], NULL))
+	if (fonts_ok(ret.lquote,
+		     ret.fbase.fonts[FONT_NORMAL],
+		     ret.fbase.fonts[FONT_EMPH],
+		     ret.ftitle.fonts[FONT_NORMAL],
+		     ret.ftitle.fonts[FONT_EMPH],
+		     ret.fchapter.fonts[FONT_NORMAL],
+		     ret.fchapter.fonts[FONT_EMPH], NULL) &&
+	    fonts_ok(ret.rquote,
+		     ret.fbase.fonts[FONT_NORMAL],
+		     ret.fbase.fonts[FONT_EMPH],
+		     ret.ftitle.fonts[FONT_NORMAL],
+		     ret.ftitle.fonts[FONT_EMPH],
+		     ret.fchapter.fonts[FONT_NORMAL],
+		     ret.fchapter.fonts[FONT_EMPH], NULL)) {
+	    for (n = 0; n < ret.nfsect; n++)
+		if (!fonts_ok(ret.lquote,
+			      ret.fsect[n].fonts[FONT_NORMAL],
+			      ret.fsect[n].fonts[FONT_EMPH], NULL) ||
+		    !fonts_ok(ret.rquote,
+			      ret.fsect[n].fonts[FONT_NORMAL],
+			      ret.fsect[n].fonts[FONT_EMPH], NULL))
+		    break;
+	    if (n == ret.nfsect)
 		break;
+	}
 	ret.lquote = uadv(ret.rquote);
 	ret.rquote = uadv(ret.lquote);
     }
@@ -510,6 +513,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
     paragraph index_placeholder_para;
     page_data *first_index_page;
 
+    init_std_fonts();
     fontlist = snew(font_list);
     fontlist->head = fontlist->tail = NULL;
 
@@ -1347,7 +1351,7 @@ static font_encoding *new_font_encoding(font_data *font)
     return fe;
 }
 
-static int kern_cmp(void *a, void *b)
+int kern_cmp(void *a, void *b)
 {
     kern_pair const *ka = a, *kb = b;
 
@@ -1362,37 +1366,68 @@ static int kern_cmp(void *a, void *b)
     return 0;
 }
 
+/* This wouldn't be necessary if C had closures. */
+static font_info *glyph_cmp_fi;
+
+static int glyph_cmp(void const *a, void const *b)
+{
+    return strcmp(glyph_cmp_fi->glyphs[*(unsigned short *)a],
+		  glyph_cmp_fi->glyphs[*(unsigned short *)b]);
+}
+
+/*
+ * Set up the glyphsbyname index for a font.
+ */
+void font_index_glyphs(font_info *fi) {
+    int i;
+
+    fi->glyphsbyname = snewn(fi->nglyphs, unsigned short);
+    for (i = 0; i < fi->nglyphs; i++)
+	fi->glyphsbyname[i] = i;
+    glyph_cmp_fi = fi;
+    qsort(fi->glyphsbyname, fi->nglyphs, sizeof(fi->glyphsbyname[0]),
+	  glyph_cmp);
+}
+
+int find_glyph(font_info *fi, char const *name) {
+    int i, j, k, r;
+
+    i = -1;
+    j = fi->nglyphs;
+    while (j-i > 1) {
+	k = (i + j) / 2;
+	r = strcmp(fi->glyphs[fi->glyphsbyname[k]], name);
+	if (r == 0)
+	    return fi->glyphsbyname[k];
+	else if (r > 0)
+	    j = k;
+	else
+	    i = k;
+    }
+    return -1;
+}
+
 static font_data *make_std_font(font_list *fontlist, char const *name)
 {
-    const int *widths;
-    const kern_pair *kerns;
     int nglyphs;
+    font_info const *fi;
     font_data *f;
     font_encoding *fe;
     int i;
 
     for (fe = fontlist->head; fe; fe = fe->next)
-	if (strcmp(fe->font->name, name) == 0)
+	if (strcmp(fe->font->info->name, name) == 0)
 	    return fe->font;
 
-    /* XXXKERN */
-    widths = ps_std_font_widths(name);
-    kerns = ps_std_font_kerns(name);
-    if (!widths || !kerns)
-	return NULL;
-
-    for (nglyphs = 0; ps_std_glyphs[nglyphs] != NULL; nglyphs++);
+    for (fi = all_fonts; fi; fi = fi->next)
+	if (strcmp(fi->name, name) == 0) break;
+    if (!fi) return NULL;
 
     f = snew(font_data);
 
     f->list = fontlist;
-    f->name = name;
-    f->nglyphs = nglyphs;
-    f->glyphs = ps_std_glyphs;
-    f->widths = widths;
-    f->kerns = newtree234(kern_cmp);
-    for (;kerns->left != 0xFFFF; kerns++)
-	add234(f->kerns, (void *)kerns);
+    f->info = fi;
+    nglyphs = f->info->nglyphs;
     f->subfont_map = snewn(nglyphs, subfont_map_entry);
 
     /*
@@ -1406,16 +1441,11 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
     fe->free_pos = 0xA1;	       /* only the top half is free */
     f->latest_subfont = fe;
 
-    for (i = 0; i < (int)lenof(f->bmp); i++)
-	f->bmp[i] = 0xFFFF;
-
     for (i = 0; i < nglyphs; i++) {
 	wchar_t ucs;
-	ucs = ps_glyph_to_unicode(f->glyphs[i]);
-	assert(ucs != 0xFFFF);
-	f->bmp[ucs] = i;
+	ucs = ps_glyph_to_unicode(f->info->glyphs[i]);
 	if (ucs >= 0x20 && ucs <= 0x7E) {
-	    fe->vector[ucs] = f->glyphs[i];
+	    fe->vector[ucs] = f->info->glyphs[i];
 	    fe->indices[ucs] = i;
 	    fe->to_unicode[ucs] = ucs;
 	    f->subfont_map[i].subfont = fe;
@@ -1442,7 +1472,7 @@ static int find_kern(font_data *font, int lindex, int rindex)
 	return 0;
     wantkp.left = lindex;
     wantkp.right = rindex;
-    kp = find234(font->kerns, &wantkp, NULL);
+    kp = find234(font->info->kerns, &wantkp, NULL);
     if (kp == NULL)
 	return 0;
     return kp->kern;
@@ -1459,13 +1489,14 @@ static int string_width(font_data *font, wchar_t const *string, int *errs)
     oindex = 0xFFFF;
     for (; *string; string++) {
 	index = (*string < 0 || *string > 0xFFFF ? 0xFFFF :
-		 font->bmp[*string]);
+		 font->info->bmp[*string]);
 
 	if (index == 0xFFFF) {
 	    if (errs)
 		*errs = 1;
 	} else {
-	    width += find_kern(font, oindex, index) + font->widths[index];
+	    width += find_kern(font, oindex, index) +
+		font->info->widths[index];
 	}
 	oindex = index;
     }
@@ -1913,7 +1944,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
     while (*str) {
 	oglyph = glyph;
 	glyph = (*str < 0 || *str > 0xFFFF ? 0xFFFF :
-		 font->bmp[*str]);
+		 font->info->bmp[*str]);
 
 	if (glyph == 0xFFFF) {
 	    str++;
@@ -1940,7 +1971,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 
 	    font->subfont_map[glyph].subfont = font->latest_subfont;
 	    font->subfont_map[glyph].position = c;
-	    font->latest_subfont->vector[c] = font->glyphs[glyph];
+	    font->latest_subfont->vector[c] = font->info->glyphs[glyph];
 	    font->latest_subfont->indices[c] = glyph;
 	    font->latest_subfont->to_unicode[c] = *str;
 
@@ -1964,7 +1995,7 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 	}
 
 	text[textpos++] = font->subfont_map[glyph].position;
-	textwid += font->widths[glyph] * fontsize;
+	textwid += font->info->widths[glyph] * fontsize;
 
 	str++;
     }

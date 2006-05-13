@@ -3,6 +3,7 @@
  * formats.
  */
 
+#include <assert.h>
 #include "halibut.h"
 #include "paper.h"
 
@@ -4085,6 +4086,35 @@ static const struct ps_std_font_data {
 	600, 600, 600, 600, 600, 600, 600, 
     }},
 };
+
+void init_std_fonts(void) {
+    int i, j;
+    kern_pair const *kern;
+    static int done = FALSE;
+
+    if (done) return;
+    for (i = 0; i < (int)lenof(ps_std_fonts); i++) {
+	font_info *fi = snew(font_info);
+	fi->name = ps_std_fonts[i].name;
+	fi->nglyphs = lenof(ps_std_glyphs) - 1;
+	fi->glyphs = ps_std_glyphs;
+	fi->widths = ps_std_fonts[i].widths;
+	fi->kerns = newtree234(kern_cmp);
+	for (kern = ps_std_fonts[i].kerns; kern->left != 0xFFFF; kern++)
+	    add234(fi->kerns, (void *)kern);
+	for (j = 0; j < (int)lenof(fi->bmp); j++)
+	    fi->bmp[j] = 0xFFFF;
+	for (j = 0; j < fi->nglyphs; j++) {
+	    wchar_t ucs;
+	    ucs = ps_glyph_to_unicode(fi->glyphs[j]);
+	    assert(ucs != 0xFFFF);
+	    fi->bmp[ucs] = j;
+	}
+	fi->next = all_fonts;
+	all_fonts = fi;
+    }
+    done = TRUE;
+}
 
 const int *ps_std_font_widths(char const *fontname)
 {

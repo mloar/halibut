@@ -1576,7 +1576,11 @@ paragraph *read_input(input *in, indexdata *idx) {
 	    in->csstate = charset_init_state;
 	    in->wcpos = in->nwc = 0;
 	    in->pushback_chars = NULL;
-	    read_file(&hptr, in, idx, macros);
+	    if (strcmp(in->filenames[in->currindex] +
+		       strlen(in->filenames[in->currindex]) - 4, ".afm") == 0)
+		read_afm_file(in);
+	    else
+		read_file(&hptr, in, idx, macros);
 	}
 	in->currindex++;
     }

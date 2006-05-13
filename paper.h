@@ -14,6 +14,7 @@
 
 typedef struct document_Tag document;
 typedef struct kern_pair_Tag kern_pair;
+typedef struct font_info_Tag font_info;
 typedef struct font_data_Tag font_data;
 typedef struct font_encoding_Tag font_encoding;
 typedef struct font_list_Tag font_list;
@@ -50,9 +51,15 @@ struct kern_pair_Tag {
 };
 
 /*
- * This data structure represents a particular font.
+ * This data structure holds static information about a font that doesn't
+ * depend on the particular document.  It gets generated when the font's
+ * metrics are read in.
  */
-struct font_data_Tag {
+
+font_info *all_fonts;
+
+struct font_info_Tag {
+    font_info *next;
     /*
      * Specify the PostScript name of the font and its point size.
      */
@@ -65,6 +72,12 @@ struct font_data_Tag {
     int nglyphs;
     const char *const *glyphs;
     const int *widths;
+    /*
+     * Glyph indices sorted into glyph-name order, for name-to-index
+     * mapping.
+     */
+    unsigned short *glyphsbyname;
+    /* A tree of kern_pairs */
     tree234 *kerns;
     /*
      * For reasonably speedy lookup, we set up a 65536-element
@@ -74,6 +87,14 @@ struct font_data_Tag {
      * it), whose elements are indices into the above two arrays.
      */
     unsigned short bmp[65536];
+};
+
+/*
+ * This structure holds the information about how a font is used
+ * in a document.
+ */
+struct font_data_Tag {
+    font_info const *info;
     /*
      * At some point I'm going to divide the font into sub-fonts
      * with largely non-overlapping encoding vectors. This array
@@ -318,10 +339,19 @@ struct outline_element_Tag {
 };
 
 /*
+ * Functions exported from bk_paper.c
+ */
+int kern_cmp(void *, void *); /* use when setting up kern_pairs */
+void font_index_glyphs(font_info *fi);
+int find_glyph(font_info *fi, char const *name);
+
+
+/*
  * Functions and data exported from psdata.c.
  */
 wchar_t ps_glyph_to_unicode(char const *glyph);
 extern const char *const ps_std_glyphs[];
+void init_std_fonts(void);
 const int *ps_std_font_widths(char const *fontname);
 const kern_pair *ps_std_font_kerns(char const *fontname);
 

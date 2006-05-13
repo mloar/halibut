@@ -243,7 +243,11 @@ enum {
     err_text_codeline,		       /* \c line too long in text backend */
     err_htmlver,		       /* unrecognised HTML version keyword */
     err_charset,		       /* unrecognised character set name */
-    err_nofont,                        /* unrecognised font name */
+    err_nofont, 		       /* unrecognised font name */
+    err_afmeof, 		       /* eof in AFM file */
+    err_afmkey, 		       /* missing expected keyword in AFM */
+    err_afmvers,		       /* unsupported AFM version */
+    err_afmval, 		       /* missing value(s) for AFM key */
     err_whatever                       /* random error of another type */
 };
 
@@ -380,6 +384,11 @@ paragraph *cmdline_cfg_simple(char *string, ...);
  * input.c
  */
 paragraph *read_input(input *in, indexdata *idx);
+
+/*
+ * in_afm.c
+ */
+void read_afm_file(input *in);
 
 /*
  * keywords.c

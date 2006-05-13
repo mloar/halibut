@@ -286,6 +286,32 @@ static void do_error(int code, va_list ap) {
 	flags = FILEPOS;
 	sfree(sp);
 	break;
+      case err_afmeof:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "AFM file ended unexpectedly");
+	flags = FILEPOS;
+	break;
+      case err_afmkey:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	sprintf(error, "required AFM key '%.200s' missing", sp);
+	flags = FILEPOS;
+	break;
+      case err_afmvers:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "unsupported AFM version");
+	flags = FILEPOS;
+	break;
+      case err_afmval:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	i = va_arg(ap, int);
+	if (i == 1)
+	    sprintf(error, "AFM key '%.200s' requires a value", sp);
+	else
+	    sprintf(error, "AFM key '%.200s' requires %d values", sp, i);
+	flags = FILEPOS;
+	break;	
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
