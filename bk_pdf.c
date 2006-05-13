@@ -40,6 +40,8 @@ static void pdf_string_len(void (*add)(object *, char const *),
 static void objref(object *o, object *dest);
 static char *pdf_outline_convert(wchar_t *s, int *len);
 
+static int is_std_font(char const *name);
+
 static void make_pages_node(object *node, object *parent, page_data *first,
 			    page_data *last, object *resources,
 			    object *mediabox);
@@ -162,7 +164,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
 	objtext(font, "\n]\n>>\n");
 
-	{
+	if (!is_std_font(fe->font->info->name)){
 	    object *widths = new_object(&olist);
 	    int firstchar = -1, lastchar = -1;
 	    char buf[80];
@@ -546,6 +548,21 @@ static void objref(object *o, object *dest)
     char buf[40];
     sprintf(buf, "%d 0 R", dest->number);
     rdaddsc(&o->main, buf);
+}
+
+static char const * const stdfonts[] = {
+    "Times-Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic",
+    "Helvetica", "Helvetica-Bold", "Helvetica-Oblique","Helvetica-BoldOblique",
+    "Courier", "Courier-Bold", "Courier-Oblique", "Courier-BoldOblique",
+    "Symbol", "ZapfDingbats"
+};
+
+static int is_std_font(char const *name) {
+    unsigned i;
+    for (i = 0; i < lenof(stdfonts); i++)
+	if (strcmp(name, stdfonts[i]) == 0)
+	    return TRUE;
+    return FALSE;
 }
 
 static void make_pages_node(object *node, object *parent, page_data *first,
