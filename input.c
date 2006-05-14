@@ -1579,6 +1579,9 @@ paragraph *read_input(input *in, indexdata *idx) {
 	    if (strcmp(in->filenames[in->currindex] +
 		       strlen(in->filenames[in->currindex]) - 4, ".afm") == 0)
 		read_afm_file(in);
+	    else if (strcmp(in->filenames[in->currindex] +
+		       strlen(in->filenames[in->currindex]) - 4, ".pfa") == 0)
+		read_pfa_file(in);
 	    else
 		read_file(&hptr, in, idx, macros);
 	}

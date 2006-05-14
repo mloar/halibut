@@ -228,7 +228,20 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(fontdesc, buf);
 	    sprintf(buf, "/StemV %g\n", fi->stemv);
 	    objtext(fontdesc, buf);
-	    objtext(fontdesc, ">>\n");
+	    if (fi->fp) {
+		object *fontfile = new_object(&olist);
+		char buf[513];
+		size_t len;
+		rewind(fi->fp);
+		do {
+		    len = fread(buf, 1, sizeof(buf)-1, fi->fp);
+		    buf[len] = 0;
+		    objstream(fontfile, buf);
+		} while (len == sizeof(buf)-1);
+		objtext(fontdesc, "/FontFile ");
+		objref(fontdesc, fontfile);
+	    }
+	    objtext(fontdesc, "\n>>\n");
 	}
 
 	objtext(font, "\n>>\n");

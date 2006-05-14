@@ -65,6 +65,10 @@ struct font_info_Tag {
      */
     const char *name;
     /*
+     * The file containing this font, if any.
+     */
+    FILE *fp;
+    /*
      * An array of pointers to the available glyph names, and their
      * corresponding character widths. These two arrays have
      * parallel indices.

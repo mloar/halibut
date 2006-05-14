@@ -391,6 +391,11 @@ paragraph *read_input(input *in, indexdata *idx);
 void read_afm_file(input *in);
 
 /*
+ * in_pf.c
+ */
+void read_pfa_file(input *in);
+
+/*
  * keywords.c
  */
 struct keywordlist_Tag {

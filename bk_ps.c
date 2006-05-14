@@ -56,8 +56,13 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%DocumentNeededResources:\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
-	fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
+	if (!fe->font->info->fp)
+	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
     fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 0\n");
+    for (fe = doc->fonts->head; fe; fe = fe->next)
+	/* XXX This may request the same font multiple times. */
+	if (fe->font->info->fp)
+	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
     fprintf(fp, "%%%%EndComments\n");
 
     fprintf(fp, "%%%%BeginProlog\n");
@@ -94,9 +99,23 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	if (p->type == para_VersionID)
 	    ps_comment(fp, "% ", p->words);
 
-    for (fe = doc->fonts->head; fe; fe = fe->next)
+    for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
-	fprintf(fp, "%%%%IncludeResource: font %s\n", fe->font->info->name);
+	if (fe->font->info->fp) {
+	    char buf[512];
+	    size_t len;
+	    fprintf(fp, "%%%%BeginResource: font %s\n", fe->font->info->name);
+	    rewind(fe->font->info->fp);
+	    do {
+		len = fread(buf, 1, sizeof(buf), fe->font->info->fp);
+		fwrite(buf, 1, len, fp);
+	    } while (len == sizeof(buf));
+	    fprintf(fp, "%%%%EndResource\n");
+	} else {
+	    fprintf(fp, "%%%%IncludeResource: font %s\n",
+		    fe->font->info->name);
+	}
+    }
 
     /*
      * Re-encode the fonts.

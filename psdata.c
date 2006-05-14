@@ -4095,6 +4095,7 @@ void init_std_fonts(void) {
     if (done) return;
     for (i = 0; i < (int)lenof(ps_std_fonts); i++) {
 	font_info *fi = snew(font_info);
+	fi->fp = NULL;
 	fi->name = ps_std_fonts[i].name;
 	fi->nglyphs = lenof(ps_std_glyphs) - 1;
 	fi->glyphs = ps_std_glyphs;
