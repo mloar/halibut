@@ -149,6 +149,8 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     for (page = doc->pages; page; page = page->next) {
 	text_fragment *frag, *frag_end;
 	rect *r;
+	font_encoding *fe;
+	int fs;
 
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
@@ -183,9 +185,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 
 	frag = page->first_text;
+	fe = NULL;
+	fs = -1;
 	while (frag) {
-	    font_encoding *fe;
-	    int fs;
 	    char *c;
 
 	    /*
@@ -197,9 +199,6 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		 frag_end = frag_end->next);
 
 	    fprintf(fp, "%g[", frag->y / FUNITS_PER_PT);
-
-	    fe = NULL;
-	    fs = -1;
 
 	    while (frag && frag != frag_end) {
 
