@@ -422,31 +422,26 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(opage, "/Annots [\n");
 
 	    for (xr = page->first_xref; xr; xr = xr->next) {
-		object *annot;
 		char buf[256];
 
-		annot = new_object(&olist);
-		objref(opage, annot);
-		objtext(opage, "\n");
-
-		objtext(annot, "<<\n/Type /Annot\n/Subtype /Link\n/Rect [");
+		objtext(opage, "<</Subtype/Link\n/Rect[");
 		sprintf(buf, "%g %g %g %g",
 			xr->lx / FUNITS_PER_PT, xr->by / FUNITS_PER_PT,
 			xr->rx / FUNITS_PER_PT, xr->ty / FUNITS_PER_PT);
-		objtext(annot, buf);
-		objtext(annot, "]\n/Border [0 0 0]\n");
+		objtext(opage, buf);
+		objtext(opage, "]/Border[0 0 0]\n");
 
 		if (xr->dest.type == PAGE) {
-		    objtext(annot, "/Dest [");
-		    objref(annot, (object *)xr->dest.page->spare);
-		    objtext(annot, " /XYZ null null null]\n");
+		    objtext(opage, "/Dest[");
+		    objref(opage, (object *)xr->dest.page->spare);
+		    objtext(opage, "/XYZ null null null]");
 		} else {
-		    objtext(annot, "/A <<\n/Type /Action\n/S /URI\n/URI ");
-		    pdf_string(objtext, annot, xr->dest.url);
-		    objtext(annot, "\n>>\n");
+		    objtext(opage, "/A<</S/URI/URI");
+		    pdf_string(objtext, opage, xr->dest.url);
+		    objtext(opage, ">>");
 		}
 
-		objtext(annot, ">>\n");
+		objtext(opage, ">>\n");
 	    }
 
 	    objtext(opage, "]\n");
