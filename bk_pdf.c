@@ -133,7 +133,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     objtext(resources, "<<\n/Font <<\n");
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	char fname[40];
-	int i;
+	int i, prev;
 	object *font;
 
 	sprintf(fname, "f%d", font_index++);
@@ -157,9 +157,13 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    char buf[20];
 	    if (!fe->vector[i])
 		continue;
-	    sprintf(buf, "\n%d /", i);
-	    objtext(font, buf);
-	    objtext(font, fe->vector[i] ? fe->vector[i] : ".notdef");
+	    if (i != prev + 1) {
+		sprintf(buf, "\n%d", i);
+		objtext(font, buf);
+	    }
+	    objtext(font, i % 8 ? "/" : "\n/");
+	    objtext(font, fe->vector[i]);
+	    prev = i;
 	}
 
 	objtext(font, "\n]\n>>\n");
