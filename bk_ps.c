@@ -99,6 +99,18 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	if (p->type == para_VersionID)
 	    ps_comment(fp, "% ", p->words);
 
+    /*
+     * Request the correct page size.  We might want to bracket this
+     * with "%%BeginFeature: *PageSize A4" or similar, and "%%EndFeature",
+     * but that would require us to have a way of getting the name of
+     * the page size given its dimensions.
+     */
+    fprintf(fp, "/setpagedevice where {\n");
+    fprintf(fp, "  pop 2 dict dup /PageSize [%g %g] put setpagedevice\n",
+	    doc->paper_width / FUNITS_PER_PT,
+	    doc->paper_height / FUNITS_PER_PT);
+    fprintf(fp, "} if\n");
+
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
 	if (fe->font->info->fp) {
