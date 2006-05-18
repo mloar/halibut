@@ -763,6 +763,9 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 #define itemname(lt) ( (lt)==LI ? "li" : (lt)==DT ? "dt" : "dd" )
 
 	    ho.fp = fopen(f->filename, "w");
+	    if (!ho.fp)
+		error(err_cantopenw, f->filename);
+
 	    ho.charset = conf.output_charset;
 	    ho.restrict_charset = conf.restrict_charset;
 	    ho.cstate = charset_init_state;
@@ -773,31 +776,38 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    /* <!DOCTYPE>. */
 	    switch (conf.htmlver) {
 	      case HTML_3_2:
-		fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD "
-			"HTML 3.2 Final//EN\">\n");
+		if (ho.fp)
+		    fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD "
+			    "HTML 3.2 Final//EN\">\n");
 		break;
 	      case HTML_4:
-		fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML"
-			" 4.01//EN\"\n\"http://www.w3.org/TR/html4/"
-			"strict.dtd\">\n");
+		if (ho.fp)
+		    fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML"
+			    " 4.01//EN\"\n\"http://www.w3.org/TR/html4/"
+			    "strict.dtd\">\n");
 		break;
 	      case ISO_HTML:
-		fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"ISO/IEC "
-			"15445:2000//DTD HTML//EN\">\n");
+		if (ho.fp)
+		    fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"ISO/IEC "
+			    "15445:2000//DTD HTML//EN\">\n");
 		break;
 	      case XHTML_1_0_TRANSITIONAL:
-		fprintf(ho.fp, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
-			charset_to_mimeenc(conf.output_charset));
-		fprintf(ho.fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML"
-			" 1.0 Transitional//EN\"\n\"http://www.w3.org/TR/"
-			"xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+		if (ho.fp) {
+		    fprintf(ho.fp, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
+			    charset_to_mimeenc(conf.output_charset));
+		    fprintf(ho.fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML"
+			    " 1.0 Transitional//EN\"\n\"http://www.w3.org/TR/"
+			    "xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+		}
 		break;
 	      case XHTML_1_0_STRICT:
-		fprintf(ho.fp, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
-			charset_to_mimeenc(conf.output_charset));
-		fprintf(ho.fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML"
-			" 1.0 Strict//EN\"\n\"http://www.w3.org/TR/xhtml1/"
-			"DTD/xhtml1-strict.dtd\">\n");
+		if (ho.fp) {
+		    fprintf(ho.fp, "<?xml version=\"1.0\" encoding=\"%s\"?>\n",
+			    charset_to_mimeenc(conf.output_charset));
+		    fprintf(ho.fp, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML"
+			    " 1.0 Strict//EN\"\n\"http://www.w3.org/TR/xhtml1/"
+			    "DTD/xhtml1-strict.dtd\">\n");
+		}
 		break;
 	    }
 
@@ -1811,16 +1821,18 @@ static void html_charset_cleanup(htmloutput *ho)
 
     bytes = charset_from_unicode(NULL, NULL, outbuf, lenof(outbuf),
 				 ho->charset, &ho->cstate, NULL);
-    if (bytes > 0)
+    if (ho->fp && bytes > 0)
 	fwrite(outbuf, 1, bytes, ho->fp);
 }
 
 static void return_mostly_to_neutral(htmloutput *ho)
 {
-    if (ho->state == HO_IN_EMPTY_TAG && is_xhtml(ho->ver)) {
-	fprintf(ho->fp, " />");
-    } else if (ho->state == HO_IN_EMPTY_TAG || ho->state == HO_IN_TAG) {
-	fprintf(ho->fp, ">");
+    if (ho->fp) {
+	if (ho->state == HO_IN_EMPTY_TAG && is_xhtml(ho->ver)) {
+	    fprintf(ho->fp, " />");
+	} else if (ho->state == HO_IN_EMPTY_TAG || ho->state == HO_IN_TAG) {
+	    fprintf(ho->fp, ">");
+	}
     }
 
     ho->state = HO_NEUTRAL;
@@ -1838,58 +1850,68 @@ static void return_to_neutral(htmloutput *ho)
 static void element_open(htmloutput *ho, char const *name)
 {
     return_to_neutral(ho);
-    fprintf(ho->fp, "<%s", name);
+    if (ho->fp)
+	fprintf(ho->fp, "<%s", name);
     ho->state = HO_IN_TAG;
 }
 
 static void element_close(htmloutput *ho, char const *name)
 {
     return_to_neutral(ho);
-    fprintf(ho->fp, "</%s>", name);
+    if (ho->fp)
+	fprintf(ho->fp, "</%s>", name);
     ho->state = HO_NEUTRAL;
 }
 
 static void element_empty(htmloutput *ho, char const *name)
 {
     return_to_neutral(ho);
-    fprintf(ho->fp, "<%s", name);
+    if (ho->fp)
+	fprintf(ho->fp, "<%s", name);
     ho->state = HO_IN_EMPTY_TAG;
 }
 
 static void html_nl(htmloutput *ho)
 {
     return_to_neutral(ho);
-    fputc('\n', ho->fp);
+    if (ho->fp)
+	fputc('\n', ho->fp);
 }
 
 static void html_raw(htmloutput *ho, char *text)
 {
     return_to_neutral(ho);
-    fputs(text, ho->fp);
+    if (ho->fp)
+	fputs(text, ho->fp);
 }
 
 static void html_raw_as_attr(htmloutput *ho, char *text)
 {
     assert(ho->state == HO_IN_TAG || ho->state == HO_IN_EMPTY_TAG);
-    fputc(' ', ho->fp);
-    fputs(text, ho->fp);
+    if (ho->fp) {
+	fputc(' ', ho->fp);
+	fputs(text, ho->fp);
+    }
 }
 
 static void element_attr(htmloutput *ho, char const *name, char const *value)
 {
     html_charset_cleanup(ho);
     assert(ho->state == HO_IN_TAG || ho->state == HO_IN_EMPTY_TAG);
-    fprintf(ho->fp, " %s=\"%s\"", name, value);
+    if (ho->fp)
+	fprintf(ho->fp, " %s=\"%s\"", name, value);
 }
 
 static void element_attr_w(htmloutput *ho, char const *name,
 			   wchar_t const *value)
 {
     html_charset_cleanup(ho);
-    fprintf(ho->fp, " %s=\"", name);
+    if (ho->fp)
+	fprintf(ho->fp, " %s=\"", name);
     html_text_limit_internal(ho, value, 0, TRUE, FALSE);
     html_charset_cleanup(ho);
-    fputc('"', ho->fp);
+    if (ho->fp)
+	fputc('"', ho->fp);
 }
 
 static void html_text(htmloutput *ho, wchar_t const *text)
@@ -1934,7 +1956,7 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 	bytes = charset_from_unicode(&text, &lenafter, outbuf, lenof(outbuf),
 				     ho->charset, &ho->cstate, &err);
 	textlen -= (lenbefore - lenafter);
-	if (bytes > 0)
+	if (bytes > 0 && ho->fp)
 	    fwrite(outbuf, 1, bytes, ho->fp);
 	if (err) {
 	    /*
@@ -1943,26 +1965,29 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 	     * we use an HTML numeric entity reference.
 	     */
 	    assert(textlen > 0);
-	    fprintf(ho->fp, "&#%ld;", (long int)*text);
+	    if (ho->fp)
+		fprintf(ho->fp, "&#%ld;", (long int)*text);
 	    text++, textlen--;
 	} else if (lenafter == 0 && textlen > 0) {
 	    /*
 	     * We have encountered a character which is special to
 	     * HTML.
 	     */
-	    if (*text == L'<')
-		fprintf(ho->fp, "&lt;");
-	    else if (*text == L'>')
-		fprintf(ho->fp, "&gt;");
-	    else if (*text == L'&')
-		fprintf(ho->fp, "&amp;");
-	    else if (*text == L'"')
-		fprintf(ho->fp, "&quot;");
-	    else if (*text == L' ') {
-		assert(nbsp);
-		fprintf(ho->fp, "&nbsp;");
-	    } else
-		assert(!"Can't happen");
+	    if (ho->fp) {
+		if (*text == L'<')
+		    fprintf(ho->fp, "&lt;");
+		else if (*text == L'>')
+		    fprintf(ho->fp, "&gt;");
+		else if (*text == L'&')
+		    fprintf(ho->fp, "&amp;");
+		else if (*text == L'"')
+		    fprintf(ho->fp, "&quot;");
+		else if (*text == L' ') {
+		    assert(nbsp);
+		    fprintf(ho->fp, "&nbsp;");
+		} else
+		    assert(!"Can't happen");
+	    }
 	    text++, textlen--;
 	}
     }
@@ -1971,7 +1996,8 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 static void cleanup(htmloutput *ho)
 {
     return_to_neutral(ho);
-    fclose(ho->fp);
+    if (ho->fp)
+	fclose(ho->fp);
 }
 
 static void html_href(htmloutput *ho, htmlfile *thisfile,

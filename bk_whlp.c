@@ -212,6 +212,10 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     state.cntfp = fopen(cntname, "wb");
+    if (!state.cntfp) {
+	error(err_cantopenw, cntname);
+	return;
+    }
     state.cnt_last_level = -1; state.cnt_workaround = 0;
 
     /*
