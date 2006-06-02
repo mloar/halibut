@@ -24,6 +24,7 @@ struct bk_whlp_state {
 typedef struct {
     int charset;
     wchar_t *bullet, *lquote, *rquote, *titlepage, *sectsuffix, *listsuffix;
+    wchar_t *contents_text;
     char *filename;
 } whlpconf;
 
@@ -73,6 +74,7 @@ static whlpconf whlp_configure(paragraph *source) {
     ret.rquote = uadv(ret.lquote);
     ret.filename = dupstr("output.hlp");
     ret.titlepage = L"Title page";
+    ret.contents_text = L"Contents";
     ret.sectsuffix = L": ";
     ret.listsuffix = L".";
 
@@ -122,6 +124,8 @@ static whlpconf whlp_configure(paragraph *source) {
 		    ret.lquote = uadv(p->keyword);
 		    ret.rquote = uadv(ret.lquote);
 		}
+	    } else if (!ustricmp(p->keyword, L"contents")) {
+		ret.contents_text = uadv(p->keyword);
 	    }
 	}
     }
@@ -314,9 +318,13 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
     /* ------------------------------------------------------------------
      * Begin the contents page.
      */
-
-    whlp_begin_topic(h, contents_topic, "Contents", "DB(\"btn_up\")", NULL);
-    state.curr_topic = contents_topic;
+    {
+	rdstringc rs = {0, 0, NULL};
+	whlp_rdadds(&rs, conf.contents_text, &conf, NULL);
+	whlp_begin_topic(h, contents_topic, rs.text, "DB(\"btn_up\")", NULL);
+	state.curr_topic = contents_topic;
+	sfree(rs.text);
+    }
 
     /*
      * The manual title goes in the non-scroll region, and also

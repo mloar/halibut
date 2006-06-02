@@ -120,6 +120,7 @@ struct paper_conf_Tag {
     int pagenum_fontsize;
     int footer_distance;
     wchar_t *lquote, *rquote, *bullet;
+    wchar_t *contents_text, *index_text;
     /* These are derived from the above */
     int base_width;
     int page_height;
@@ -283,6 +284,8 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     ret.lquote = L"\x2018\0\x2019\0'\0'\0\0";
     ret.rquote = uadv(ret.lquote);
     ret.bullet = L"\x2022\0-\0\0";
+    ret.contents_text = L"Contents";
+    ret.index_text = L"Index";
 
     /*
      * Two-pass configuration so that we can pick up global config
@@ -309,6 +312,10 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 		    ret.lquote = uadv(p->keyword);
 		    ret.rquote = uadv(ret.lquote);
 		}
+	    } else if (!ustricmp(p->keyword, L"contents")) {
+		ret.contents_text = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"index")) {
+		ret.index_text = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"paper-bullet")) {
 		ret.bullet = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"paper-page-width")) {
@@ -547,7 +554,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
      */
     {
 	word *contents_title;
-	contents_title = fake_word(L"Contents");
+	contents_title = fake_word(conf->contents_text);
 
 	firstcont = make_para_data(para_UnnumberedChapter, 0, 0, 0,
 				   NULL, NULL, contents_title, conf);
@@ -615,7 +622,8 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	if (has_index) {
 	    pdata = make_para_data(para_Normal, 0, 0,
 				   conf->contents_margin,
-				   NULL, NULL, fake_word(L"Index"), conf);
+				   NULL, NULL,
+				   fake_word(conf->index_text), conf);
 	    pdata->next = NULL;
 	    pdata->contents_entry = &index_placeholder_para;
 	    lastcont->next = pdata;
@@ -835,7 +843,7 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 	/*
 	 * Create a set of paragraphs for the index.
 	 */
-	index_title = fake_word(L"Index");
+	index_title = fake_word(conf->index_text);
 
 	firstidx = make_para_data(para_UnnumberedChapter, 0, 0, 0,
 				  NULL, NULL, index_title, conf);

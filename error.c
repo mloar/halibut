@@ -19,7 +19,7 @@ static void do_error(int code, va_list ap) {
     int i, j;
     char *sp, *sp2;
     wchar_t *wsp, *wsp2;
-    filepos fpos, fpos2;
+    filepos fpos, fpos2, *fposp;
     int flags;
 
     switch(code) {
@@ -248,11 +248,14 @@ static void do_error(int code, va_list ap) {
 	flags = FILEPOS;
 	break;
       case err_infonodechar:
-	fpos = *va_arg(ap, filepos *);
+	fposp = va_arg(ap, filepos *);
 	c = (char)va_arg(ap, int);
 	sprintf(error, "info output format does not support '%c' in"
 		" node names; removing", c);
-	flags = FILEPOS;
+	if (fposp) {
+	    flags = FILEPOS;
+	    fpos = *fposp;
+	}
 	break;
       case err_text_codeline:
 	fpos = *va_arg(ap, filepos *);

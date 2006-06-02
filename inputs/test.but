@@ -9,6 +9,9 @@ Lines, Not Just Two. How's That For Ludicrous?
 document}{sub-sub}
 \cfg{man-headnumbers}{true}
 
+\cfg{contents}{Contents(edited)}
+\cfg{index}{Index(alsoedited)}
+
 This paragraph is not labelled \q{preamble}, but should still appear
 as it.
 

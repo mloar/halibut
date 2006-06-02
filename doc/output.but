@@ -624,6 +624,16 @@ different language.
 the first chapter heading), contents, and index respectively, in the
 navigation bar, contents, and index.
 
+\lcont{
+
+(\c{html-contents-text} and \c{html-index-text} override the
+cross-format configuration keywords \c{contents} and \c{index} (see
+\k{input-config}, if both appear. They are legacy keywords preserved
+for backwards compatibility; you should generally use \c{contents}
+and \c{index}.)
+
+}
+
 \dt \I{\cw{\\cfg\{html-title-separator\}}}\cw{\\cfg\{html-title-separator\}\{}\e{text}\cw{\}}
 
 \dd If multiple headings are used in a file's \cw{<TITLE>} tag, this

@@ -259,6 +259,10 @@ static htmlconfig html_configure(paragraph *source) {
 		    ret.lquote = uadv(p->keyword);
 		    ret.rquote = uadv(ret.lquote);
 		}
+	    } else if (!ustricmp(p->keyword, L"index")) {
+		ret.index_text = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"contents")) {
+		ret.contents_text = uadv(p->keyword);
 	    }
 	}
     }

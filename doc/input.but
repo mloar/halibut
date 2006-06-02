@@ -1327,6 +1327,16 @@ subsections of a chapter.
 \dd Exactly like \c{chapter}, but changes the name given to
 appendices.
 
+\dt \I\cw{\\cfg\{contents\}}\cw{\\cfg\{contents\}\{}\e{new contents name}\cw{\}}
+
+\dd This changes the name given to the contents section (by default
+\q{Contents}) in back ends which generate one.
+
+\dt \I\cw{\\cfg\{index\}}\cw{\\cfg\{index\}\{}\e{new index name}\cw{\}}
+
+\dd This changes the name given to the index section (by default
+\q{Index}) in back ends which generate one.
+
 \dt \I\cw{\\cfg\{input-charset\}}\cw{\\cfg\{input-charset\}\{}\e{character set name}\cw{\}}
 
 \dd This tells Halibut what \i{character set} you are writing your
@@ -1405,6 +1415,8 @@ The \i{default settings} for the above options are:
 \c \cfg{chapter}{Chapter}
 \c \cfg{section}{Section}
 \c \cfg{appendix}{Appendix}
+\c \cfg{contents}{Contents}
+\c \cfg{index}{Index}
 \c \cfg{input-charset}{ASCII}
 
 The default for \cw{\\cfg\{input-charset\}} can be changed with the

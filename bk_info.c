@@ -39,6 +39,7 @@ typedef struct {
     wchar_t *lquote, *rquote;
     wchar_t *sectsuffix, *underline;
     wchar_t *rule;
+    wchar_t *index_text;
 } infoconfig;
 
 typedef struct {
@@ -84,7 +85,8 @@ static int info_check_index(word *, node *, indexdata *);
 static int info_rdaddwc(info_data *, word *, word *, int, infoconfig *);
 
 static node *info_node_new(char *name, int charset);
-static char *info_node_name(paragraph *p, infoconfig *);
+static char *info_node_name_for_para(paragraph *p, infoconfig *);
+static char *info_node_name_for_text(wchar_t *text, infoconfig *);
 
 static infoconfig info_configure(paragraph *source) {
     infoconfig ret;
@@ -110,6 +112,7 @@ static infoconfig info_configure(paragraph *source) {
     ret.rquote = uadv(ret.lquote);
     ret.sectsuffix = L": ";
     ret.underline = L"\x203E\0-\0\0";
+    ret.index_text = L"Index";
 
     /*
      * Two-pass configuration so that we can pick up global config
@@ -124,6 +127,8 @@ static infoconfig info_configure(paragraph *source) {
 		    ret.lquote = uadv(p->keyword);
 		    ret.rquote = uadv(ret.lquote);
 		}
+	    } else if (!ustricmp(p->keyword, L"index")) {
+		ret.index_text = uadv(p->keyword);
 	    }
 	}
     }
@@ -247,7 +252,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    node *newnode, *upnode;
 	    char *nodename;
 
-	    nodename = info_node_name(p, &conf);
+	    nodename = info_node_name_for_para(p, &conf);
 	    newnode = info_node_new(nodename, conf.charset);
 	    sfree(nodename);
 
@@ -495,15 +500,25 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	node *newnode;
 	int i, j, k;
 	indexentry *entry;
+	char *nodename;
 
-	newnode = info_node_new("Index", conf.charset);
+	nodename = info_node_name_for_text(conf.index_text, &conf);
+	newnode = info_node_new(nodename, conf.charset);
+	sfree(nodename);
+
 	newnode->up = topnode;
 
 	currnode->next = newnode;
 	newnode->prev = currnode;
 	currnode->listnext = newnode;
 
-	info_rdaddsc(&newnode->text, "Index\n-----\n\n");
+	k = info_rdadds(&newnode->text, conf.index_text);
+	info_rdaddsc(&newnode->text, "\n");
+	while (k > 0) {
+	    info_rdadds(&newnode->text, conf.underline);
+	    k -= ustrwid(conf.underline, conf.charset);
+	}
+	info_rdaddsc(&newnode->text, "\n\n");
 
 	info_menu_item(&topnode->text, newnode, NULL, &conf);
 
@@ -1035,32 +1050,49 @@ static node *info_node_new(char *name, int charset)
     return n;
 }
 
-static char *info_node_name(paragraph *par, infoconfig *cfg)
+static char *info_node_name_core(info_data *id, filepos *fpos)
+{
+    char *p, *q;
+
+    /*
+     * We cannot have commas, colons or parentheses in a node name.
+     * Remove any that we find, with a warning.
+     */
+    p = q = id->output.text;
+    while (*p) {
+	if (*p == ':' || *p == ',' || *p == '(' || *p == ')') {
+	    error(err_infonodechar, fpos, *p);
+	} else {
+	    *q++ = *p;
+	}
+	p++;
+    }
+    *q = '\0';
+
+    return id->output.text;
+}
+
+static char *info_node_name_for_para(paragraph *par, infoconfig *cfg)
 {
     info_data id = EMPTY_INFO_DATA;
-    char *p, *q;
 
     id.charset = cfg->charset;
     info_rdaddwc(&id, par->kwtext ? par->kwtext : par->words,
 		 NULL, FALSE, cfg);
     info_rdaddsc(&id, NULL);
 
-    /*
-     * We cannot have commas or colons in a node name. Remove any
-     * that we find, with a warning.
-     */
-    p = q = id.output.text;
-    while (*p) {
-	if (*p == ':' || *p == ',') {
-	    error(err_infonodechar, &par->fpos, *p);
-	} else {
-	    *q++ = *p;
-	}
-	p++;
-    }
-    *p = '\0';
+    return info_node_name_core(&id, &par->fpos);
+}
 
-    return id.output.text;
+static char *info_node_name_for_text(wchar_t *text, infoconfig *cfg)
+{
+    info_data id = EMPTY_INFO_DATA;
+
+    id.charset = cfg->charset;
+    info_rdadds(&id, text);
+    info_rdaddsc(&id, NULL);
+
+    return info_node_name_core(&id, NULL);
 }
 
 static void info_menu_item(info_data *text, node *n, paragraph *p,
