@@ -541,8 +541,6 @@ static int man_rdaddctrl(rdstringc *rs, char *c, int quote_props,
 			 manconfig *conf, charset_state *state) {
     quote_props = man_rdaddwc_reset(rs, quote_props, conf, state);
     rdaddsc(rs, c);
-    if (*c)
-	quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
     return quote_props;
 }
 
@@ -604,9 +602,11 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 			quote_props &= ~QUOTE_INITCTRL;   /* not at start any more */
 		    *state = s2;
 		}
-		if (hyphen)
+		if (hyphen) {
 		    quote_props =
 			man_rdaddctrl(rs, "-", quote_props, conf, state);
+		    quote_props &= ~QUOTE_INITCTRL;
+		}
 	    } else {
 		quote_props = man_rdaddwc(rs, text->alt, NULL,
 					  quote_props, conf, state);
@@ -615,6 +615,7 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 		sfree(c);
 	} else if (removeattr(text->type) == word_WhiteSpace) {
 	    quote_props = man_rdaddctrl(rs, " ", quote_props, conf, state);
+	    quote_props &= ~QUOTE_INITCTRL;
 	} else if (removeattr(text->type) == word_Quote) {
 	    man_convert(quoteaux(text->aux) == quote_Open ?
 			conf->lquote : conf->rquote, 0,
