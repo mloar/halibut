@@ -112,7 +112,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
     /*
      * The catalogue just contains references to the outlines and
-     * pages objects.
+     * pages objects, and the pagelabels dictionary.
      */
     objtext(cat, "<<\n/Type /Catalog");
     if (outlines) {
@@ -121,6 +121,8 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     }
     objtext(cat, "\n/Pages ");
     objref(cat, pages);
+    /* Halibut just numbers pages 1, 2, 3, ... */
+    objtext(cat, "\n/PageLabels<</Nums[0<</S/D>>]>>");
     if (outlines)
 	objtext(cat, "\n/PageMode /UseOutlines");
     objtext(cat, "\n>>\n");
