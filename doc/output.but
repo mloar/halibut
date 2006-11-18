@@ -704,20 +704,30 @@ directive (see \k{output-text-characters}).
 
 \dd Identifies the precise version of HTML that is output. This
 affects the declaration within the HTML, and also has minor effects on
-the body of the HTML so that it is valid for the declare version. The
+the body of the HTML so that it is valid for the declared version. The
 available variants are:
 
 \lcont{
 
-\b \cw{html3.2}
+\dt \cw{html3.2}
 
-\b \cw{html4}
+\dd W3C HTML 3.2
 
-\b \cw{iso-html}
+\dt \cw{html4}
 
-\b \cw{xhtml1.0transitional}
+\dd W3C HTML 4.01 Strict
 
-\b \cw{xhtml1.0strict}
+\dt \cw{iso-html}
+
+\dd ISO/IEC 15445:2000
+
+\dt \cw{xhtml1.0transitional}
+
+\dd W3C XHTML 1.0 Transitional
+
+\dt \cw{xhtml1.0strict}
+
+\dd W3C XHTML 1.0 Strict
 
 }
 
