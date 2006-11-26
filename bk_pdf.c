@@ -132,7 +132,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
      * providing all the font objects and names to call them by.
      */
     font_index = 0;
-    objtext(resources, "<<\n/Font <<\n");
+    objtext(resources, "<<\n/ProcSet [/PDF/Text]\n/Font <<\n");
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	char fname[40];
 	int i, prev;
