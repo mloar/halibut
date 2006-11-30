@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "halibut.h"
 #include "paper.h"
+#include "deflate.h"
 
 #define TREE_BRANCH 2		       /* max branching factor in page tree */
 
@@ -472,12 +473,19 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     for (o = olist.head; o; o = o->next) {
 	rdstringc rs = {0, 0, NULL};
 	char text[80];
+	deflate_compress_ctx *zcontext;
+	void *zbuf;
+	int zlen;
 
 	sprintf(text, "%d 0 obj\n", o->number);
 	rdaddsc(&rs, text);
 
 	if (!o->main.text && o->stream.text) {
-	    sprintf(text, "<<\n/Length %d\n>>\n", o->stream.pos);
+	    zcontext = deflate_compress_new(DEFLATE_TYPE_ZLIB);
+	    deflate_compress_data(zcontext, o->stream.text, o->stream.pos,
+				  DEFLATE_END_OF_DATA, &zbuf, &zlen);
+	    deflate_compress_free(zcontext);
+	    sprintf(text, "<<\n/Filter/FlateDecode\n/Length %d\n>>\n", zlen);
 	    rdaddsc(&o->main, text);
 	}
 
@@ -489,15 +497,11 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    rdaddc(&rs, '\n');
 
 	if (o->stream.text) {
-	    /*
-	     * FIXME: If we ever start compressing stream data then
-	     * it will have zero bytes in it, so we'll have to be
-	     * more careful than this.
-	     */
 	    rdaddsc(&rs, "stream\n");
-	    rdaddsc(&rs, o->stream.text);
+	    rdaddsn(&rs, zbuf, zlen);
 	    rdaddsc(&rs, "\nendstream\n");
 	    sfree(o->stream.text);
+	    sfree(zbuf);
 	}
 
 	rdaddsc(&rs, "endobj\n");
@@ -518,9 +522,11 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
     /*
      * Header. I'm going to put the version IDs in the header as
-     * well, simply in PDF comments.
+     * well, simply in PDF comments.  The PDF Reference also suggests
+     * that binary PDF files contain four top-bit-set characters in
+     * the second line.
      */
-    fileoff = fprintf(fp, "%%PDF-1.3\n");
+    fileoff = fprintf(fp, "%%PDF-1.3\n%% L\xc3\xba\xc3\xb0""a\n");
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_VersionID)
 	    fileoff += pdf_versionid(fp, p->words);

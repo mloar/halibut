@@ -90,13 +90,16 @@ void rdaddc(rdstringc *rs, char c) {
     rs->text[rs->pos] = 0;
 }
 void rdaddsc(rdstringc *rs, char const *p) {
-    int len = strlen(p);
+    rdaddsn(rs, p, strlen(p));
+}
+void rdaddsn(rdstringc *rs, char const *p, int len) {
     if (rs->pos >= rs->size - len) {
 	rs->size = rs->pos + len + 128;
 	rs->text = sresize(rs->text, rs->size, char);
     }
-    strcpy(rs->text + rs->pos, p);
+    memcpy(rs->text + rs->pos, p, len);
     rs->pos += len;
+    rs->text[rs->pos] = 0;
 }
 char *rdtrimc(rdstringc *rs) {
     rs->text = sresize(rs->text, rs->pos + 1, char);

@@ -361,6 +361,7 @@ void rdadds(rdstring *rs, wchar_t const *p);
 wchar_t *rdtrim(rdstring *rs);
 void rdaddc(rdstringc *rs, char c);
 void rdaddsc(rdstringc *rs, char const *p);
+void rdaddsn(rdstringc *rc, char const *p, int len);
 char *rdtrimc(rdstringc *rs);
 
 int compare_wordlists(word *a, word *b);

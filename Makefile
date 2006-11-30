@@ -72,6 +72,7 @@ else
 # The `real' makefile part.
 
 CFLAGS += -Wall -W -ansi -pedantic
+LIBS += -lm
 
 ifdef TEST
 CFLAGS += -DLOGALLOC
@@ -108,7 +109,7 @@ include $(LIBCHARSET_SRCDIR)Makefile
 MODULES := main malloc ustring error help licence version misc tree234
 MODULES += input in_afm in_pf keywords contents index biblio
 MODULES += bk_text bk_html bk_whlp bk_man bk_info bk_paper bk_ps bk_pdf
-MODULES += winhelp psdata wcwidth
+MODULES += winhelp deflate psdata wcwidth
 
 OBJECTS := $(addsuffix .o,$(MODULES)) $(LIBCHARSET_OBJS)
 DEPS := $(addsuffix .d,$(MODULES))
