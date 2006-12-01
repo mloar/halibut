@@ -39,6 +39,7 @@ static void pdf_string(void (*add)(object *, char const *),
 static void pdf_string_len(void (*add)(object *, char const *),
 			   object *, char const *, int);
 static void objref(object *o, object *dest);
+static void objdest(object *o, page_data *p);
 static char *pdf_outline_convert(wchar_t *s, int *len);
 
 static int is_std_font(char const *name);
@@ -435,9 +436,8 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		objtext(opage, "]/Border[0 0 0]\n");
 
 		if (xr->dest.type == PAGE) {
-		    objtext(opage, "/Dest[");
-		    objref(opage, (object *)xr->dest.page->spare);
-		    objtext(opage, "/XYZ null null null]");
+		    objtext(opage, "/Dest");
+		    objdest(opage, xr->dest.page);
 		} else {
 		    objtext(opage, "/A<</S/URI/URI");
 		    pdf_string(objtext, opage, xr->dest.url);
@@ -609,6 +609,12 @@ static void objref(object *o, object *dest)
     rdaddsc(&o->main, buf);
 }
 
+static void objdest(object *o, page_data *p) {
+    objtext(o, "[");
+    objref(o, (object *)p->spare);
+    objtext(o, "/XYZ null null null]");
+}
+
 static char const * const stdfonts[] = {
     "Times-Roman", "Times-Bold", "Times-Italic", "Times-BoldItalic",
     "Helvetica", "Helvetica-Bold", "Helvetica-Oblique","Helvetica-BoldOblique",
@@ -777,9 +783,9 @@ static int make_outline(object *parent, outline_element *items, int n,
 	sfree(title);
 	objtext(curr, "\n/Parent ");
 	objref(curr, parent);
-	objtext(curr, "\n/Dest [");
-	objref(curr, (object *)items->pdata->first->page->spare);
-	objtext(curr, " /XYZ null null null]\n");
+	objtext(curr, "\n/Dest");
+	objdest(curr, items->pdata->first->page);
+	objtext(curr, "\n");
 	if (prev) {
 	    objtext(curr, "/Prev ");
 	    objref(curr, prev);
