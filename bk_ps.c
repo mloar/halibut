@@ -58,7 +58,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	/* XXX This may request the same font multiple times. */
 	if (!fe->font->info->fp)
 	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
-    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 0\n");
+    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 1\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
 	if (fe->font->info->fp)
@@ -66,17 +66,19 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndComments\n");
 
     fprintf(fp, "%%%%BeginProlog\n");
-    fprintf(fp, "%%%%BeginResource: procset Halibut 0 0\n");
+    fprintf(fp, "%%%%BeginResource: procset Halibut 0 1\n");
     /*
      * Supply a prologue function which allows a reasonably
      * compressed representation of the text on the pages.
      * 
-     * Expects two arguments: a y-coordinate, and then an array.
+     * "t" expects two arguments: a y-coordinate, and then an array.
      * Elements of the array are processed sequentially as follows:
      * 
      *  - a number is treated as an x-coordinate
      *  - an array is treated as a (font, size) pair
      *  - a string is shown
+     *
+     * "r" takes four arguments, and behaves like "rectfill".
      */
     fprintf(fp,
 	    "/tdict 4 dict dup begin\n"
@@ -85,7 +87,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "  /integertype /realtype load def\n"
 	    "  /stringtype {show} bind def\n"
 	    "end def\n"
-	    "/t { tdict begin {dup type exec} forall end pop } bind def\n");
+	    "/t { tdict begin {dup type exec} forall end pop } bind def\n"
+	    "/r { 4 2 roll moveto 1 index 0 rlineto 0 exch rlineto\n"
+	    "     neg 0 rlineto closepath fill } bind def\n");
 
     fprintf(fp, "%%%%EndResource\n");
     fprintf(fp, "%%%%EndProlog\n");
@@ -167,7 +171,6 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
 	fprintf(fp, "save\n");
-
 #if 0
 	{
 	    xref *xr;
@@ -189,11 +192,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 #endif
 
 	for (r = page->first_rect; r; r = r->next) {
-	    fprintf(fp, "%g %g moveto %g 0 rlineto 0 %g rlineto "
-		    "-%g 0 rlineto closepath fill\n",
+	    fprintf(fp, "%g %g %g %g r\n",
 		    r->x / FUNITS_PER_PT, r->y / FUNITS_PER_PT,
-		    r->w / FUNITS_PER_PT, r->h / FUNITS_PER_PT,
-		    r->w / FUNITS_PER_PT);
+		    r->w / FUNITS_PER_PT, r->h / FUNITS_PER_PT);
 	}
 
 	frag = page->first_text;
