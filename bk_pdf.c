@@ -7,7 +7,7 @@
 #include "paper.h"
 #include "deflate.h"
 
-#define TREE_BRANCH 2		       /* max branching factor in page tree */
+#define TREE_BRANCH 8		       /* max branching factor in page tree */
 
 paragraph *pdf_config_filename(char *filename)
 {
