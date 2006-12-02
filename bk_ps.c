@@ -46,7 +46,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
     fprintf(fp, "%%!PS-Adobe-3.0\n");
     fprintf(fp, "%%%%Creator: Halibut, %s\n", version);
-    fprintf(fp, "%%%%DocumentData: Clean8Bit\n");
+    fprintf(fp, "%%%%DocumentData: Clean7Bit\n");
     fprintf(fp, "%%%%LanguageLevel: 1\n");
     for (pageno = 0, page = doc->pages; page; page = page->next)
 	pageno++;
@@ -315,9 +315,13 @@ static void ps_string(FILE *fp, char const *str) {
 
     fprintf(fp, "(");
     for (c = str; *c; c++) {
-	if (*c == '(' || *c == ')' || *c == '\\')
-	    fputc('\\', fp);
-	fputc(*c, fp);
+	if (*c < ' ' || *c > '~') {
+	    fprintf(fp, "\\%03o", 0xFF & (int)*c);
+	} else {
+	    if (*c == '(' || *c == ')' || *c == '\\')
+		fputc('\\', fp);
+	    fputc(*c, fp);
+	}
     }
     fprintf(fp, ")");
 }
