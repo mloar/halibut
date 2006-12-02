@@ -7,6 +7,7 @@
 #include "paper.h"
 
 static void ps_comment(FILE *fp, char const *leader, word *words);
+static void ps_string(FILE *fp, char const *str);
 
 paragraph *ps_config_filename(char *filename)
 {
@@ -58,7 +59,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	/* XXX This may request the same font multiple times. */
 	if (!fe->font->info->fp)
 	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
-    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 1\n");
+    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 2\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
 	if (fe->font->info->fp)
@@ -66,7 +67,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndComments\n");
 
     fprintf(fp, "%%%%BeginProlog\n");
-    fprintf(fp, "%%%%BeginResource: procset Halibut 0 1\n");
+    fprintf(fp, "%%%%BeginResource: procset Halibut 0 2\n");
     /*
      * Supply a prologue function which allows a reasonably
      * compressed representation of the text on the pages.
@@ -90,6 +91,27 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "/t { tdict begin {dup type exec} forall end pop } bind def\n"
 	    "/r { 4 2 roll moveto 1 index 0 rlineto 0 exch rlineto\n"
 	    "     neg 0 rlineto closepath fill } bind def\n");
+    /*
+     * pdfmark wrappers
+     *
+     * "p" generates a named destination referencing this page.
+     * "x" generates a link to a named destination.
+     * "u" generates a link to a URI.
+     *
+     * They all do nothing if pdfmark is undefined.
+     */
+    fprintf(fp,
+	    "/pdfmark where { pop\n"
+	    "  /p { [ /Dest 3 -1 roll /View [ /XYZ null null null ]\n"
+	    "       /DEST pdfmark } bind def\n"
+	    "  /x { [ /Dest 3 -1 roll /Rect 5 -1 roll /Border [0 0 0 0]\n"
+	    "       /Subtype /Link /ANN pdfmark } bind def\n"
+	    "  /u { 2 dict dup /Subtype /URI put dup /URI 4 -1 roll put\n"
+	    "       [ /Action 3 -1 roll /Rect 5 -1 roll /Border [0 0 0 0]\n"
+	    "       /Subtype /Link /ANN pdfmark } bind def\n"
+	    "} {\n"
+	    "  [/p /x /u] { null cvx def } forall\n"
+	    "} ifelse\n");
 
     fprintf(fp, "%%%%EndResource\n");
     fprintf(fp, "%%%%EndProlog\n");
@@ -114,6 +136,12 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    doc->paper_width / FUNITS_PER_PT,
 	    doc->paper_height / FUNITS_PER_PT);
     fprintf(fp, "} if\n");
+
+    /* Request outline view if the document is converted to PDF. */
+    fprintf(fp,
+	    "/pdfmark where {\n"
+	    "  pop [ /PageMode /UseOutlines /DOCVIEW pdfmark\n"
+	    "} if\n");
 
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
@@ -159,37 +187,43 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndSetup\n");
 
     /*
+     * Assign a destination name to each page for pdfmark purposes.
+     */
+    pageno = 0;
+    for (page = doc->pages; page; page = page->next) {
+	char *buf;
+	pageno++;
+	buf = snewn(12, char);
+	sprintf(buf, "/p%d", pageno);
+	page->spare = buf;
+    }
+
+    /*
      * Output the text and graphics.
      */
     pageno = 0;
     for (page = doc->pages; page; page = page->next) {
 	text_fragment *frag, *frag_end;
 	rect *r;
+	xref *xr;
 	font_encoding *fe;
 	int fs;
 
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
-	fprintf(fp, "save\n");
-#if 0
-	{
-	    xref *xr;
-	    /*
-	     * I used this diagnostic briefly to ensure that
-	     * cross-reference rectangles were being put where they
-	     * should be.
-	     */
-	    for (xr = page->first_xref; xr; xr = xr->next) {
-		fprintf(fp, "gsave 0.7 setgray %g %g moveto",
-			xr->lx/FUNITS_PER_PT, xr->ty/FUNITS_PER_PT);
-		fprintf(fp, " %g %g lineto %g %g lineto",
-			xr->lx/FUNITS_PER_PT, xr->by/FUNITS_PER_PT,
-			xr->rx/FUNITS_PER_PT, xr->by/FUNITS_PER_PT);
-		fprintf(fp, " %g %g lineto closepath fill grestore\n",
-			xr->rx/FUNITS_PER_PT, xr->ty/FUNITS_PER_PT);
+	fprintf(fp, "save %s p\n", (char *)page->spare);
+	
+	for (xr = page->first_xref; xr; xr = xr->next) {
+	    fprintf(fp, "[%g %g %g %g]",
+		    xr->lx/FUNITS_PER_PT, xr->by/FUNITS_PER_PT,
+		    xr->rx/FUNITS_PER_PT, xr->ty/FUNITS_PER_PT);
+	    if (xr->dest.type == PAGE) {
+		fprintf(fp, "%s x\n", (char *)xr->dest.page->spare);
+	    } else {
+		ps_string(fp, xr->dest.url);
+		fprintf(fp, "u\n");
 	    }
 	}
-#endif
 
 	for (r = page->first_rect; r; r = r->next) {
 	    fprintf(fp, "%g %g %g %g r\n",
@@ -201,8 +235,6 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	fe = NULL;
 	fs = -1;
 	while (frag) {
-	    char *c;
-
 	    /*
 	     * Collect all the adjacent text fragments with the
 	     * same y-coordinate.
@@ -220,13 +252,8 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		fe = frag->fe;
 		fs = frag->fontsize;
 
-		fprintf(fp, "%g(", frag->x/FUNITS_PER_PT);
-		for (c = frag->text; *c; c++) {
-		    if (*c == '(' || *c == ')' || *c == '\\')
-			fputc('\\', fp);
-		    fputc(*c, fp);
-		}
-		fprintf(fp, ")");
+		fprintf(fp, "%g", frag->x/FUNITS_PER_PT);
+		ps_string(fp, frag->text);
 
 		frag = frag->next;
 	    }
@@ -281,4 +308,16 @@ static void ps_comment(FILE *fp, char const *leader, word *words)
     }
 
     fprintf(fp, "\n");
+}
+
+static void ps_string(FILE *fp, char const *str) {
+    char const *c;
+
+    fprintf(fp, "(");
+    for (c = str; *c; c++) {
+	if (*c == '(' || *c == ')' || *c == '\\')
+	    fputc('\\', fp);
+	fputc(*c, fp);
+    }
+    fprintf(fp, ")");
 }
