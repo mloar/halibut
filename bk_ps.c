@@ -7,6 +7,7 @@
 #include "paper.h"
 
 static void ps_comment(FILE *fp, char const *leader, word *words);
+static void ps_string_len(FILE *fp, char const *str, int len);
 static void ps_string(FILE *fp, char const *str);
 
 paragraph *ps_config_filename(char *filename)
@@ -24,6 +25,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     FILE *fp;
     char *filename;
     paragraph *p;
+    outline_element *oe;
+    int noe;
+
 
     IGNORE(keywords);
     IGNORE(idx);
@@ -119,6 +123,18 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%BeginSetup\n");
 
     /*
+     * Assign a destination name to each page for pdfmark purposes.
+     */
+    pageno = 0;
+    for (page = doc->pages; page; page = page->next) {
+	char *buf;
+	pageno++;
+	buf = snewn(12, char);
+	sprintf(buf, "/p%d", pageno);
+	page->spare = buf;
+    }
+
+    /*
      * This is as good a place as any to put version IDs.
      */
     for (p = sourceform; p; p = p->next)
@@ -137,11 +153,29 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    doc->paper_height / FUNITS_PER_PT);
     fprintf(fp, "} if\n");
 
-    /* Request outline view if the document is converted to PDF. */
-    fprintf(fp,
-	    "/pdfmark where {\n"
-	    "  pop [ /PageMode /UseOutlines /DOCVIEW pdfmark\n"
-	    "} if\n");
+    /* Outline etc, only if pdfmark is supported */
+    fprintf(fp, "/pdfmark where { pop %% if\n");
+    fprintf(fp, "  [/PageMode/UseOutlines/DOCVIEW pdfmark\n");
+    noe = doc->n_outline_elements;
+    for (oe = doc->outline_elements; noe; oe++, noe--) {
+	char *title;
+	int titlelen, count, i;
+
+	title = pdf_outline_convert(oe->pdata->outline_title, &titlelen);
+
+	count = 0;
+	for (i = 1; i < noe && oe[i].level > oe->level; i++)
+	    if (oe[i].level == oe->level + 1)
+		count++;
+	if (oe->level > 0) count = -count;
+
+	fprintf(fp, "  [/Title");
+	ps_string_len(fp, title, titlelen);
+	sfree(title);
+	fprintf(fp, "/Dest%s/Count %d/OUT pdfmark\n",
+		(char *)oe->pdata->first->page->spare, count);
+    }
+    fprintf(fp, "} if\n");
 
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
@@ -185,18 +219,6 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	       fe->name, fe->name);
     }
     fprintf(fp, "%%%%EndSetup\n");
-
-    /*
-     * Assign a destination name to each page for pdfmark purposes.
-     */
-    pageno = 0;
-    for (page = doc->pages; page; page = page->next) {
-	char *buf;
-	pageno++;
-	buf = snewn(12, char);
-	sprintf(buf, "/p%d", pageno);
-	page->spare = buf;
-    }
 
     /*
      * Output the text and graphics.
@@ -310,18 +332,39 @@ static void ps_comment(FILE *fp, char const *leader, word *words)
     fprintf(fp, "\n");
 }
 
-static void ps_string(FILE *fp, char const *str) {
+static void ps_string_len(FILE *fp, char const *str, int len) {
     char const *c;
+    int score = 0;
 
-    fprintf(fp, "(");
-    for (c = str; *c; c++) {
-	if (*c < ' ' || *c > '~') {
-	    fprintf(fp, "\\%03o", 0xFF & (int)*c);
-	} else {
-	    if (*c == '(' || *c == ')' || *c == '\\')
-		fputc('\\', fp);
-	    fputc(*c, fp);
-	}
+    for (c = str; c < str+len; c++) {
+	if (*c < ' ' || *c > '~')
+	    score += 2;
+	else if (*c == '(' || *c == ')' || *c == '\\')
+	    score += 0;
+	else
+	    score -= 1;
     }
-    fprintf(fp, ")");
+    if (score > 0) {
+	fprintf(fp, "<");
+	for (c = str; c < str+len; c++) {
+	    fprintf(fp, "%02X", 0xFF & (int)*c);
+	}
+	fprintf(fp, ">");
+    } else {
+	fprintf(fp, "(");
+	for (c = str; c < str+len; c++) {
+	    if (*c < ' ' || *c > '~') {
+		fprintf(fp, "\\%03o", 0xFF & (int)*c);
+	    } else {
+		if (*c == '(' || *c == ')' || *c == '\\')
+		    fputc('\\', fp);
+		fputc(*c, fp);
+	    }
+	}
+	fprintf(fp, ")");
+    }
+}
+
+static void ps_string(FILE *fp, char const *str) {
+    ps_string_len(fp, str, strlen(str));
 }

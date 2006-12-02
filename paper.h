@@ -371,4 +371,9 @@ void init_std_fonts(void);
 const int *ps_std_font_widths(char const *fontname);
 const kern_pair *ps_std_font_kerns(char const *fontname);
 
+/*
+ * Function from bk_pdf.c borrowed by bk_ps.c
+ */
+char *pdf_outline_convert(wchar_t *s, int *len);
+
 #endif
