@@ -14,11 +14,6 @@
  * 
  *  - linearised PDF, perhaps?
  * 
- *  - we should use PDFDocEncoding or Unicode for outline strings,
- *    now that I actually know how to do them. Probably easiest if
- *    I do this _after_ bringing in libcharset, since I can simply
- *    supply PDFDocEncoding in there.
- * 
  *  - I'm uncertain of whether I need to include a ToUnicode CMap
  *    in each of my font definitions in PDF. Currently things (by
  *    which I mean cut and paste out of acroread) seem to be
