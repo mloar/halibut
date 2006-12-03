@@ -114,7 +114,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "       [ /Action 3 -1 roll /Rect 5 -1 roll /Border [0 0 0 0]\n"
 	    "       /Subtype /Link /ANN pdfmark } bind def\n"
 	    "} {\n"
-	    "  [/p /x /u] { null cvx def } forall\n"
+	    "  /p { pop } bind def\n"
+	    "  /x { pop pop } bind def\n"
+	    "  /u /x load def\n"
 	    "} ifelse\n");
 
     fprintf(fp, "%%%%EndResource\n");
