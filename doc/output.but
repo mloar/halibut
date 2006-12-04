@@ -1440,7 +1440,7 @@ vertical space between paragraphs does \e{not} include
 
 \dd Specifies the indentation of the bullet or number in a
 \I{bulletted list, indentation}bulletted or \I{numbered list,
-indentation}numbers \I{list, indentation}list, similarly to
+indentation}numbered \I{list, indentation}list, similarly to
 \cw{\\cfg\{text-list-indent\}} (see \k{output-text-dimensions}).
 
 \dt \I{\cw{\\cfg\{paper-listitem-indent\}}}\cw{\\cfg\{paper-listitem-indent\}\{}\e{points}\cw{\}}
