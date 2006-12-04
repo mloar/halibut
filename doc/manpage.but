@@ -146,7 +146,3 @@ locally on your system, you can also find it at the Halibut web site:
 \H{putty-manpage-bugs} BUGS
 
 This man page isn't terribly complete.
-
-The HTML output isn't very good.
-
-Unicode handling is atrocious.
