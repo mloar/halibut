@@ -1561,10 +1561,23 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
     stk_free(crossparastk);
 }
 
+struct {
+    char const *magic;
+    size_t nmagic;
+    void (*reader)(input *);
+} magics[] = {
+    { "%!FontType1-",     12, &read_pfa_file },
+    { "%!PS-AdobeFont-",  15, &read_pfa_file },
+    { "StartFontMetrics", 16, &read_afm_file },
+};
+
 paragraph *read_input(input *in, indexdata *idx) {
     paragraph *head = NULL;
     paragraph **hptr = &head;
     tree234 *macros;
+    char mag[16];
+    size_t len, i;
+    void (*reader)(input *);
 
     macros = newtree234(macrocmp);
 
@@ -1576,14 +1589,20 @@ paragraph *read_input(input *in, indexdata *idx) {
 	    in->csstate = charset_init_state;
 	    in->wcpos = in->nwc = 0;
 	    in->pushback_chars = NULL;
-	    if (strcmp(in->filenames[in->currindex] +
-		       strlen(in->filenames[in->currindex]) - 4, ".afm") == 0)
-		read_afm_file(in);
-	    else if (strcmp(in->filenames[in->currindex] +
-		       strlen(in->filenames[in->currindex]) - 4, ".pfa") == 0)
-		read_pfa_file(in);
-	    else
+	    reader = NULL;
+	    len = fread(mag, 1, sizeof(mag), in->currfp);
+	    for (i = 0; i < lenof(magics); i++) {
+		if (len >= magics[i].nmagic &&
+		    memcmp(mag, magics[i].magic, magics[i].nmagic) == 0) {
+		    reader = magics[i].reader;
+		    break;
+		}
+	    }
+	    rewind(in->currfp);
+	    if (reader == NULL)
 		read_file(&hptr, in, idx, macros);
+	    else
+		(*reader)(in);
 	}
 	in->currindex++;
     }
