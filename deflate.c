@@ -7,31 +7,12 @@
 /*
  * TODO:
  * 
- *  - Feature: it would probably be useful to add a third format
- *    type to read and write actual gzip files.
- * 
- *  - Feature: the decompress function should return error codes
- *    indicating what kind of thing went wrong in a decoding error
- *    situation, possibly even including a file pointer. I envisage
- *    an enum of error codes in the header file, and one of those
- *    nasty preprocessor tricks to permit a user to define a
- *    code-to-text mapping array.
- *
  *  - Feature: could do with forms of flush other than SYNC_FLUSH.
  *    I'm not sure exactly how those work when you don't know in
  *    advance that your next block will be static (as we did in
  *    PuTTY). And remember the 9-bit limitation of zlib.
- *
- *  - Compression quality: introduce the option of choosing a
- *    static block instead of a dynamic one, where that's more
- *    efficient.
- *
- *  - Compression quality: the actual LZ77 engine appears to be
- *    unable to track a match going beyond the input data passed to
- *    it in a single call. I'd prefer it to be more restartable
- *    than that: we ought to be able to pass in our input data in
- *    whatever size blocks happen to be convenient and not affect
- *    the output at all.
+ *     + also, zlib has FULL_FLUSH which clears the LZ77 state as
+ * 	 well, for random access.
  *
  *  - Compression quality: chooseblock() appears to be computing
  *    wildly inaccurate block size estimates. Possible resolutions:
@@ -41,16 +22,12 @@
  *
  *  - Compression quality: see if increasing SYMLIMIT causes
  *    dynamic blocks to start being consistently smaller than it.
+ *     + actually we seem to be there already, but check on a
+ * 	 larger corpus.
  *
  *  - Compression quality: we ought to be able to fall right back
  *    to actual uncompressed blocks if really necessary, though
  *    it's not clear what the criterion for doing so would be.
- *
- *  - Performance: chooseblock() is currently computing the whole
- *    entropic approximation for every possible block size. It
- *    ought to be able to update it incrementally as it goes along
- *    (assuming of course we don't jack it all in and go for a
- *    proper Huffman analysis).
  */
 
 /*
@@ -83,7 +60,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <math.h>
 
 #include "deflate.h"
 
@@ -94,6 +70,26 @@
 
 #define lenof(x) (sizeof((x)) / sizeof(*(x)))
 
+#ifndef FALSE
+#define FALSE 0
+#define TRUE (!FALSE)
+#endif
+
+/* ----------------------------------------------------------------------
+ * This file can be compiled in a number of modes.
+ * 
+ * With -DSTANDALONE, it builds a self-contained deflate tool which
+ * can compress, decompress, and also analyse a deflated file to
+ * print out the sequence of literals and copy commands it
+ * contains.
+ * 
+ * With -DTESTMODE, it builds a test application which is given a
+ * file on standard input, both compresses and decompresses it, and
+ * outputs the re-decompressed result so it can be conveniently
+ * diffed against the original. Define -DTESTDBG as well for lots
+ * of diagnostics.
+ */
+
 #if defined TESTDBG
 /* gcc-specific diagnostic macro */
 #define debug_int(x...) ( fprintf(stderr, x) )
@@ -102,9 +98,12 @@
 #define debug(x)
 #endif
 
-#ifndef FALSE
-#define FALSE 0
-#define TRUE (!FALSE)
+#ifdef STANDALONE
+#define ANALYSIS
+#endif
+
+#ifdef ANALYSIS
+int analyse_level = 0;
 #endif
 
 /* ----------------------------------------------------------------------
@@ -398,7 +397,10 @@ static const unsigned char lenlenmap[] = {
  * codes, in the final form suitable for feeding to outbits (i.e.
  * already bit-mirrored).
  *
- * Returns the maximum code length found.
+ * Returns the maximum code length found. Can also return -1 to
+ * indicate the table was overcommitted (too many or too short
+ * codes to exactly cover the possible space), or -2 to indicate it
+ * was undercommitted (too few or too long codes).
  */
 static int hufcodes(const unsigned char *lengths, int *codes, int nsyms)
 {
@@ -420,8 +422,12 @@ static int hufcodes(const unsigned char *lengths, int *codes, int nsyms)
     for (i = 1; i < MAXCODELEN; i++) {
 	startcode[i] = code;
 	code += count[i];
+	if (code > (1 << i))
+	    maxlen = -1;	       /* overcommitted */
 	code <<= 1;
     }
+    if (code < (1 << MAXCODELEN))
+	maxlen = -2;		       /* undercommitted */
     /* Determine the code for each symbol. Mirrored, of course. */
     for (i = 0; i < nsyms; i++) {
 	code = startcode[lengths[i]]++;
@@ -434,6 +440,179 @@ static int hufcodes(const unsigned char *lengths, int *codes, int nsyms)
 
     return maxlen;
 }
+
+/*
+ * Adler32 checksum function.
+ */
+static unsigned long adler32_update(unsigned long s,
+				    const unsigned char *data, int len)
+{
+    unsigned s1 = s & 0xFFFF, s2 = (s >> 16) & 0xFFFF;
+    int i;
+
+    for (i = 0; i < len; i++) {
+	s1 += data[i];
+	s2 += s1;
+	if (!(i & 0xFFF)) {
+	    s1 %= 65521;
+	    s2 %= 65521;
+	}
+    }
+
+    return ((s2 % 65521) << 16) | (s1 % 65521);
+}
+
+/*
+ * CRC32 checksum function.
+ */
+
+static unsigned long crc32_update(unsigned long crcword,
+				  const unsigned char *data, int len)
+{
+    static const unsigned long crc32_table[256] = {
+	0x00000000L, 0x77073096L, 0xEE0E612CL, 0x990951BAL,
+	0x076DC419L, 0x706AF48FL, 0xE963A535L, 0x9E6495A3L,
+	0x0EDB8832L, 0x79DCB8A4L, 0xE0D5E91EL, 0x97D2D988L,
+	0x09B64C2BL, 0x7EB17CBDL, 0xE7B82D07L, 0x90BF1D91L,
+	0x1DB71064L, 0x6AB020F2L, 0xF3B97148L, 0x84BE41DEL,
+	0x1ADAD47DL, 0x6DDDE4EBL, 0xF4D4B551L, 0x83D385C7L,
+	0x136C9856L, 0x646BA8C0L, 0xFD62F97AL, 0x8A65C9ECL,
+	0x14015C4FL, 0x63066CD9L, 0xFA0F3D63L, 0x8D080DF5L,
+	0x3B6E20C8L, 0x4C69105EL, 0xD56041E4L, 0xA2677172L,
+	0x3C03E4D1L, 0x4B04D447L, 0xD20D85FDL, 0xA50AB56BL,
+	0x35B5A8FAL, 0x42B2986CL, 0xDBBBC9D6L, 0xACBCF940L,
+	0x32D86CE3L, 0x45DF5C75L, 0xDCD60DCFL, 0xABD13D59L,
+	0x26D930ACL, 0x51DE003AL, 0xC8D75180L, 0xBFD06116L,
+	0x21B4F4B5L, 0x56B3C423L, 0xCFBA9599L, 0xB8BDA50FL,
+	0x2802B89EL, 0x5F058808L, 0xC60CD9B2L, 0xB10BE924L,
+	0x2F6F7C87L, 0x58684C11L, 0xC1611DABL, 0xB6662D3DL,
+	0x76DC4190L, 0x01DB7106L, 0x98D220BCL, 0xEFD5102AL,
+	0x71B18589L, 0x06B6B51FL, 0x9FBFE4A5L, 0xE8B8D433L,
+	0x7807C9A2L, 0x0F00F934L, 0x9609A88EL, 0xE10E9818L,
+	0x7F6A0DBBL, 0x086D3D2DL, 0x91646C97L, 0xE6635C01L,
+	0x6B6B51F4L, 0x1C6C6162L, 0x856530D8L, 0xF262004EL,
+	0x6C0695EDL, 0x1B01A57BL, 0x8208F4C1L, 0xF50FC457L,
+	0x65B0D9C6L, 0x12B7E950L, 0x8BBEB8EAL, 0xFCB9887CL,
+	0x62DD1DDFL, 0x15DA2D49L, 0x8CD37CF3L, 0xFBD44C65L,
+	0x4DB26158L, 0x3AB551CEL, 0xA3BC0074L, 0xD4BB30E2L,
+	0x4ADFA541L, 0x3DD895D7L, 0xA4D1C46DL, 0xD3D6F4FBL,
+	0x4369E96AL, 0x346ED9FCL, 0xAD678846L, 0xDA60B8D0L,
+	0x44042D73L, 0x33031DE5L, 0xAA0A4C5FL, 0xDD0D7CC9L,
+	0x5005713CL, 0x270241AAL, 0xBE0B1010L, 0xC90C2086L,
+	0x5768B525L, 0x206F85B3L, 0xB966D409L, 0xCE61E49FL,
+	0x5EDEF90EL, 0x29D9C998L, 0xB0D09822L, 0xC7D7A8B4L,
+	0x59B33D17L, 0x2EB40D81L, 0xB7BD5C3BL, 0xC0BA6CADL,
+	0xEDB88320L, 0x9ABFB3B6L, 0x03B6E20CL, 0x74B1D29AL,
+	0xEAD54739L, 0x9DD277AFL, 0x04DB2615L, 0x73DC1683L,
+	0xE3630B12L, 0x94643B84L, 0x0D6D6A3EL, 0x7A6A5AA8L,
+	0xE40ECF0BL, 0x9309FF9DL, 0x0A00AE27L, 0x7D079EB1L,
+	0xF00F9344L, 0x8708A3D2L, 0x1E01F268L, 0x6906C2FEL,
+	0xF762575DL, 0x806567CBL, 0x196C3671L, 0x6E6B06E7L,
+	0xFED41B76L, 0x89D32BE0L, 0x10DA7A5AL, 0x67DD4ACCL,
+	0xF9B9DF6FL, 0x8EBEEFF9L, 0x17B7BE43L, 0x60B08ED5L,
+	0xD6D6A3E8L, 0xA1D1937EL, 0x38D8C2C4L, 0x4FDFF252L,
+	0xD1BB67F1L, 0xA6BC5767L, 0x3FB506DDL, 0x48B2364BL,
+	0xD80D2BDAL, 0xAF0A1B4CL, 0x36034AF6L, 0x41047A60L,
+	0xDF60EFC3L, 0xA867DF55L, 0x316E8EEFL, 0x4669BE79L,
+	0xCB61B38CL, 0xBC66831AL, 0x256FD2A0L, 0x5268E236L,
+	0xCC0C7795L, 0xBB0B4703L, 0x220216B9L, 0x5505262FL,
+	0xC5BA3BBEL, 0xB2BD0B28L, 0x2BB45A92L, 0x5CB36A04L,
+	0xC2D7FFA7L, 0xB5D0CF31L, 0x2CD99E8BL, 0x5BDEAE1DL,
+	0x9B64C2B0L, 0xEC63F226L, 0x756AA39CL, 0x026D930AL,
+	0x9C0906A9L, 0xEB0E363FL, 0x72076785L, 0x05005713L,
+	0x95BF4A82L, 0xE2B87A14L, 0x7BB12BAEL, 0x0CB61B38L,
+	0x92D28E9BL, 0xE5D5BE0DL, 0x7CDCEFB7L, 0x0BDBDF21L,
+	0x86D3D2D4L, 0xF1D4E242L, 0x68DDB3F8L, 0x1FDA836EL,
+	0x81BE16CDL, 0xF6B9265BL, 0x6FB077E1L, 0x18B74777L,
+	0x88085AE6L, 0xFF0F6A70L, 0x66063BCAL, 0x11010B5CL,
+	0x8F659EFFL, 0xF862AE69L, 0x616BFFD3L, 0x166CCF45L,
+	0xA00AE278L, 0xD70DD2EEL, 0x4E048354L, 0x3903B3C2L,
+	0xA7672661L, 0xD06016F7L, 0x4969474DL, 0x3E6E77DBL,
+	0xAED16A4AL, 0xD9D65ADCL, 0x40DF0B66L, 0x37D83BF0L,
+	0xA9BCAE53L, 0xDEBB9EC5L, 0x47B2CF7FL, 0x30B5FFE9L,
+	0xBDBDF21CL, 0xCABAC28AL, 0x53B39330L, 0x24B4A3A6L,
+	0xBAD03605L, 0xCDD70693L, 0x54DE5729L, 0x23D967BFL,
+	0xB3667A2EL, 0xC4614AB8L, 0x5D681B02L, 0x2A6F2B94L,
+	0xB40BBE37L, 0xC30C8EA1L, 0x5A05DF1BL, 0x2D02EF8DL
+    };
+    crcword ^= 0xFFFFFFFFL;
+    while (len--) {
+	unsigned long newbyte = *data++;
+	newbyte ^= crcword & 0xFFL;
+	crcword = (crcword >> 8) ^ crc32_table[newbyte];
+    }
+    return crcword ^ 0xFFFFFFFFL;
+}
+
+typedef struct {
+    short code, extrabits;
+    int min, max;
+} coderecord;
+
+static const coderecord lencodes[] = {
+    {257, 0, 3, 3},
+    {258, 0, 4, 4},
+    {259, 0, 5, 5},
+    {260, 0, 6, 6},
+    {261, 0, 7, 7},
+    {262, 0, 8, 8},
+    {263, 0, 9, 9},
+    {264, 0, 10, 10},
+    {265, 1, 11, 12},
+    {266, 1, 13, 14},
+    {267, 1, 15, 16},
+    {268, 1, 17, 18},
+    {269, 2, 19, 22},
+    {270, 2, 23, 26},
+    {271, 2, 27, 30},
+    {272, 2, 31, 34},
+    {273, 3, 35, 42},
+    {274, 3, 43, 50},
+    {275, 3, 51, 58},
+    {276, 3, 59, 66},
+    {277, 4, 67, 82},
+    {278, 4, 83, 98},
+    {279, 4, 99, 114},
+    {280, 4, 115, 130},
+    {281, 5, 131, 162},
+    {282, 5, 163, 194},
+    {283, 5, 195, 226},
+    {284, 5, 227, 257},
+    {285, 0, 258, 258},
+};
+
+static const coderecord distcodes[] = {
+    {0, 0, 1, 1},
+    {1, 0, 2, 2},
+    {2, 0, 3, 3},
+    {3, 0, 4, 4},
+    {4, 1, 5, 6},
+    {5, 1, 7, 8},
+    {6, 2, 9, 12},
+    {7, 2, 13, 16},
+    {8, 3, 17, 24},
+    {9, 3, 25, 32},
+    {10, 4, 33, 48},
+    {11, 4, 49, 64},
+    {12, 5, 65, 96},
+    {13, 5, 97, 128},
+    {14, 6, 129, 192},
+    {15, 6, 193, 256},
+    {16, 7, 257, 384},
+    {17, 7, 385, 512},
+    {18, 8, 513, 768},
+    {19, 8, 769, 1024},
+    {20, 9, 1025, 1536},
+    {21, 9, 1537, 2048},
+    {22, 10, 2049, 3072},
+    {23, 10, 3073, 4096},
+    {24, 11, 4097, 6144},
+    {25, 11, 6145, 8192},
+    {26, 12, 8193, 12288},
+    {27, 12, 12289, 16384},
+    {28, 13, 16385, 24576},
+    {29, 13, 24577, 32768},
+};
 
 /* ----------------------------------------------------------------------
  * Deflate compression.
@@ -449,6 +628,15 @@ static int hufcodes(const unsigned char *lengths, int *codes, int nsyms)
 #define SYM_EXTRABITS_MASK 0x3C000000U
 #define SYM_EXTRABITS_SHIFT 26
 
+struct huftrees {
+    unsigned char *len_litlen;
+    int *code_litlen;
+    unsigned char *len_dist;
+    int *code_dist;
+    unsigned char *len_codelen;
+    int *code_codelen;
+};
+
 struct deflate_compress_ctx {
     struct LZ77Context *lzc;
     unsigned char *outbuf;
@@ -459,9 +647,13 @@ struct deflate_compress_ctx {
     unsigned long *syms;
     int symstart, nsyms;
     int type;
-    unsigned long adler32;
+    unsigned long checksum;
+    unsigned long datasize;
     int lastblock;
     int finished;
+    unsigned char static_len1[286], static_len2[30];
+    int static_code1[286], static_code2[30];
+    struct huftrees sht;
 #ifdef STATISTICS
     unsigned long bitcount;
 #endif
@@ -633,6 +825,26 @@ static void deflate_buildhuf(int *freqs, unsigned char *lengths,
     int maxprob;
 
     /*
+     * Nasty special case: if the frequency table has fewer than
+     * two non-zero elements, we must invent some, because we can't
+     * have fewer than one bit encoding a symbol.
+     */
+    assert(nsyms >= 2);
+    {
+	int count = 0;
+	for (i = 0; i < nsyms; i++)
+	    if (freqs[i] > 0)
+		count++;
+	if (count < 2) {
+	    for (i = 0; i < nsyms && count > 0; i++)
+		if (freqs[i] == 0) {
+		    freqs[i] = 1;
+		    count--;
+		}
+	}
+    }
+
+    /*
      * First, try building the Huffman table the normal way. If
      * this works, it's optimal, so we don't want to mess with it.
      */
@@ -749,20 +961,31 @@ static void deflate_buildhuf(int *freqs, unsigned char *lengths,
 	assert(lengths[i] <= limit);
 }
 
-struct huftrees {
-    unsigned char *len_litlen;
-    int *code_litlen;
-    unsigned char *len_dist;
-    int *code_dist;
-    unsigned char *len_codelen;
-    int *code_codelen;
-};
+/*
+ * Compute the bit length of a symbol, given the three Huffman
+ * trees.
+ */
+static int symsize(unsigned sym, const struct huftrees *trees)
+{
+    unsigned basesym = sym &~ SYMPFX_MASK;
+
+    switch (sym & SYMPFX_MASK) {
+      case SYMPFX_LITLEN:
+	return trees->len_litlen[basesym];
+      case SYMPFX_DIST:
+	return trees->len_dist[basesym];
+      case SYMPFX_CODELEN:
+	return trees->len_codelen[basesym];
+      default /*case SYMPFX_EXTRABITS*/:
+	return basesym >> SYM_EXTRABITS_SHIFT;
+    }
+}
 
 /*
  * Write out a single symbol, given the three Huffman trees.
  */
 static void writesym(deflate_compress_ctx *out,
-		     unsigned sym, struct huftrees *trees)
+		     unsigned sym, const struct huftrees *trees)
 {
     unsigned basesym = sym &~ SYMPFX_MASK;
     int i;
@@ -789,8 +1012,13 @@ static void writesym(deflate_compress_ctx *out,
     }
 }
 
+/*
+ * outblock() must output _either_ a dynamic block of length
+ * `dynamic_len', _or_ a static block of length `static_len', but
+ * it gets to choose which.
+ */
 static void outblock(deflate_compress_ctx *out,
-		     int blklen, int dynamic)
+		     int dynamic_len, int static_len)
 {
     int freqs1[286], freqs2[30], freqs3[19];
     unsigned char len1[286], len2[30], len3[19];
@@ -800,183 +1028,225 @@ static void outblock(deflate_compress_ctx *out,
     int treesyms[286 + 30];
     int codelen[19];
     int i, ntreesrc, ntreesyms;
-    struct huftrees ht;
+    int dynamic, blklen;
+    struct huftrees dht;
+    const struct huftrees *ht;
 #ifdef STATISTICS
     unsigned long bitcount_before;
 #endif
 
-    ht.len_litlen = len1;
-    ht.len_dist = len2;
-    ht.len_codelen = len3;
-    ht.code_litlen = code1;
-    ht.code_dist = code2;
-    ht.code_codelen = code3;
+    dht.len_litlen = len1;
+    dht.len_dist = len2;
+    dht.len_codelen = len3;
+    dht.code_litlen = code1;
+    dht.code_dist = code2;
+    dht.code_codelen = code3;
 
     /*
-     * Build the two main Huffman trees.
+     * We make our choice of block to output by doing all the
+     * detailed work to determine the exact length of each possible
+     * block. Then we choose the one which has fewest output bits
+     * per symbol.
      */
-    if (dynamic) {
-	/*
-	 * Count up the frequency tables.
-	 */
-	memset(freqs1, 0, sizeof(freqs1));
-	memset(freqs2, 0, sizeof(freqs2));
-	freqs1[256] = 1;	       /* we're bound to need one EOB */
-	for (i = 0; i < blklen; i++) {
-	    unsigned sym = out->syms[(out->symstart + i) % SYMLIMIT];
 
-	    /*
-	     * Increment the occurrence counter for this symbol, if
-	     * it's in one of the Huffman alphabets and isn't extra
-	     * bits.
-	     */
-	    if ((sym & SYMPFX_MASK) == SYMPFX_LITLEN) {
-		sym &= ~SYMPFX_MASK;
-		assert(sym < lenof(freqs1));
-		freqs1[sym]++;
-	    } else if ((sym & SYMPFX_MASK) == SYMPFX_DIST) {
-		sym &= ~SYMPFX_MASK;
-		assert(sym < lenof(freqs2));
-		freqs2[sym]++;
-	    }
-	}
-	deflate_buildhuf(freqs1, len1, lenof(freqs1), 15);
-	deflate_buildhuf(freqs2, len2, lenof(freqs2), 15);
-    } else {
+    /*
+     * First build the two main Huffman trees for the dynamic
+     * block.
+     */
+
+    /*
+     * Count up the frequency tables.
+     */
+    memset(freqs1, 0, sizeof(freqs1));
+    memset(freqs2, 0, sizeof(freqs2));
+    freqs1[256] = 1;	       /* we're bound to need one EOB */
+    for (i = 0; i < dynamic_len; i++) {
+	unsigned sym = out->syms[(out->symstart + i) % SYMLIMIT];
+
 	/*
-	 * Fixed static trees.
+	 * Increment the occurrence counter for this symbol, if
+	 * it's in one of the Huffman alphabets and isn't extra
+	 * bits.
 	 */
-	for (i = 0; i < lenof(len1); i++)
-	    len1[i] = (i < 144 ? 8 :
-		       i < 256 ? 9 :
-		       i < 280 ? 7 : 8);
-	for (i = 0; i < lenof(len2); i++)
-	    len2[i] = 5;
+	if ((sym & SYMPFX_MASK) == SYMPFX_LITLEN) {
+	    sym &= ~SYMPFX_MASK;
+	    assert(sym < lenof(freqs1));
+	    freqs1[sym]++;
+	} else if ((sym & SYMPFX_MASK) == SYMPFX_DIST) {
+	    sym &= ~SYMPFX_MASK;
+	    assert(sym < lenof(freqs2));
+	    freqs2[sym]++;
+	}
     }
+    deflate_buildhuf(freqs1, len1, lenof(freqs1), 15);
+    deflate_buildhuf(freqs2, len2, lenof(freqs2), 15);
     hufcodes(len1, code1, lenof(freqs1));
     hufcodes(len2, code2, lenof(freqs2));
 
-    if (dynamic) {
-	/*
-	 * Determine HLIT and HDIST.
-	 */
-	for (hlit = 286; hlit > 257 && len1[hlit-1] == 0; hlit--);
-	for (hdist = 30; hdist > 1 && len2[hdist-1] == 0; hdist--);
+    /*
+     * Determine HLIT and HDIST.
+     */
+    for (hlit = 286; hlit > 257 && len1[hlit-1] == 0; hlit--);
+    for (hdist = 30; hdist > 1 && len2[hdist-1] == 0; hdist--);
 
-	/*
-	 * Write out the list of symbols used to transmit the
-	 * trees.
-	 */
-	ntreesrc = 0;
-	for (i = 0; i < hlit; i++)
-	    treesrc[ntreesrc++] = len1[i];
-	for (i = 0; i < hdist; i++)
-	    treesrc[ntreesrc++] = len2[i];
-	ntreesyms = 0;
-	for (i = 0; i < ntreesrc ;) {
-	    int j = 1;
-	    int k;
+    /*
+     * Write out the list of symbols used to transmit the
+     * trees.
+     */
+    ntreesrc = 0;
+    for (i = 0; i < hlit; i++)
+	treesrc[ntreesrc++] = len1[i];
+    for (i = 0; i < hdist; i++)
+	treesrc[ntreesrc++] = len2[i];
+    ntreesyms = 0;
+    for (i = 0; i < ntreesrc ;) {
+	int j = 1;
+	int k;
 
-	    /* Find length of run of the same length code. */
-	    while (i+j < ntreesrc && treesrc[i+j] == treesrc[i])
-		j++;
+	/* Find length of run of the same length code. */
+	while (i+j < ntreesrc && treesrc[i+j] == treesrc[i])
+	    j++;
 
-	    /* Encode that run as economically as we can. */
-	    k = j;
-	    if (treesrc[i] == 0) {
-		/*
-		 * Zero code length: we can output run codes for
-		 * 3-138 zeroes. So if we have fewer than 3 zeroes,
-		 * we just output literals. Otherwise, we output
-		 * nothing but run codes, and tweak their lengths
-		 * to make sure we aren't left with under 3 at the
-		 * end.
-		 */
-		if (k < 3) {
-		    while (k--)
-			treesyms[ntreesyms++] = 0 | SYMPFX_CODELEN;
-		} else {
-		    while (k > 0) {
-			int rpt = (k < 138 ? k : 138);
-			if (rpt > k-3 && rpt < k)
-			    rpt = k-3;
-			assert(rpt >= 3 && rpt <= 138);
-			if (rpt < 11) {
-			    treesyms[ntreesyms++] = 17 | SYMPFX_CODELEN;
-			    treesyms[ntreesyms++] =
-				(SYMPFX_EXTRABITS | (rpt - 3) |
-				 (3 << SYM_EXTRABITS_SHIFT));
-			} else {
-			    treesyms[ntreesyms++] = 18 | SYMPFX_CODELEN;
-			    treesyms[ntreesyms++] =
-				(SYMPFX_EXTRABITS | (rpt - 11) |
-				 (7 << SYM_EXTRABITS_SHIFT));
-			}
-			k -= rpt;
-		    }
-		}
-	    } else {
-		/*
-		 * Non-zero code length: we must output the first
-		 * one explicitly, then we can output a copy code
-		 * for 3-6 repeats. So if we have fewer than 4
-		 * repeats, we _just_ output literals. Otherwise,
-		 * we output one literal plus at least one copy
-		 * code, and tweak the copy codes to make sure we
-		 * aren't left with under 3 at the end.
-		 */
-		assert(treesrc[i] < 16);
-		treesyms[ntreesyms++] = treesrc[i] | SYMPFX_CODELEN;
-		k--;
-		if (k < 3) {
-		    while (k--)
-			treesyms[ntreesyms++] = treesrc[i] | SYMPFX_CODELEN;
-		} else {
-		    while (k > 0) {
-			int rpt = (k < 6 ? k : 6);
-			if (rpt > k-3 && rpt < k)
-			    rpt = k-3;
-			assert(rpt >= 3 && rpt <= 6);
-			treesyms[ntreesyms++] = 16 | SYMPFX_CODELEN;
-			treesyms[ntreesyms++] = (SYMPFX_EXTRABITS | (rpt - 3) |
-						 (2 << SYM_EXTRABITS_SHIFT));
-			k -= rpt;
-		    }
-		}
-	    }
-
-	    i += j;
-	}
-	assert((unsigned)ntreesyms < lenof(treesyms));
-
-	/*
-	 * Count up the frequency table for the tree-transmission
-	 * symbols, and build the auxiliary Huffman tree for that.
-	 */
-	memset(freqs3, 0, sizeof(freqs3));
-	for (i = 0; i < ntreesyms; i++) {
-	    unsigned sym = treesyms[i];
-
+	/* Encode that run as economically as we can. */
+	k = j;
+	if (treesrc[i] == 0) {
 	    /*
-	     * Increment the occurrence counter for this symbol, if
-	     * it's the Huffman alphabet and isn't extra bits.
+	     * Zero code length: we can output run codes for
+	     * 3-138 zeroes. So if we have fewer than 3 zeroes,
+	     * we just output literals. Otherwise, we output
+	     * nothing but run codes, and tweak their lengths
+	     * to make sure we aren't left with under 3 at the
+	     * end.
 	     */
-	    if ((sym & SYMPFX_MASK) == SYMPFX_CODELEN) {
-		sym &= ~SYMPFX_MASK;
-		assert(sym < lenof(freqs3));
-		freqs3[sym]++;
+	    if (k < 3) {
+		while (k--)
+		    treesyms[ntreesyms++] = 0 | SYMPFX_CODELEN;
+	    } else {
+		while (k > 0) {
+		    int rpt = (k < 138 ? k : 138);
+		    if (rpt > k-3 && rpt < k)
+			rpt = k-3;
+		    assert(rpt >= 3 && rpt <= 138);
+		    if (rpt < 11) {
+			treesyms[ntreesyms++] = 17 | SYMPFX_CODELEN;
+			treesyms[ntreesyms++] =
+			    (SYMPFX_EXTRABITS | (rpt - 3) |
+			     (3 << SYM_EXTRABITS_SHIFT));
+		    } else {
+			treesyms[ntreesyms++] = 18 | SYMPFX_CODELEN;
+			treesyms[ntreesyms++] =
+			    (SYMPFX_EXTRABITS | (rpt - 11) |
+			     (7 << SYM_EXTRABITS_SHIFT));
+		    }
+		    k -= rpt;
+		}
+	    }
+	} else {
+	    /*
+	     * Non-zero code length: we must output the first
+	     * one explicitly, then we can output a copy code
+	     * for 3-6 repeats. So if we have fewer than 4
+	     * repeats, we _just_ output literals. Otherwise,
+	     * we output one literal plus at least one copy
+	     * code, and tweak the copy codes to make sure we
+	     * aren't left with under 3 at the end.
+	     */
+	    assert(treesrc[i] < 16);
+	    treesyms[ntreesyms++] = treesrc[i] | SYMPFX_CODELEN;
+	    k--;
+	    if (k < 3) {
+		while (k--)
+		    treesyms[ntreesyms++] = treesrc[i] | SYMPFX_CODELEN;
+	    } else {
+		while (k > 0) {
+		    int rpt = (k < 6 ? k : 6);
+		    if (rpt > k-3 && rpt < k)
+			rpt = k-3;
+		    assert(rpt >= 3 && rpt <= 6);
+		    treesyms[ntreesyms++] = 16 | SYMPFX_CODELEN;
+		    treesyms[ntreesyms++] = (SYMPFX_EXTRABITS | (rpt - 3) |
+					     (2 << SYM_EXTRABITS_SHIFT));
+		    k -= rpt;
+		}
 	    }
 	}
-	deflate_buildhuf(freqs3, len3, lenof(freqs3), 7);
-	hufcodes(len3, code3, lenof(freqs3));
+
+	i += j;
+    }
+    assert((unsigned)ntreesyms < lenof(treesyms));
+
+    /*
+     * Count up the frequency table for the tree-transmission
+     * symbols, and build the auxiliary Huffman tree for that.
+     */
+    memset(freqs3, 0, sizeof(freqs3));
+    for (i = 0; i < ntreesyms; i++) {
+	unsigned sym = treesyms[i];
 
 	/*
-	 * Reorder the code length codes into transmission order, and
-	 * determine HCLEN.
+	 * Increment the occurrence counter for this symbol, if
+	 * it's the Huffman alphabet and isn't extra bits.
 	 */
-	for (i = 0; i < 19; i++)
-	    codelen[i] = len3[lenlenmap[i]];
-	for (hclen = 19; hclen > 4 && codelen[hclen-1] == 0; hclen--);
+	if ((sym & SYMPFX_MASK) == SYMPFX_CODELEN) {
+	    sym &= ~SYMPFX_MASK;
+	    assert(sym < lenof(freqs3));
+	    freqs3[sym]++;
+	}
+    }
+    deflate_buildhuf(freqs3, len3, lenof(freqs3), 7);
+    hufcodes(len3, code3, lenof(freqs3));
+
+    /*
+     * Reorder the code length codes into transmission order, and
+     * determine HCLEN.
+     */
+    for (i = 0; i < 19; i++)
+	codelen[i] = len3[lenlenmap[i]];
+    for (hclen = 19; hclen > 4 && codelen[hclen-1] == 0; hclen--);
+
+    /*
+     * Now work out the exact size of both the dynamic and the
+     * static block, in bits.
+     */
+    {
+	int ssize, dsize;
+
+	/*
+	 * First the dynamic block.
+	 */
+	dsize = 3 + 5 + 5 + 4;	       /* 3-bit header, HLIT, HDIST, HCLEN */
+	dsize += 3 * hclen;	       /* code-length-alphabet code lengths */
+	/* Code lengths */
+	for (i = 0; i < ntreesyms; i++)
+	    dsize += symsize(treesyms[i], &dht);
+	/* The actual block data */
+	for (i = 0; i < dynamic_len; i++) {
+	    unsigned sym = out->syms[(out->symstart + i) % SYMLIMIT];
+	    dsize += symsize(sym, &dht);
+	}
+	/* And the end-of-data symbol. */
+	dsize += symsize(SYMPFX_LITLEN | 256, &dht);
+
+	/*
+	 * Now the static block.
+	 */
+	ssize = 3;		       /* 3-bit block header */
+	/* The actual block data */
+	for (i = 0; i < static_len; i++) {
+	    unsigned sym = out->syms[(out->symstart + i) % SYMLIMIT];
+	    ssize += symsize(sym, &out->sht);
+	}
+	/* And the end-of-data symbol. */
+	ssize += symsize(SYMPFX_LITLEN | 256, &out->sht);
+
+	/*
+	 * Compare the two and decide which to output. We break
+	 * exact ties in favour of the static block, because of the
+	 * special case in which that block has zero length.
+	 */
+	dynamic = ((double)ssize * dynamic_len > (double)dsize * static_len);
+	ht = dynamic ? &dht : &out->sht;
+	blklen = dynamic ? dynamic_len : static_len;
     }
 
     /*
@@ -1009,7 +1279,7 @@ static void outblock(deflate_compress_ctx *out,
 
 	/* Code lengths for the literal/length and distance trees */
 	for (i = 0; i < ntreesyms; i++)
-	    writesym(out, treesyms[i], &ht);
+	    writesym(out, treesyms[i], ht);
 #ifdef STATISTICS
 	fprintf(stderr, "total tree size %lu bits\n",
 		out->bitcount - bitcount_before);
@@ -1019,11 +1289,11 @@ static void outblock(deflate_compress_ctx *out,
     /* Output the actual symbols from the buffer */
     for (i = 0; i < blklen; i++) {
 	unsigned sym = out->syms[(out->symstart + i) % SYMLIMIT];
-	writesym(out, sym, &ht);
+	writesym(out, sym, ht);
     }
 
     /* Output the end-of-data symbol */
-    writesym(out, SYMPFX_LITLEN | 256, &ht);
+    writesym(out, SYMPFX_LITLEN | 256, ht);
 
     /*
      * Remove all the just-output symbols from the symbol buffer by
@@ -1033,35 +1303,60 @@ static void outblock(deflate_compress_ctx *out,
     out->nsyms -= blklen;
 }
 
-static void outblock_wrapper(deflate_compress_ctx *out,
-			     int best_dynamic_len)
+/*
+ * Give the approximate log-base-2 of an input integer, measured in
+ * 8ths of a bit. (I.e. this computes an integer approximation to
+ * 8*logbase2(x).)
+ */
+static int approxlog2(unsigned x)
 {
+    int ret = 31*8;
+
     /*
-     * Final block choice function: we have the option of either
-     * outputting a dynamic block of length best_dynamic_len, or a
-     * static block of length out->nsyms. Whichever gives us the
-     * best value for money, we do.
-     *
-     * FIXME: currently we always choose dynamic except for empty
-     * blocks. We should make a sensible judgment.
+     * Binary-search to get the top bit of x up to bit 31.
      */
-    if (out->nsyms == 0)
-	outblock(out, 0, FALSE);
-    else
-	outblock(out, best_dynamic_len, TRUE);
+    if (x < 0x00010000U) x <<= 16, ret -= 16*8;
+    if (x < 0x01000000U) x <<=  8, ret -=  8*8;
+    if (x < 0x10000000U) x <<=  4, ret -=  4*8;
+    if (x < 0x40000000U) x <<=  2, ret -=  2*8;
+    if (x < 0x80000000U) x <<=  1, ret -=  1*8;
+
+    /*
+     * Now we know the logarithm we want is in [ret,ret+1).
+     * Determine the bottom three bits by checking against
+     * threshold values.
+     * 
+     * (Each of these threshold values is 0x80000000 times an odd
+     * power of 2^(1/16). Therefore, this function rounds to
+     * nearest.)
+     */
+    if (x <= 0xAD583EEAU) {
+	if (x <= 0x91C3D373U)
+	    ret += (x <= 0x85AAC367U ? 0 : 1);
+	else
+	    ret += (x <= 0x9EF53260U ? 2 : 3);
+    } else {
+	if (x <= 0xCE248C15U)
+	    ret += (x <= 0xBD08A39FU ? 4 : 5);
+	else
+	    ret += (x <= 0xE0CCDEECU ? 6 : x <= 0xF5257D15L ? 7 : 8);
+    }
+
+    return ret;
 }
 
 static void chooseblock(deflate_compress_ctx *out)
 {
     int freqs1[286], freqs2[30];
-    int i, bestlen;
-    double bestvfm;
-    int nextrabits;
+    int i, len, bestlen, longestlen = 0;
+    int total1, total2;
+    int bestvfm;
 
     memset(freqs1, 0, sizeof(freqs1));
     memset(freqs2, 0, sizeof(freqs2));
     freqs1[256] = 1;		       /* we're bound to need one EOB */
-    nextrabits = 0;
+    total1 = 1;
+    total2 = 0;
 
     /*
      * Iterate over all possible block lengths, computing the
@@ -1071,52 +1366,26 @@ static void chooseblock(deflate_compress_ctx *out)
      * bits-per-symbol count) of a block of that length.
      */
     bestlen = -1;
-    bestvfm = 0.0;
+    bestvfm = 0;
+
+    len = 300 * 8;	      /* very approximate size of the Huffman trees */
+
     for (i = 0; i < out->nsyms; i++) {
 	unsigned sym = out->syms[(out->symstart + i) % SYMLIMIT];
 
 	if (i > 0 && (sym & SYMPFX_MASK) == SYMPFX_LITLEN) {
 	    /*
 	     * This is a viable point at which to end the block.
-	     * Compute the length approximation and hence the value
-	     * for money.
+	     * Compute the value for money.
 	     */
-	    double len = 0.0, vfm;
-	    int k;
-	    int total;
+	    int vfm = i * 32768 / len;      /* symbols encoded per bit */
 
-	    /*
-	     * FIXME: we should be doing this incrementally, rather
-	     * than recomputing the whole thing at every byte
-	     * position. Also, can we fiddle the logs somehow to
-	     * avoid having to do floating point?
-	     */
-	    total = 0;
-	    for (k = 0; k < (int)lenof(freqs1); k++) {
-		if (freqs1[k])
-		    len -= freqs1[k] * log(freqs1[k]);
-		total += freqs1[k];
-	    }
-	    if (total)
-		len += total * log(total);
-	    total = 0;
-	    for (k = 0; k < (int)lenof(freqs2); k++) {
-		if (freqs2[k])
-		    len -= freqs2[k] * log(freqs2[k]);
-		total += freqs2[k];
-	    }
-	    if (total)
-		len += total * log(total);
-	    len /= log(2);
-	    len += nextrabits;
-	    len += 300;   /* very approximate size of the Huffman trees */
-
-	    vfm = i / len;	       /* symbols encoded per bit */
-/* fprintf(stderr, "chooseblock: i=%d gives len %g, vfm %g\n", i, len, vfm); */
 	    if (bestlen < 0 || vfm > bestvfm) {
 		bestlen = i;
 		bestvfm = vfm;
 	    }
+
+	    longestlen = i;
 	}
 
 	/*
@@ -1127,20 +1396,29 @@ static void chooseblock(deflate_compress_ctx *out)
 	if ((sym & SYMPFX_MASK) == SYMPFX_LITLEN) {
 	    sym &= ~SYMPFX_MASK;
 	    assert(sym < lenof(freqs1));
+	    len += freqs1[sym] * approxlog2(freqs1[sym]);
+	    len -= total1 * approxlog2(total1);
 	    freqs1[sym]++;
+	    total1++;
+	    len -= freqs1[sym] * approxlog2(freqs1[sym]);
+	    len += total1 * approxlog2(total1);
 	} else if ((sym & SYMPFX_MASK) == SYMPFX_DIST) {
 	    sym &= ~SYMPFX_MASK;
 	    assert(sym < lenof(freqs2));
+	    len += freqs2[sym] * approxlog2(freqs2[sym]);
+	    len -= total2 * approxlog2(total2);
 	    freqs2[sym]++;
+	    total2++;
+	    len -= freqs2[sym] * approxlog2(freqs2[sym]);
+	    len += total2 * approxlog2(total2);
 	} else if ((sym & SYMPFX_MASK) == SYMPFX_EXTRABITS) {
-	    nextrabits += (sym &~ SYMPFX_MASK) >> SYM_EXTRABITS_SHIFT;
+	    len += 8 * ((sym &~ SYMPFX_MASK) >> SYM_EXTRABITS_SHIFT);
 	}
     }
 
     assert(bestlen > 0);
 
-/* fprintf(stderr, "chooseblock: bestlen %d, bestvfm %g\n", bestlen, bestvfm); */
-    outblock_wrapper(out, bestlen);
+    outblock(out, bestlen, longestlen);
 }
 
 /*
@@ -1150,13 +1428,11 @@ static void chooseblock(deflate_compress_ctx *out)
 static void flushblock(deflate_compress_ctx *out)
 {
     /*
-     * Because outblock_wrapper guarantees to output either a
-     * dynamic block of the given length or a static block of
-     * length out->nsyms, we know that passing out->nsyms as the
-     * given length will definitely result in us using up the
-     * entire buffer.
+     * No need to check that out->nsyms is a valid block length: we
+     * know it has to be, because flushblock() is called in between
+     * two matches/literals.
      */
-    outblock_wrapper(out, out->nsyms);
+    outblock(out, out->nsyms, out->nsyms);
     assert(out->nsyms == 0);
 }
 
@@ -1172,76 +1448,6 @@ static void outsym(deflate_compress_ctx *out, unsigned long sym)
 	chooseblock(out);
 }
 
-typedef struct {
-    short code, extrabits;
-    int min, max;
-} coderecord;
-
-static const coderecord lencodes[] = {
-    {257, 0, 3, 3},
-    {258, 0, 4, 4},
-    {259, 0, 5, 5},
-    {260, 0, 6, 6},
-    {261, 0, 7, 7},
-    {262, 0, 8, 8},
-    {263, 0, 9, 9},
-    {264, 0, 10, 10},
-    {265, 1, 11, 12},
-    {266, 1, 13, 14},
-    {267, 1, 15, 16},
-    {268, 1, 17, 18},
-    {269, 2, 19, 22},
-    {270, 2, 23, 26},
-    {271, 2, 27, 30},
-    {272, 2, 31, 34},
-    {273, 3, 35, 42},
-    {274, 3, 43, 50},
-    {275, 3, 51, 58},
-    {276, 3, 59, 66},
-    {277, 4, 67, 82},
-    {278, 4, 83, 98},
-    {279, 4, 99, 114},
-    {280, 4, 115, 130},
-    {281, 5, 131, 162},
-    {282, 5, 163, 194},
-    {283, 5, 195, 226},
-    {284, 5, 227, 257},
-    {285, 0, 258, 258},
-};
-
-static const coderecord distcodes[] = {
-    {0, 0, 1, 1},
-    {1, 0, 2, 2},
-    {2, 0, 3, 3},
-    {3, 0, 4, 4},
-    {4, 1, 5, 6},
-    {5, 1, 7, 8},
-    {6, 2, 9, 12},
-    {7, 2, 13, 16},
-    {8, 3, 17, 24},
-    {9, 3, 25, 32},
-    {10, 4, 33, 48},
-    {11, 4, 49, 64},
-    {12, 5, 65, 96},
-    {13, 5, 97, 128},
-    {14, 6, 129, 192},
-    {15, 6, 193, 256},
-    {16, 7, 257, 384},
-    {17, 7, 385, 512},
-    {18, 8, 513, 768},
-    {19, 8, 769, 1024},
-    {20, 9, 1025, 1536},
-    {21, 9, 1537, 2048},
-    {22, 10, 2049, 3072},
-    {23, 10, 3073, 4096},
-    {24, 11, 4097, 6144},
-    {25, 11, 6145, 8192},
-    {26, 12, 8193, 12288},
-    {27, 12, 12289, 16384},
-    {28, 13, 16385, 24576},
-    {29, 13, 24577, 32768},
-};
-
 static void literal(struct LZ77Context *ectx, unsigned char c)
 {
     deflate_compress_ctx *out = (deflate_compress_ctx *) ectx->userdata;
@@ -1256,84 +1462,84 @@ static void match(struct LZ77Context *ectx, int distance, int len)
     deflate_compress_ctx *out = (deflate_compress_ctx *) ectx->userdata;
 
     while (len > 0) {
-	int thislen;
+        int thislen;
 
-	/*
-	 * We can transmit matches of lengths 3 through 258
-	 * inclusive. So if len exceeds 258, we must transmit in
-	 * several steps, with 258 or less in each step.
-	 *
-	 * Specifically: if len >= 261, we can transmit 258 and be
-	 * sure of having at least 3 left for the next step. And if
-	 * len <= 258, we can just transmit len. But if len == 259
-	 * or 260, we must transmit len-3.
-	 */
-	thislen = (len > 260 ? 258 : len <= 258 ? len : len - 3);
-	len -= thislen;
+        /*
+         * We can transmit matches of lengths 3 through 258
+         * inclusive. So if len exceeds 258, we must transmit in
+         * several steps, with 258 or less in each step.
+         *
+         * Specifically: if len >= 261, we can transmit 258 and be
+         * sure of having at least 3 left for the next step. And if
+         * len <= 258, we can just transmit len. But if len == 259
+         * or 260, we must transmit len-3.
+         */
+        thislen = (len > 260 ? 258 : len <= 258 ? len : len - 3);
+        len -= thislen;
 
-	/*
-	 * Binary-search to find which length code we're
-	 * transmitting.
-	 */
-	i = -1;
-	j = sizeof(lencodes) / sizeof(*lencodes);
-	while (1) {
-	    assert(j - i >= 2);
-	    k = (j + i) / 2;
-	    if (thislen < lencodes[k].min)
-		j = k;
-	    else if (thislen > lencodes[k].max)
-		i = k;
-	    else {
-		l = &lencodes[k];
-		break;		       /* found it! */
-	    }
-	}
+        /*
+         * Binary-search to find which length code we're
+         * transmitting.
+         */
+        i = -1;
+        j = sizeof(lencodes) / sizeof(*lencodes);
+        while (1) {
+            assert(j - i >= 2);
+            k = (j + i) / 2;
+            if (thislen < lencodes[k].min)
+                j = k;
+            else if (thislen > lencodes[k].max)
+                i = k;
+            else {
+                l = &lencodes[k];
+                break;                 /* found it! */
+            }
+        }
 
-	/*
-	 * Transmit the length code.
-	 */
-	outsym(out, SYMPFX_LITLEN | l->code);
+        /*
+         * Transmit the length code.
+         */
+        outsym(out, SYMPFX_LITLEN | l->code);
 
-	/*
-	 * Transmit the extra bits.
-	 */
-	if (l->extrabits) {
-	    outsym(out, (SYMPFX_EXTRABITS | (thislen - l->min) |
-			 (l->extrabits << SYM_EXTRABITS_SHIFT)));
-	}
+        /*
+         * Transmit the extra bits.
+         */
+        if (l->extrabits) {
+            outsym(out, (SYMPFX_EXTRABITS | (thislen - l->min) |
+                         (l->extrabits << SYM_EXTRABITS_SHIFT)));
+        }
 
-	/*
-	 * Binary-search to find which distance code we're
-	 * transmitting.
-	 */
-	i = -1;
-	j = sizeof(distcodes) / sizeof(*distcodes);
-	while (1) {
-	    assert(j - i >= 2);
-	    k = (j + i) / 2;
-	    if (distance < distcodes[k].min)
-		j = k;
-	    else if (distance > distcodes[k].max)
-		i = k;
-	    else {
-		d = &distcodes[k];
-		break;		       /* found it! */
-	    }
-	}
+        /*
+         * Binary-search to find which distance code we're
+         * transmitting.
+         */
+        i = -1;
+        j = sizeof(distcodes) / sizeof(*distcodes);
+        while (1) {
+            assert(j - i >= 2);
+            k = (j + i) / 2;
+            if (distance < distcodes[k].min)
+                j = k;
+            else if (distance > distcodes[k].max)
+                i = k;
+            else {
+                d = &distcodes[k];
+                break;                 /* found it! */
+            }
+        }
 
-	/*
-	 * Write the distance code.
-	 */
-	outsym(out, SYMPFX_DIST | d->code);
+        /*
+         * Write the distance code.
+         */
+        outsym(out, SYMPFX_DIST | d->code);
 
-	/*
-	 * Transmit the extra bits.
-	 */
-	if (d->extrabits) {
-	    outsym(out, (SYMPFX_EXTRABITS | (distance - d->min) |
-			 (d->extrabits << SYM_EXTRABITS_SHIFT)));
-	}
+        /*
+         * Transmit the extra bits.
+         */
+        if (d->extrabits) {
+            outsym(out, (SYMPFX_EXTRABITS | (distance - d->min) |
+                         (d->extrabits << SYM_EXTRABITS_SHIFT)));
+        }
     }
 }
 
@@ -1357,9 +1563,33 @@ deflate_compress_ctx *deflate_compress_new(int type)
     out->syms = snewn(SYMLIMIT, unsigned long);
     out->symstart = out->nsyms = 0;
 
-    out->adler32 = 1;
+    out->checksum = (type == DEFLATE_TYPE_ZLIB ? 1 : 0);
+    out->datasize = 0;
     out->lastblock = FALSE;
     out->finished = FALSE;
+
+    /*
+     * Build the static Huffman tables now, so we'll have them
+     * available every time outblock() is called.
+     */
+    {
+	int i;
+
+	for (i = 0; i < lenof(out->static_len1); i++)
+	    out->static_len1[i] = (i < 144 ? 8 :
+				   i < 256 ? 9 :
+				   i < 280 ? 7 : 8);
+	for (i = 0; i < lenof(out->static_len2); i++)
+	    out->static_len2[i] = 5;
+    }
+    hufcodes(out->static_len1, out->static_code1, lenof(out->static_code1));
+    hufcodes(out->static_len2, out->static_code2, lenof(out->static_code2));
+    out->sht.len_litlen = out->static_len1;
+    out->sht.len_dist = out->static_len2;
+    out->sht.len_codelen = NULL;
+    out->sht.code_litlen = out->static_code1;
+    out->sht.code_dist = out->static_code2;
+    out->sht.code_codelen = NULL;
 
     ectx->userdata = out;
     out->lzc = ectx;
@@ -1372,32 +1602,14 @@ void deflate_compress_free(deflate_compress_ctx *out)
     struct LZ77Context *ectx = out->lzc;
 
     sfree(out->syms);
-    sfree(out);
     sfree(ectx->ictx);
     sfree(ectx);
+    sfree(out);
 }
 
-static unsigned long adler32_update(unsigned long s,
-				    const unsigned char *data, int len)
-{
-    unsigned s1 = s & 0xFFFF, s2 = (s >> 16) & 0xFFFF;
-    int i;
-
-    for (i = 0; i < len; i++) {
-	s1 += data[i];
-	s2 += s1;
-	if (!(i & 0xFFF)) {
-	    s1 %= 65521;
-	    s2 %= 65521;
-	}
-    }
-
-    return ((s2 % 65521) << 16) | (s1 % 65521);
-}
-
-int deflate_compress_data(deflate_compress_ctx *out,
-			  const void *vblock, int len, int flushtype,
-			  void **outblock, int *outlen)
+void deflate_compress_data(deflate_compress_ctx *out,
+			   const void *vblock, int len, int flushtype,
+			   void **outblock, int *outlen)
 {
     struct LZ77Context *ectx = out->lzc;
     const unsigned char *block = (const unsigned char *)vblock;
@@ -1416,10 +1628,26 @@ int deflate_compress_data(deflate_compress_ctx *out,
 	    break;		       /* no header */
 	  case DEFLATE_TYPE_ZLIB:
 	    /*
-	     * Zlib (RFC1950) header bytes: 78 9C. (Deflate
+	     * zlib (RFC1950) header bytes: 78 9C. (Deflate
 	     * compression, 32K window size, default algorithm.)
 	     */
 	    outbits(out, 0x9C78, 16);
+	    break;
+	  case DEFLATE_TYPE_GZIP:
+	    /*
+	     * Minimal gzip (RFC1952) header:
+	     * 
+	     *  - basic header of 1F 8B
+	     *  - compression method byte (8 = deflate)
+	     *  - flags byte (zero: we use no optional features)
+	     *  - modification time (zero: no time stamp available)
+	     * 	- extra flags byte (2: we use maximum compression
+	     * 	  always)
+	     *  - operating system byte (255: we do not specify)
+	     */
+	    outbits(out, 0x00088B1F, 32);   /* header, CM, flags */
+	    outbits(out, 0, 32);       /* mtime */
+	    outbits(out, 0xFF02, 16);  /* xflags, OS */
 	    break;
 	}
 	out->firstblock = FALSE;
@@ -1431,10 +1659,17 @@ int deflate_compress_data(deflate_compress_ctx *out,
     lz77_compress(ectx, block, len, TRUE);
 
     /*
-     * Update checksums.
+     * Update checksums and counters.
      */
-    if (out->type == DEFLATE_TYPE_ZLIB)
-	out->adler32 = adler32_update(out->adler32, block, len);
+    switch (out->type) {
+      case DEFLATE_TYPE_ZLIB:
+	out->checksum = adler32_update(out->checksum, block, len);
+	break;
+      case DEFLATE_TYPE_GZIP:
+	out->checksum = crc32_update(out->checksum, block, len);
+	break;
+    }
+    out->datasize += len;
 
     switch (flushtype) {
 	/*
@@ -1477,13 +1712,25 @@ int deflate_compress_data(deflate_compress_ctx *out,
 	    outbits(out, 0, 8 - out->noutbits);
 
 	/*
-	 * Output the adler32 checksum, in zlib mode.
+	 * Format-specific trailer data.
 	 */
-	if (out->type == DEFLATE_TYPE_ZLIB) {
-	    outbits(out, (out->adler32 >> 24) & 0xFF, 8);
-	    outbits(out, (out->adler32 >> 16) & 0xFF, 8);
-	    outbits(out, (out->adler32 >>  8) & 0xFF, 8);
-	    outbits(out, (out->adler32 >>  0) & 0xFF, 8);
+	switch (out->type) {
+	  case DEFLATE_TYPE_ZLIB:
+	    /*
+	     * Just write out the Adler32 checksum.
+	     */
+	    outbits(out, (out->checksum >> 24) & 0xFF, 8);
+	    outbits(out, (out->checksum >> 16) & 0xFF, 8);
+	    outbits(out, (out->checksum >>  8) & 0xFF, 8);
+	    outbits(out, (out->checksum >>  0) & 0xFF, 8);
+	    break;
+	  case DEFLATE_TYPE_GZIP:
+	    /*
+	     * Write out the CRC32 checksum and the data length.
+	     */
+	    outbits(out, out->checksum, 32);
+	    outbits(out, out->datasize, 32);
+	    break;
 	}
 
 	out->finished = TRUE;
@@ -1495,12 +1742,10 @@ int deflate_compress_data(deflate_compress_ctx *out,
      */
     *outblock = (void *)out->outbuf;
     *outlen = out->outlen;
-
-    return 1;
 }
 
 /* ----------------------------------------------------------------------
- * deflate decompression.
+ * Deflate decompression.
  */
 
 /*
@@ -1525,6 +1770,8 @@ struct table {
 };
 
 #define MAXSYMS 288
+
+#define DWINSIZE 32768
 
 /*
  * Build a single-level decode table for elements
@@ -1578,12 +1825,38 @@ static struct table *mkonetab(int *codes, unsigned char *lengths, int nsyms,
 /*
  * Build a decode table, given a set of Huffman tree lengths.
  */
-static struct table *mktable(unsigned char *lengths, int nlengths)
+static struct table *mktable(unsigned char *lengths, int nlengths,
+#ifdef ANALYSIS
+			     const char *alphabet,
+#endif
+			     int *error)
 {
     int codes[MAXSYMS];
     int maxlen;
 
+#ifdef ANALYSIS
+    if (alphabet && analyse_level > 1) {
+	int i, col = 0;
+	printf("code lengths for %s alphabet:\n", alphabet);
+	for (i = 0; i < nlengths; i++) {
+	    col += printf("%3d", lengths[i]);
+	    if (col > 72) {
+		putchar('\n');
+		col = 0;
+	    }
+	}
+	if (col > 0)
+	    putchar('\n');
+    }
+#endif
+
     maxlen = hufcodes(lengths, codes, nlengths);
+
+    if (maxlen < 0) {
+	*error = (maxlen == -1 ? DEFLATE_ERR_LARGE_HUFTABLE :
+		  DEFLATE_ERR_SMALL_HUFTABLE);
+	return NULL;
+    }
 
     /*
      * Now we have the complete list of Huffman codes. Build a
@@ -1622,11 +1895,16 @@ struct deflate_decompress_ctx {
     struct table *staticlentable, *staticdisttable;
     struct table *currlentable, *currdisttable, *lenlentable;
     enum {
-	START, OUTSIDEBLK,
-	TREES_HDR, TREES_LENLEN, TREES_LEN, TREES_LENREP,
+	ZLIBSTART,
+	GZIPSTART, GZIPMETHFLAGS, GZIPIGNORE1, GZIPIGNORE2, GZIPIGNORE3,
+	GZIPEXTRA, GZIPFNAME, GZIPCOMMENT,
+	OUTSIDEBLK, TREES_HDR, TREES_LENLEN, TREES_LEN, TREES_LENREP,
 	INBLK, GOTLENSYM, GOTLEN, GOTDISTSYM,
 	UNCOMP_LEN, UNCOMP_NLEN, UNCOMP_DATA,
-	END, ADLER1, ADLER2, FINALSPIN
+	END,
+	ADLER1, ADLER2,
+	CRC1, CRC2, ILEN1, ILEN2,
+	FINALSPIN
     } state;
     int sym, hlit, hdist, hclen, lenptr, lenextrabits, lenaddon, len,
 	lenrep, lastblock;
@@ -1635,12 +1913,19 @@ struct deflate_decompress_ctx {
     unsigned char lengths[286 + 32];
     unsigned long bits;
     int nbits;
-    unsigned char window[WINSIZE];
+    unsigned char window[DWINSIZE];
     int winpos;
     unsigned char *outblk;
     int outlen, outsize;
     int type;
-    unsigned long adler32;
+    unsigned long checksum;
+    unsigned long bytesout;
+    int gzflags, gzextralen;
+#ifdef ANALYSIS
+    int bytesread;
+    int bitcount_before;
+#define BITCOUNT(dctx) ( (dctx)->bytesread * 8 - (dctx)->nbits )
+#endif
 };
 
 deflate_decompress_ctx *deflate_decompress_new(int type)
@@ -1652,20 +1937,34 @@ deflate_decompress_ctx *deflate_decompress_new(int type)
     memset(lengths + 144, 9, 256 - 144);
     memset(lengths + 256, 7, 280 - 256);
     memset(lengths + 280, 8, 288 - 280);
-    dctx->staticlentable = mktable(lengths, 288);
+    dctx->staticlentable = mktable(lengths, 288,
+#ifdef ANALYSIS
+				   NULL,
+#endif
+				   NULL);
+    assert(dctx->staticlentable);
     memset(lengths, 5, 32);
-    dctx->staticdisttable = mktable(lengths, 32);
-    if (type == DEFLATE_TYPE_BARE)
-	dctx->state = OUTSIDEBLK;
-    else
-	dctx->state = START;
+    dctx->staticdisttable = mktable(lengths, 32,
+#ifdef ANALYSIS
+				    NULL,
+#endif
+				    NULL);
+    assert(dctx->staticdisttable);
+    dctx->state = (type == DEFLATE_TYPE_ZLIB ? ZLIBSTART :
+		   type == DEFLATE_TYPE_GZIP ? GZIPSTART :
+		   OUTSIDEBLK);
     dctx->currlentable = dctx->currdisttable = dctx->lenlentable = NULL;
     dctx->bits = 0;
     dctx->nbits = 0;
     dctx->winpos = 0;
     dctx->type = type;
     dctx->lastblock = FALSE;
-    dctx->adler32 = 1;
+    dctx->checksum = (type == DEFLATE_TYPE_ZLIB ? 1 : 0);
+    dctx->bytesout = 0;
+    dctx->gzflags = dctx->gzextralen = 0;
+#ifdef ANALYSIS
+    dctx->bytesread = dctx->bitcount_before = 0;
+#endif
 
     return dctx;
 }
@@ -1702,31 +2001,35 @@ static int huflookup(unsigned long *bitsp, int *nbitsp, struct table *tab)
 	    return ent->code;
 	}
 
-	if (!tab) {
-	    /*
-	     * There was a missing entry in the table, presumably
-	     * due to an invalid Huffman table description, and the
-	     * subsequent data has attempted to use the missing
-	     * entry. Return a decoding failure.
-	     */
-	    return -2;
-	}
+	/*
+	 * If we reach here with `tab' null, it can only be because
+	 * there was a missing entry in the Huffman table. This
+	 * should never occur even with invalid input data, because
+	 * we enforce at mktable time that the Huffman codes should
+	 * precisely cover the code space; so we can enforce this
+	 * by assertion.
+	 */
+	assert(tab);
     }
 }
 
 static void emit_char(deflate_decompress_ctx *dctx, int c)
 {
     dctx->window[dctx->winpos] = c;
-    dctx->winpos = (dctx->winpos + 1) & (WINSIZE - 1);
+    dctx->winpos = (dctx->winpos + 1) & (DWINSIZE - 1);
     if (dctx->outlen >= dctx->outsize) {
-	dctx->outsize = dctx->outlen + 512;
+	dctx->outsize = dctx->outlen * 3 / 2 + 512;
 	dctx->outblk = sresize(dctx->outblk, dctx->outsize, unsigned char);
     }
     if (dctx->type == DEFLATE_TYPE_ZLIB) {
 	unsigned char uc = c;
-	dctx->adler32 = adler32_update(dctx->adler32, &uc, 1);
+	dctx->checksum = adler32_update(dctx->checksum, &uc, 1);
+    } else if (dctx->type == DEFLATE_TYPE_GZIP) {
+	unsigned char uc = c;
+	dctx->checksum = crc32_update(dctx->checksum, &uc, 1);
     }
     dctx->outblk[dctx->outlen++] = c;
+    dctx->bytesout++;
 }
 
 #define EATBITS(n) ( dctx->nbits -= (n), dctx->bits >>= (n) )
@@ -1737,10 +2040,20 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 {
     const coderecord *rec;
     const unsigned char *block = (const unsigned char *)vblock;
-    int code, bfinal, btype, rep, dist, nlen, header, adler;
+    int code, bfinal, btype, rep, dist, nlen, header, cksum;
+    int error = 0;
 
-    dctx->outblk = snewn(256, unsigned char);
-    dctx->outsize = 256;
+    if (len == 0) {
+	*outblock = NULL;
+	*outlen = 0;
+	if (dctx->state != FINALSPIN)
+	    return DEFLATE_ERR_UNEXPECTED_EOF;
+	else
+	    return 0;
+    }
+
+    dctx->outblk = NULL;
+    dctx->outsize = 0;
     dctx->outlen = 0;
 
     while (len > 0 || dctx->nbits > 0) {
@@ -1748,9 +2061,12 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    dctx->bits |= (*block++) << dctx->nbits;
 	    dctx->nbits += 8;
 	    len--;
+#ifdef ANALYSIS
+	    dctx->bytesread++;
+#endif
 	}
 	switch (dctx->state) {
-	  case START:
+	  case ZLIBSTART:
 	    /* Expect 16-bit zlib header. */
 	    if (dctx->nbits < 16)
 		goto finished;	       /* done all we can */
@@ -1774,13 +2090,123 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
              *  - bits 0-4 should be set up to make the whole thing
              *    a multiple of 31 (checksum).
              */
-            if ((header & 0x0F00) != 0x0800 ||
-                (header & 0xF000) >  0x7000 ||
+	    if ((header & 0xF000) >  0x7000 ||
                 (header & 0x0020) != 0x0000 ||
-                (header % 31) != 0)
-                goto decode_error;
-
+                (header % 31) != 0) {
+		error = DEFLATE_ERR_ZLIB_HEADER;
+                goto finished;
+	    }
+            if ((header & 0x0F00) != 0x0800) {
+		error = DEFLATE_ERR_ZLIB_WRONGCOMP;
+                goto finished;
+	    }
 	    dctx->state = OUTSIDEBLK;
+	    break;
+	  case GZIPSTART:
+	    /* Expect 16-bit gzip header. */
+	    if (dctx->nbits < 16)
+		goto finished;
+	    header = dctx->bits & 0xFFFF;
+	    EATBITS(16);
+	    if (header != 0x8B1F) {
+		error = DEFLATE_ERR_GZIP_HEADER;
+		goto finished;
+	    }
+	    dctx->state = GZIPMETHFLAGS;
+	    break;
+	  case GZIPMETHFLAGS:
+	    /* Expect gzip compression method and flags bytes. */
+	    if (dctx->nbits < 16)
+		goto finished;
+	    header = dctx->bits & 0xFF;
+	    EATBITS(8);
+	    if (header != 8) {
+		error = DEFLATE_ERR_GZIP_WRONGCOMP;
+		goto finished;
+	    }
+	    dctx->gzflags = dctx->bits & 0xFF;
+	    if (dctx->gzflags & 2) {
+		/*
+		 * The FHCRC flag is slightly confusing. RFC1952
+		 * documents it as indicating the presence of a
+		 * two-byte CRC16 of the gzip header, occurring
+		 * just before the beginning of the Deflate stream.
+		 * However, gzip itself (as of 1.3.5) appears to
+		 * believe it indicates that the current gzip
+		 * `member' is not the final one, i.e. that the
+		 * stream is composed of multiple gzip members
+		 * concatenated together, and furthermore gzip will
+		 * refuse to decode any file that has it set.
+		 * 
+		 * For this reason, I label it as `disputed' and
+		 * also refuse to decode anything that has it set.
+		 * I don't expect this to be a problem in practice.
+		 */
+		error = DEFLATE_ERR_GZIP_FHCRC;
+		goto finished;
+	    }
+	    EATBITS(8);
+	    dctx->state = GZIPIGNORE1;
+	    break;
+	  case GZIPIGNORE1:
+	  case GZIPIGNORE2:
+	  case GZIPIGNORE3:
+	    /* Expect two bytes of gzip timestamp/XFL/OS, which we ignore. */
+	    if (dctx->nbits < 16)
+		goto finished;
+	    EATBITS(16);
+	    if (dctx->state == GZIPIGNORE3) {
+		dctx->state = GZIPEXTRA;
+	    } else
+		dctx->state++;	       /* maps IGNORE1 -> IGNORE2 -> IGNORE3 */
+	    break;
+	  case GZIPEXTRA:
+	    if (dctx->gzflags & 4) {
+		/* Expect two bytes of extra-length count, then that many
+		 * extra bytes of header data, all of which we ignore. */
+		if (!dctx->gzextralen) {
+		    if (dctx->nbits < 16)
+			goto finished;
+		    dctx->gzextralen = dctx->bits & 0xFFFF;
+		    EATBITS(16);
+		    break;
+		} else if (dctx->gzextralen > 0) {
+		    if (dctx->nbits < 8)
+			goto finished;
+		    EATBITS(8);
+		    if (--dctx->gzextralen > 0)
+			break;
+		}
+	    }
+	    dctx->state = GZIPFNAME;
+	    break;
+	  case GZIPFNAME:
+	    if (dctx->gzflags & 8) {
+		/*
+		 * Expect a NUL-terminated filename.
+		 */
+		if (dctx->nbits < 8)
+		    goto finished;
+		code = dctx->bits & 0xFF;
+		EATBITS(8);
+	    } else
+		code = 0;
+	    if (code == 0)
+		dctx->state = GZIPCOMMENT;
+	    break;
+	  case GZIPCOMMENT:
+	    if (dctx->gzflags & 16) {
+		/*
+		 * Expect a NUL-terminated filename.
+		 */
+		if (dctx->nbits < 8)
+		    goto finished;
+		code = dctx->bits & 0xFF;
+		EATBITS(8);
+	    } else
+		code = 0;
+	    if (code == 0)
+		dctx->state = OUTSIDEBLK;
 	    break;
 	  case OUTSIDEBLK:
 	    /* Expect 3-bit block header. */
@@ -1804,6 +2230,16 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 		dctx->state = TREES_HDR;
 	    }
 	    debug(("recv: bfinal=%d btype=%d\n", bfinal, btype));
+#ifdef ANALYSIS
+	    if (analyse_level > 1) {
+		static const char *const btypes[] = {
+		    "uncompressed", "static", "dynamic", "type 3 (unknown)"
+		};
+		printf("new block, %sfinal, %s\n",
+		       bfinal ? "" : "not ",
+		       btypes[btype]);
+	    }
+#endif
 	    break;
 	  case TREES_HDR:
 	    /*
@@ -1820,6 +2256,11 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    EATBITS(4);
 	    debug(("recv: hlit=%d hdist=%d hclen=%d\n", dctx->hlit,
 		   dctx->hdist, dctx->hclen));
+#ifdef ANALYSIS
+	    if (analyse_level > 1)
+		printf("hlit=%d, hdist=%d, hclen=%d\n",
+		        dctx->hlit, dctx->hdist, dctx->hclen);
+#endif
 	    dctx->lenptr = 0;
 	    dctx->state = TREES_LENLEN;
 	    memset(dctx->lenlen, 0, sizeof(dctx->lenlen));
@@ -1834,16 +2275,34 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 		EATBITS(3);
 	    }
 	    if (dctx->lenptr == dctx->hclen) {
-		dctx->lenlentable = mktable(dctx->lenlen, 19);
+		dctx->lenlentable = mktable(dctx->lenlen, 19,
+#ifdef ANALYSIS
+					    "code length",
+#endif
+					    &error);
+		if (!dctx->lenlentable)
+		    goto finished;     /* error code set up by mktable */
 		dctx->state = TREES_LEN;
 		dctx->lenptr = 0;
 	    }
 	    break;
 	  case TREES_LEN:
 	    if (dctx->lenptr >= dctx->hlit + dctx->hdist) {
-		dctx->currlentable = mktable(dctx->lengths, dctx->hlit);
+		dctx->currlentable = mktable(dctx->lengths, dctx->hlit,
+#ifdef ANALYSIS
+					     "literal/length",
+#endif
+					     &error);
+		if (!dctx->currlentable)
+		    goto finished;     /* error code set up by mktable */
 		dctx->currdisttable = mktable(dctx->lengths + dctx->hlit,
-					      dctx->hdist);
+					      dctx->hdist,
+#ifdef ANALYSIS
+					      "distance",
+#endif
+					      &error);
+		if (!dctx->currdisttable)
+		    goto finished;     /* error code set up by mktable */
 		freetable(&dctx->lenlentable);
 		dctx->lenlentable = NULL;
 		dctx->state = INBLK;
@@ -1853,11 +2312,13 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    debug(("recv: codelen %d\n", code));
 	    if (code == -1)
 		goto finished;
-	    if (code == -2)
-		goto decode_error;
-	    if (code < 16)
+	    if (code < 16) {
+#ifdef ANALYSIS
+		if (analyse_level > 1)
+		    printf("code-length %d\n", code);
+#endif
 		dctx->lengths[dctx->lenptr++] = code;
-	    else {
+	    } else {
 		dctx->lenextrabits = (code == 16 ? 2 : code == 17 ? 3 : 7);
 		dctx->lenaddon = (code == 18 ? 11 : 3);
 		dctx->lenrep = (code == 16 && dctx->lenptr > 0 ?
@@ -1875,6 +2336,11 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    if (dctx->lenextrabits)
 		debug(("recv: codelen-extrabits %d/%d\n", rep - dctx->lenaddon,
 		       dctx->lenextrabits));
+#ifdef ANALYSIS
+	    if (analyse_level > 1)
+		printf("code-length-repeat: %d copies of %d\n", rep,
+		       dctx->lenrep);
+#endif
 	    while (rep > 0 && dctx->lenptr < dctx->hlit + dctx->hdist) {
 		dctx->lengths[dctx->lenptr] = dctx->lenrep;
 		dctx->lenptr++;
@@ -1883,15 +2349,21 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    dctx->state = TREES_LEN;
 	    break;
 	  case INBLK:
+#ifdef ANALYSIS
+	    dctx->bitcount_before = BITCOUNT(dctx);
+#endif
 	    code = huflookup(&dctx->bits, &dctx->nbits, dctx->currlentable);
 	    debug(("recv: litlen %d\n", code));
 	    if (code == -1)
 		goto finished;
-	    if (code == -2)
-		goto decode_error;
-	    if (code < 256)
+	    if (code < 256) {
+#ifdef ANALYSIS
+		if (analyse_level > 0)
+		    printf("%lu: literal %d [%d]\n", dctx->bytesout, code,
+			   BITCOUNT(dctx) - dctx->bitcount_before);
+#endif
 		emit_char(dctx, code);
-	    else if (code == 256) {
+	    } else if (code == 256) {
 		if (dctx->lastblock)
 		    dctx->state = END;
 		else
@@ -1926,8 +2398,6 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    debug(("recv: dist %d\n", code));
 	    if (code == -1)
 		goto finished;
-	    if (code == -2)
-		goto decode_error;
 	    dctx->state = GOTDISTSYM;
 	    dctx->sym = code;
 	    break;
@@ -1941,9 +2411,15 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 		       dist - rec->min, rec->extrabits));
 	    EATBITS(rec->extrabits);
 	    dctx->state = INBLK;
+#ifdef ANALYSIS
+	    if (analyse_level > 0)
+		printf("%lu: copy len=%d dist=%d [%d]\n", dctx->bytesout,
+		       dctx->len, dist,
+		       BITCOUNT(dctx) - dctx->bitcount_before);
+#endif
 	    while (dctx->len--)
 		emit_char(dctx, dctx->window[(dctx->winpos - dist) &
-					     (WINSIZE - 1)]);
+					     (DWINSIZE - 1)]);
 	    break;
 	  case UNCOMP_LEN:
 	    /*
@@ -1973,6 +2449,11 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	  case UNCOMP_DATA:
 	    if (dctx->nbits < 8)
 		goto finished;
+#ifdef ANALYSIS
+	    if (analyse_level > 0)
+		printf("%lu: uncompressed %d [8]\n", dctx->bytesout,
+		       (int)(dctx->bits & 0xFF));
+#endif
 	    emit_char(dctx, dctx->bits & 0xFF);
 	    EATBITS(8);
 	    if (--dctx->uncomplen == 0)
@@ -1989,33 +2470,85 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    }
 	    if (dctx->type == DEFLATE_TYPE_ZLIB)
 		dctx->state = ADLER1;
+	    else if (dctx->type == DEFLATE_TYPE_GZIP)
+		dctx->state = CRC1;
 	    else
 		dctx->state = FINALSPIN;
 	    break;
 	  case ADLER1:
 	    if (dctx->nbits < 16)
 		goto finished;
-	    adler = (dctx->bits & 0xFF) << 8;
+	    cksum = (dctx->bits & 0xFF) << 8;
 	    EATBITS(8);
-	    adler |= (dctx->bits & 0xFF);
+	    cksum |= (dctx->bits & 0xFF);
 	    EATBITS(8);
-	    if (adler != ((dctx->adler32 >> 16) & 0xFFFF))
-		goto decode_error;
+	    if (cksum != ((dctx->checksum >> 16) & 0xFFFF)) {
+		error = DEFLATE_ERR_CHECKSUM;
+		goto finished;
+	    }
 	    dctx->state = ADLER2;
 	    break;
 	  case ADLER2:
 	    if (dctx->nbits < 16)
 		goto finished;
-	    adler = (dctx->bits & 0xFF) << 8;
+	    cksum = (dctx->bits & 0xFF) << 8;
 	    EATBITS(8);
-	    adler |= (dctx->bits & 0xFF);
+	    cksum |= (dctx->bits & 0xFF);
 	    EATBITS(8);
-	    if (adler != (dctx->adler32 & 0xFFFF))
-		goto decode_error;
+	    if (cksum != (dctx->checksum & 0xFFFF)) {
+		error = DEFLATE_ERR_CHECKSUM;
+		goto finished;
+	    }
+	    dctx->state = FINALSPIN;
+	    break;
+	  case CRC1:
+	    if (dctx->nbits < 16)
+		goto finished;
+	    cksum = dctx->bits & 0xFFFF;
+	    EATBITS(16);
+	    if (cksum != (dctx->checksum & 0xFFFF)) {
+		error = DEFLATE_ERR_CHECKSUM;
+		goto finished;
+	    }
+	    dctx->state = CRC2;
+	    break;
+	  case CRC2:
+	    if (dctx->nbits < 16)
+		goto finished;
+	    cksum = dctx->bits & 0xFFFF;
+	    EATBITS(16);
+	    if (cksum != ((dctx->checksum >> 16) & 0xFFFF)) {
+		error = DEFLATE_ERR_CHECKSUM;
+		goto finished;
+	    }
+	    dctx->state = ILEN1;
+	    break;
+	  case ILEN1:
+	    if (dctx->nbits < 16)
+		goto finished;
+	    cksum = dctx->bits & 0xFFFF;
+	    EATBITS(16);
+	    if (cksum != (dctx->bytesout & 0xFFFF)) {
+		error = DEFLATE_ERR_INLEN;
+		goto finished;
+	    }
+	    dctx->state = ILEN2;
+	    break;
+	  case ILEN2:
+	    if (dctx->nbits < 16)
+		goto finished;
+	    cksum = dctx->bits & 0xFFFF;
+	    EATBITS(16);
+	    if (cksum != ((dctx->bytesout >> 16) & 0xFFFF)) {
+		error = DEFLATE_ERR_INLEN;
+		goto finished;
+	    }
 	    dctx->state = FINALSPIN;
 	    break;
 	  case FINALSPIN:
 	    /* Just ignore any trailing garbage on the data stream. */
+	    /* (We could alternatively throw an error here, if we wanted
+	     * to detect and complain about trailing garbage.) */
 	    EATBITS(dctx->nbits);
 	    break;
 	}
@@ -2024,35 +2557,52 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
     finished:
     *outblock = dctx->outblk;
     *outlen = dctx->outlen;
-    return 1;
-
-    decode_error:
-    sfree(dctx->outblk);
-    *outblock = dctx->outblk = NULL;
-    *outlen = 0;
-    return 0;
+    return error;
 }
+
+#define A(code,str) str
+const char *const deflate_error_msg[DEFLATE_NUM_ERRORS] = {
+    DEFLATE_ERRORLIST(A)
+};
+#undef A
+
+#define A(code,str) #code
+const char *const deflate_error_sym[DEFLATE_NUM_ERRORS] = {
+    DEFLATE_ERRORLIST(A)
+};
+#undef A
 
 #ifdef STANDALONE
 
 int main(int argc, char **argv)
 {
-    unsigned char buf[65536], *outbuf;
-    int ret, outlen;
+    unsigned char buf[65536];
+    void *outbuf;
+    int ret, err, outlen;
     deflate_decompress_ctx *dhandle;
     deflate_compress_ctx *chandle;
-    int type = DEFLATE_TYPE_ZLIB, opts = TRUE, compress = FALSE;
+    int type = DEFLATE_TYPE_ZLIB, opts = TRUE;
+    int compress = FALSE, decompress = FALSE;
+    int got_arg = FALSE;
     char *filename = NULL;
     FILE *fp;
 
     while (--argc) {
         char *p = *++argv;
 
+	got_arg = TRUE;
+
         if (p[0] == '-' && opts) {
-            if (!strcmp(p, "-d"))
+            if (!strcmp(p, "-b"))
                 type = DEFLATE_TYPE_BARE;
-            if (!strcmp(p, "-c"))
+            else if (!strcmp(p, "-g"))
+                type = DEFLATE_TYPE_GZIP;
+            else if (!strcmp(p, "-c"))
                 compress = TRUE;
+            else if (!strcmp(p, "-d"))
+                decompress = TRUE;
+            else if (!strcmp(p, "-a"))
+                analyse_level++, decompress = TRUE;
             else if (!strcmp(p, "--"))
                 opts = FALSE;          /* next thing is filename */
             else {
@@ -2065,6 +2615,18 @@ int main(int argc, char **argv)
             fprintf(stderr, "can only handle one filename\n");
             return 1;
         }
+    }
+
+    if (!compress && !decompress) {
+	fprintf(stderr, "usage: deflate [ -c | -d | -a ] [ -b | -g ]"
+		" [filename]\n");
+	return (got_arg ? 1 : 0);
+    }
+
+    if (compress && decompress) {
+	fprintf(stderr, "please do not specify both compression and"
+		" decompression\n");
+	return (got_arg ? 1 : 0);
     }
 
     if (compress) {
@@ -2088,10 +2650,14 @@ int main(int argc, char **argv)
 
     do {
 	ret = fread(buf, 1, sizeof(buf), fp);
+	outbuf = NULL;
 	if (dhandle) {
 	    if (ret > 0)
-		deflate_decompress_data(dhandle, buf, ret,
-					(void **)&outbuf, &outlen);
+		err = deflate_decompress_data(dhandle, buf, ret,
+					      (void **)&outbuf, &outlen);
+	    else
+		err = deflate_decompress_data(dhandle, NULL, 0,
+					      (void **)&outbuf, &outlen);
 	} else {
 	    if (ret > 0)
 		deflate_compress_data(chandle, buf, ret, DEFLATE_NO_FLUSH,
@@ -2099,13 +2665,15 @@ int main(int argc, char **argv)
 	    else
 		deflate_compress_data(chandle, buf, ret, DEFLATE_END_OF_DATA,
 				      (void **)&outbuf, &outlen);
+	    err = 0;
 	}
         if (outbuf) {
-            if (outlen)
+            if (!analyse_level && outlen)
                 fwrite(outbuf, 1, outlen, stdout);
             sfree(outbuf);
-        } else if (dhandle) {
-            fprintf(stderr, "decoding error\n");
+        }
+	if (err > 0) {
+            fprintf(stderr, "decoding error: %s\n", deflate_error_msg[err]);
             return 1;
         }
     } while (ret > 0);
@@ -2132,7 +2700,7 @@ int main(int argc, char **argv)
     deflate_compress_ctx *chandle;
     deflate_decompress_ctx *dhandle;
     unsigned char buf[65536], *outbuf, *outbuf2;
-    int ret, outlen, outlen2;
+    int ret, err, outlen, outlen2;
     int dlen = 0, clen = 0;
     int opts = TRUE;
 
@@ -2180,15 +2748,25 @@ int main(int argc, char **argv)
 	}
 	if (outbuf) {
 	    clen += outlen;
-	    deflate_decompress_data(dhandle, outbuf, outlen,
-				    (void **)&outbuf2, &outlen2);
+	    err = deflate_decompress_data(dhandle, outbuf, outlen,
+					  (void **)&outbuf2, &outlen2);
 	    sfree(outbuf);
 	    if (outbuf2) {
 		if (outlen2)
 		    fwrite(outbuf2, 1, outlen2, stdout);
 		sfree(outbuf2);
-	    } else {
-		fprintf(stderr, "decoding error\n");
+	    }
+	    if (!err && ret <= 0) {
+		/*
+		 * signal EOF
+		 */
+		err = deflate_decompress_data(dhandle, NULL, 0,
+					      (void **)&outbuf2, &outlen2);
+		assert(outbuf2 == NULL);
+	    }
+	    if (err) {
+		fprintf(stderr, "decoding error: %s\n",
+			deflate_error_msg[err]);
 		return 1;
 	    }
 	}
