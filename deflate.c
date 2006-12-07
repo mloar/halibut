@@ -912,7 +912,8 @@ static void deflate_buildhuf(int *freqs, unsigned char *lengths,
      * assert()-level confident that the resulting code lengths
      * contain nothing outside the permitted range.
      */
-    maxprob = (limit == 16 ? 2584 : 55);   /* no point in computing full F_n */
+    assert(limit == 15 || limit == 7);
+    maxprob = (limit == 15 ? 2584 : 55);   /* no point in computing full F_n */
     totalfreq = nactivesyms = 0;
     smallestfreq = -1;
     for (i = 0; i < nsyms; i++) {
