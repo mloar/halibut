@@ -3,7 +3,8 @@ See If Wrapping Titles Works OK. In Fact This Title Will Span Three
 Lines, Not Just Two. How's That For Ludicrous?
 
 \cfg{xhtml-leaf-smallest-contents}{2}
-\cfg{xhtml-leaf-contains-contents}{true}
+\cfg{xhtml-leaf-contains-contents}
+{true}
 \cfg{info-dir-entry}{Sillinesses}{test.but}{Halibut test document}
 \cfg{info-dir-entry}{Florbles}{test.but}{Subsection of Halibut test
 document}{sub-sub}

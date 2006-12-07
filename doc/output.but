@@ -1662,15 +1662,20 @@ The default page size corresponds to 210\_\u00D7{x}\_297\_mm, i.e.,
 \c \cfg{paper-base-font-size}{12} 
 \c \cfg{paper-code-fonts}{Courier-Bold}{Courier-Oblique}{Courier}
 \c \cfg{paper-code-font-size}{12}
-\c \cfg{paper-title-fonts}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-title-fonts}{Helvetica-Bold}
+\c     {Helvetica-BoldOblique}{Courier-Bold}
 \c \cfg{paper-title-font-size}{24}
-\c \cfg{paper-chapter-fonts}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-chapter-fonts}{Helvetica-Bold}
+\c     {Helvetica-BoldOblique}{Courier-Bold}
 \c \cfg{paper-chapter-font-size}{20}
-\c \cfg{paper-section-fonts}{0}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-section-fonts}{0}{Helvetica-Bold}
+\c     {Helvetica-BoldOblique}{Courier-Bold}
 \c \cfg{paper-section-font-size}{0}{16}
-\c \cfg{paper-section-fonts}{1}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-section-fonts}{1}{Helvetica-Bold}
+\c     {Helvetica-BoldOblique}{Courier-Bold}
 \c \cfg{paper-section-font-size}{1}{14}
-\c \cfg{paper-section-fonts}{2}{Helvetica-Bold}{Helvetica-BoldOblique}{Courier-Bold}
+\c \cfg{paper-section-fonts}{2}{Helvetica-Bold}
+\c     {Helvetica-BoldOblique}{Courier-Bold}
 \c \cfg{paper-section-font-size}{2}{13}
 \c ... and so on for all section levels below this ...
 \e iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii

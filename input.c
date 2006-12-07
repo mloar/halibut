@@ -903,7 +903,21 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		/* Get keywords. */
 		dtor(t), t = get_token(in);
 		fp = t.pos;
-		while (t.type == tok_lbrace) {
+		while (t.type == tok_lbrace ||
+		       (t.type == tok_white && (needkw & 24))) {
+		    /*
+		     * In paragraph types which can't accept any
+		     * body text (such as \cfg), we are lenient
+		     * about whitespace between keywords. This is
+		     * important for \cfg in particular since it
+		     * can often have many keywords which are long
+		     * pieces of text, so it's useful to permit the
+		     * user to wrap the line between them.
+		     */
+		    if (t.type == tok_white) {
+			dtor(t), t = get_token(in); /* eat the space */
+			continue;
+		    }
 		    /* This is a keyword. */
 		    nkeys++;
 		    /* FIXME: there will be bugs if anyone specifies an
