@@ -75,7 +75,7 @@
 #include "winhelp.h"
 #include "tree234.h"
 
-#ifdef TESTMODE
+#ifdef WINHELP_TESTMODE
 /*
  * This lot is useful for testing. Something like it will also be
  * needed to use this module standalone.
@@ -1951,9 +1951,15 @@ void whlp_abandon(WHLP h)
     sfree(h);
 }
 
-#ifdef TESTMODE
+#ifdef WINHELP_TESTMODE
 
-int main(void)
+#ifdef PICTURE_FROM_CMDLINE
+#include "png.h"
+#include "colquant.h"
+#include "dither.h"
+#endif
+
+int main(int argc, char **argv)
 {
     WHLP h;
     WHLP_TOPIC t1, t2, t3;
@@ -2260,6 +2266,7 @@ int main(void)
     whlp_text(h, "This third topic is not nearly as boring as the first, "
 	      "because it has a picture: ");
     {
+#ifndef PICTURE_FROM_CMDLINE
 	const unsigned long palette[] = {
 	    0xFF0000,
 	    0xFFFF00,
@@ -2281,7 +2288,48 @@ int main(void)
 	    0, 1, 2, 3, 4, 4, 4, 4,
 	    0, 1, 2, 3, 4, 4, 4, 4,
 	};
-	whlp_ref_picture(h, whlp_add_picture(h, 8, 12, picture, palette));
+	int wid = 8, ht = 12;
+#else
+	png_pixel ppalette[256];
+	unsigned long palette[256];
+	unsigned char *picture;
+	png *png;
+	colquant *cq;
+	int plen, i, err, wid, ht;
+
+	if (argc < 2) {
+	    fprintf(stderr, "in this mode I need a .png file on the"
+		    " command line\n");
+	    return 1;
+	}
+	png = png_decode_file(argv[1], &err);
+	if (!png) {
+	    fprintf(stderr, "%s: PNG read error: %s\n", argv[1],
+		    png_error_msg[err]);
+	    return 1;
+	}
+
+	cq = colquant_new(256, 8);
+	colquant_data(cq, png->pixels, png->width * png->height);
+	plen = colquant_get_palette(cq, ppalette);
+	colquant_free(cq);
+	assert(plen <= 256);
+	for (i = 0; i < plen; i++) {
+	    palette[i] = ppalette[i].r >> 8;
+	    palette[i] <<= 8;
+	    palette[i] |= ppalette[i].g >> 8;
+	    palette[i] <<= 8;
+	    palette[i] |= ppalette[i].b >> 8;
+	}
+	picture = malloc(png->width * png->height);
+	dither_image(png->width, png->height, png->pixels,
+		     ppalette, plen, picture);
+	wid = png->width;
+	ht = png->height;
+	png_free(png);
+
+#endif
+	whlp_ref_picture(h, whlp_add_picture(h, wid, ht, picture, palette));
     }
     whlp_end_para(h);
 
