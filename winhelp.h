@@ -166,3 +166,33 @@ void whlp_text(WHLP h, char *text);
 void whlp_start_hyperlink(WHLP h, WHLP_TOPIC target);
 void whlp_end_hyperlink(WHLP h);
 void whlp_tab(WHLP h);
+
+/*
+ * Routines to add images to a help file.
+ * 
+ * First call whlp_add_picture() to load some actual image data
+ * into a help file. This will return a numeric index which
+ * identifies the picture. Then you can call whlp_ref_picture() to
+ * indicate that that picture should be displayed inline in the
+ * current paragraph (i.e. it occurs between a call to
+ * whlp_begin_para() and whlp_end_para()).
+ */
+
+/*
+ * The parameters to this function are:
+ * 
+ *  - wd and ht give the width and height of the image in pixels.
+ *  - picdata is a pointer to the actual bitmap data. This _must_
+ *    be formatted as one byte per pixel, with each byte being an
+ *    index into the `palette' array. Ordering is the normal one
+ *    (top to bottom, left to right), not the Windows BMP one.
+ *  - palettelen is an array of up to 256 unsigned longs. Each
+ *    unsigned long represents an RGB value, in the form
+ *    0x00RRGGBB. Thus 0x00FF0000 is red, 0x00FF00 is green,
+ *    0x000000FF is blue, 0x00FFFFFF is white, zero is black, and
+ *    so on. You may supply fewer than 256 entries if the image
+ *    data does not refer to all possible values.
+ */
+int whlp_add_picture(WHLP h, int wd, int ht, const void *picdata,
+		     const unsigned long *palette);
+void whlp_ref_picture(WHLP h, int index);

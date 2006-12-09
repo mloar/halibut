@@ -183,6 +183,7 @@ struct WHLP_tag {
     int para_flags;
     int para_attrs[7];
     int ncontexts;
+    int picture_index;
 };
 
 /* Functions to return the index and leaf data for B-tree contents. */
@@ -196,6 +197,10 @@ static void whlp_file_add(struct file *f, const void *data, int len);
 static void whlp_file_add_char(struct file *f, int data);
 static void whlp_file_add_short(struct file *f, int data);
 static void whlp_file_add_long(struct file *f, int data);
+static void whlp_file_add_cushort(struct file *f, int data);
+static void whlp_file_add_csshort(struct file *f, int data);
+static void whlp_file_add_culong(struct file *f, int data);
+static void whlp_file_add_cslong(struct file *f, int data);
 static void whlp_file_fill(struct file *f, int len);
 static void whlp_file_seek(struct file *f, int pos, int whence);
 static int whlp_file_offset(struct file *f);
@@ -795,6 +800,94 @@ void whlp_tab(WHLP h)
      * Now the formatting command is 0x83.
      */
     whlp_linkdata(h, 1, 0x83);
+}
+
+int whlp_add_picture(WHLP h, int wd, int ht, const void *vpicdata,
+		     const unsigned long *palette)
+{
+    struct file *f;
+    char filename[80];
+    const unsigned char *picdata = (const unsigned char *)vpicdata;
+    int picstart, picoff, imgoff, imgstart;
+    int palettelen;
+    int i, index;
+    int wdrounded;
+
+    /*
+     * Determine the limit of the colour palette.
+     */
+    palettelen = -1;
+    for (i = 0; i < wd*ht; i++)
+	if (palettelen < picdata[i])
+	    palettelen = picdata[i];
+    palettelen++;
+
+    /*
+     * Round up the width to the next multiple of 4.
+     */
+    wdrounded = (wd + 3) & ~3;
+
+    index = h->picture_index++;
+    sprintf(filename, "bm%d", index);
+
+    f = whlp_new_file(h, filename);
+    whlp_file_add_short(f, 0x706C);    /* magic number */
+    whlp_file_add_short(f, 1);	       /* number of pictures */
+    picoff = whlp_file_offset(f);
+    whlp_file_add_long(f, 0);	       /* offset of first (only) picture */
+    picstart = whlp_file_offset(f);
+    whlp_file_add_char(f, 6);	       /* DIB */
+    whlp_file_add_char(f, 0);	       /* no packing */
+    whlp_file_add_culong(f, 100);      /* xdpi */
+    whlp_file_add_culong(f, 100);      /* ydpi */
+    whlp_file_add_cushort(f, 1);       /* planes (?) */
+    whlp_file_add_cushort(f, 8);       /* bitcount */
+    whlp_file_add_culong(f, wd);       /* width */
+    whlp_file_add_culong(f, ht);       /* height */
+    whlp_file_add_culong(f, palettelen);/* colours used */
+    whlp_file_add_culong(f, palettelen);/* colours important */
+    whlp_file_add_culong(f, wdrounded*ht);    /* `compressed' data size */
+    whlp_file_add_culong(f, 0);	       /* hotspot size (no hotspots) */
+    imgoff = whlp_file_offset(f);
+    whlp_file_add_long(f, 0);	       /* offset of `compressed' data */
+    whlp_file_add_long(f, 0);	       /* offset of hotspot data (none) */
+    for (i = 0; i < palettelen; i++)
+	whlp_file_add_long(f, palette[i]);
+    imgstart = whlp_file_offset(f);
+    /*
+     * Windows Help files, like BMP, start from the bottom scanline.
+     */
+    for (i = ht; i-- > 0 ;) {
+	whlp_file_add(f, picdata + i*wd, wd);
+	if (wd < wdrounded)
+	    whlp_file_add(f, "\0\0\0", wdrounded - wd);
+    }
+
+    /* Now go back and fix up internal offsets */
+    whlp_file_seek(f, picoff, 0);
+    whlp_file_add_long(f, picstart);
+    whlp_file_seek(f, imgoff, 0);
+    whlp_file_add_long(f, imgstart - picstart);
+    whlp_file_seek(f, 0, 2);
+
+    return index;
+}
+
+void whlp_ref_picture(WHLP h, int picid)
+{
+    /*
+     * Write a NUL into linkdata2.
+     */
+    whlp_linkdata(h, 2, 0);
+    /*
+     * Write the formatting command and its followup data to
+     * specify a picture in a separate file.
+     */
+    whlp_linkdata(h, 1, 0x86);
+    whlp_linkdata(h, 1, 3);	       /* type (picture without hotspots) */
+    whlp_linkdata_cslong(h, 1, 4);
+    whlp_linkdata_short(h, 1, 0);
+    whlp_linkdata_short(h, 1, picid);
 }
 
 void whlp_text(WHLP h, char *text)
@@ -1538,6 +1631,46 @@ static void whlp_file_add_long(struct file *f, int data)
     whlp_file_add(f, s, 4);
 }
 
+static void whlp_file_add_cushort(struct file *f, int data)
+{
+    if (data <= 0x7F) {
+	whlp_file_add_char(f, data*2);
+    } else {
+	whlp_file_add_char(f, 1 + (data%128 * 2));
+	whlp_file_add_char(f, data/128);
+    }
+}
+
+#if 0				       /* currently unused */
+static void whlp_file_add_csshort(struct file *f, int data)
+{
+    if (data >= -0x40 && data <= 0x3F)
+	whlp_file_add_cushort(f, data+64);
+    else
+	whlp_file_add_cushort(f, data+16384);
+}
+#endif
+
+static void whlp_file_add_culong(struct file *f, int data)
+{
+    if (data <= 0x7FFF) {
+	whlp_file_add_short(f, data*2);
+    } else {
+	whlp_file_add_short(f, 1 + (data%32768 * 2));
+	whlp_file_add_short(f, data/32768);
+    }
+}
+
+#if 0				       /* currently unused */
+static void whlp_file_add_cslong(struct file *f, int data)
+{
+    if (data >= -0x4000 && data <= 0x3FFF)
+	whlp_file_add_culong(f, data+16384);
+    else
+	whlp_file_add_culong(f, data+67108864);
+}
+#endif
+
 static void whlp_file_fill(struct file *f, int len)
 {
     if (f->pos + len > f->size) {
@@ -1599,6 +1732,7 @@ WHLP whlp_new(void)
     ret->prevtopic = NULL;
     ret->ncontexts = 0;
     ret->link = NULL;
+    ret->picture_index = 0;
 
     return ret;
 }
@@ -2123,7 +2257,32 @@ int main(void)
 
     whlp_begin_para(h, WHLP_PARA_SCROLL);
     whlp_set_font(h, 1);
-    whlp_text(h, "This third topic is almost as boring as the first. Woo!");
+    whlp_text(h, "This third topic is not nearly as boring as the first, "
+	      "because it has a picture: ");
+    {
+	const unsigned long palette[] = {
+	    0xFF0000,
+	    0xFFFF00,
+	    0x00FF00,
+	    0x00FFFF,
+	    0x0000FF,
+	};
+	const unsigned char picture[] = {
+	    0, 0, 0, 0, 1, 2, 3, 4,
+	    0, 0, 0, 0, 1, 2, 3, 4,
+	    0, 0, 0, 0, 1, 2, 3, 4,
+	    0, 0, 0, 1, 2, 3, 4, 4,
+	    0, 0, 0, 1, 2, 3, 4, 4,
+	    0, 0, 0, 1, 2, 3, 4, 4,
+	    0, 0, 1, 2, 3, 4, 4, 4,
+	    0, 0, 1, 2, 3, 4, 4, 4,
+	    0, 0, 1, 2, 3, 4, 4, 4,
+	    0, 1, 2, 3, 4, 4, 4, 4,
+	    0, 1, 2, 3, 4, 4, 4, 4,
+	    0, 1, 2, 3, 4, 4, 4, 4,
+	};
+	whlp_ref_picture(h, whlp_add_picture(h, 8, 12, picture, palette));
+    }
     whlp_end_para(h);
 
     /*
