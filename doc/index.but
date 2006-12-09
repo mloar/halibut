@@ -652,5 +652,13 @@ directive
 \IM{PDF} PDF
 \IM{PDF} Portable Document Format
 
+\IM{embedding fonts} embedding fonts
+\IM{embedding fonts} fonts, embedding
+
+\IM{Type 1 fonts} Type 1 fonts
+\IM{Type 1 fonts} fonts, Type 1
+
+\IM{font sizes} font size
+
 \IM{<META NAME="AppleTitle">} \cw{<META NAME="AppleTitle">}
 \IM{<META NAME="AppleTitle">} \cw{AppleTitle}, \cw{<META>} tag

@@ -1526,8 +1526,10 @@ various kinds of text.  Directives for setting the font normally take
 three font names, the first of which is used for normal text, the
 second for emphasised text, and the third for code.  Any fonts which
 aren't specified are left unchanged.  Fonts are named using their
-PostScript names and must be ones whose metrics are compiled into
-Halibut.  These are:
+PostScript names.
+
+Halibut intrinsically knows about some fonts, and these fonts are also
+built into all PDF and most PostScript implementations.  These are:
 
 \b \cw{Times-Roman}
 
@@ -1552,6 +1554,15 @@ Halibut.  These are:
 \b \cw{Courier-Bold}
 
 \b \cw{Courier-BoldOblique}
+
+These fonts can be used without further formality.  To use any other font,
+Halibut needs at least to know its measurements, which are provided in an
+\i{Adobe Font Metrics} (\I{AFM files}AFM) file.  Halibut can also
+\I{embedding fonts}embed
+\i{Type 1 fonts} in its PDF and PostScript output if provided with an
+ASCII-format (\I{PFA files}PFA) font file.  To provide an AFM or PFA file
+to Halibut, simply name it on Halibut's command line.  If both are named,
+the AFM file must come first.
 
 \ii{Font sizes} are specified in PostScript \i{points} (72 to the inch).
 
