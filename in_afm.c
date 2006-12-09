@@ -51,6 +51,7 @@ static int afm_require_key(char *line, char const *expected, input *in) {
 void read_afm_file(input *in) {
     char *line, *key, *val;
     font_info *fi;
+    size_t i;
 
     fi = snew(font_info);
     fi->name = NULL;
@@ -62,6 +63,8 @@ void read_afm_file(input *in) {
     fi->fontbbox[0] = fi->fontbbox[1] = fi->fontbbox[2] = fi->fontbbox[3] = 0;
     fi->capheight = fi->xheight = fi->ascent = fi->descent = 0;
     fi->stemh = fi->stemv = fi->italicangle = 0;
+    for (i = 0; i < lenof(fi->bmp); i++)
+	    fi->bmp[i] = 0xFFFF;
     in->pos.line = 0;
     line = afm_read_line(in);
     if (!line || !afm_require_key(line, "StartFontMetrics", in))
