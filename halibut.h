@@ -248,6 +248,10 @@ enum {
     err_afmkey, 		       /* missing expected keyword in AFM */
     err_afmvers,		       /* unsupported AFM version */
     err_afmval, 		       /* missing value(s) for AFM key */
+    err_pfeof,			       /* eof in Type 1 font file */
+    err_pfhead,			       /* bad Type 1 header line */
+    err_pfbad,			       /* otherwise invalide Type 1 font */
+    err_pfnoafm,		       /* Type 1 font but no AFM */
     err_whatever                       /* random error of another type */
 };
 

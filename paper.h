@@ -68,6 +68,11 @@ struct font_info_Tag {
      * The file containing this font, if any.
      */
     FILE *fp;
+    filepos pos;
+    /*
+     * Lengths of the unencrypted and encrypted portions of the font.
+     */
+    long length1, length2;
     /*
      * An array of pointers to the available glyph names, and their
      * corresponding character widths. These two arrays have
@@ -375,5 +380,11 @@ const kern_pair *ps_std_font_kerns(char const *fontname);
  * Function from bk_pdf.c borrowed by bk_ps.c
  */
 char *pdf_outline_convert(wchar_t *s, int *len);
+
+/*
+ * Backend functions exported by in_pf.c
+ */
+void pf_part1(font_info *fi, char **bufp, size_t *lenp);
+void pf_part2(font_info *fi, char **bufp, size_t *lenp);
 
 #endif

@@ -315,6 +315,27 @@ static void do_error(int code, va_list ap) {
 	    sprintf(error, "AFM key '%.200s' requires %d values", sp, i);
 	flags = FILEPOS;
 	break;	
+      case err_pfeof:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "Type 1 font file ended unexpectedly");
+	flags = FILEPOS;
+	break;
+      case err_pfhead:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "Type 1 font file header line invalid");
+	flags = FILEPOS;
+	break;
+      case err_pfbad:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "Type 1 font file invalid");
+	flags = FILEPOS;
+	break;
+      case err_pfnoafm:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	sprintf(error, "No metrics available for Type 1 font '%.200s'", sp);
+	flags = FILEPOS;
+	break;
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);

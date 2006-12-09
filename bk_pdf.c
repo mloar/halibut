@@ -34,6 +34,7 @@ struct objlist_Tag {
 static object *new_object(objlist *list);
 static void objtext(object *o, char const *text);
 static void objstream(object *o, char const *text);
+static void objstream_len(object *o, char const *text, size_t len);
 static void pdf_string(void (*add)(object *, char const *),
 		       object *, char const *);
 static void pdf_string_len(void (*add)(object *, char const *),
@@ -237,14 +238,20 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(fontdesc, buf);
 	    if (fi->fp) {
 		object *fontfile = new_object(&olist);
-		char buf[513];
 		size_t len;
-		rewind(fi->fp);
-		do {
-		    len = fread(buf, 1, sizeof(buf)-1, fi->fp);
-		    buf[len] = 0;
-		    objstream(fontfile, buf);
-		} while (len == sizeof(buf)-1);
+		char *ffbuf;
+
+		pf_part1((font_info *)fi, &ffbuf, &len);
+		objstream_len(fontfile, ffbuf, len);
+		sfree(ffbuf);
+		sprintf(buf, "<<\n/Length1 %lu\n", (unsigned long)len);
+		objtext(fontfile, buf);
+		pf_part2((font_info *)fi, &ffbuf, &len);
+		objstream_len(fontfile, ffbuf, len);
+		sfree(ffbuf);
+		sprintf(buf, "/Length2 %lu\n", (unsigned long)len);
+		objtext(fontfile, buf);
+		objtext(fontfile, "/Length3 0\n");
 		objtext(fontdesc, "/FontFile ");
 		objref(fontdesc, fontfile);
 	    }
@@ -479,12 +486,19 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	sprintf(text, "%d 0 obj\n", o->number);
 	rdaddsc(&rs, text);
 
-	if (!o->main.text && o->stream.text) {
+	if (o->stream.text) {
+	    char buf[100];
+	    sprintf(buf, "stream%06d", o->number);
+	    fp = fopen(buf, "wb");
+	    fwrite(o->stream.text, 1, o->stream.pos, fp);
+	    fclose(fp);
 	    zcontext = deflate_compress_new(DEFLATE_TYPE_ZLIB);
 	    deflate_compress_data(zcontext, o->stream.text, o->stream.pos,
 				  DEFLATE_END_OF_DATA, &zbuf, &zlen);
 	    deflate_compress_free(zcontext);
-	    sprintf(text, "<<\n/Filter/FlateDecode\n/Length %d\n>>\n", zlen);
+	    if (!o->main.text)
+		rdaddsc(&o->main, "<<\n");
+	    sprintf(text, "/Filter/FlateDecode\n/Length %d\n>>\n", zlen);
 	    rdaddsc(&o->main, text);
 	}
 
@@ -594,6 +608,11 @@ static object *new_object(objlist *list)
 static void objtext(object *o, char const *text)
 {
     rdaddsc(&o->main, text);
+}
+
+static void objstream_len(object *o, char const *text, size_t len)
+{
+    rdaddsn(&o->stream, text, len);
 }
 
 static void objstream(object *o, char const *text)
