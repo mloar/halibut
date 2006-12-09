@@ -1350,28 +1350,10 @@ and no \cw{\\cfg\{info-dir-entry\}} directives.
 These output formats (currently PostScript and PDF) generate printable
 manuals. As such, they share a number of configuration directives.
 
-\S{output-ps} \i{PostScript}
-
-This output format generates a printable manual in PostScript format.
-
-There is one configuration option specific to PostScript:
-
-\dt \I{\cw{\\cfg\{ps-filename\}}}\cw{\\cfg\{ps-filename\}\{}\e{filename}\cw{\}}
-
-\dd Sets the \i{output file name} in which to store the PostScript
-file. This directive is implicitly generated if you provide a file
-name parameter after the command-line option \i\c{--ps} (see
-\k{running-options}).
-
-The \i{default settings} for the PostScript output format are:
-
-\c \cfg{ps-filename}{output.ps}
-
 \S{output-pdf} \i{PDF}
 
-This output format generates a printable manual in PDF format. This
-should look exactly identical to the PostScript output (see
-\k{output-ps}), but also uses some PDF interactive features to
+This output format generates a printable manual in PDF format. In
+addition, it uses some PDF interactive features to
 provide an outline of all the document's sections and clickable
 cross-references between sections.
 
@@ -1387,6 +1369,26 @@ parameter after the command-line option \i\c{--pdf} (see
 The \i{default settings} for the PDF output format are:
 
 \c \cfg{pdf-filename}{output.pdf}
+
+\S{output-ps} \i{PostScript}
+
+This output format generates a printable manual in PostScript format.
+This should look exactly identical to the PDF output (see
+\k{output-ps}), and uses \i\c{pdfmark} to arrange that if converted
+to PDF it will contain the same interactive features.
+
+There is one configuration option specific to PostScript:
+
+\dt \I{\cw{\\cfg\{ps-filename\}}}\cw{\\cfg\{ps-filename\}\{}\e{filename}\cw{\}}
+
+\dd Sets the \i{output file name} in which to store the PostScript
+file. This directive is implicitly generated if you provide a file
+name parameter after the command-line option \i\c{--ps} (see
+\k{running-options}).
+
+The \i{default settings} for the PostScript output format are:
+
+\c \cfg{ps-filename}{output.ps}
 
 \S{output-paper-dimensions} Configuring layout and \i{measurements}
 
