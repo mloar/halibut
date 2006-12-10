@@ -164,6 +164,11 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	int titlelen, count, i;
 
 	title = pdf_outline_convert(oe->pdata->outline_title, &titlelen);
+	if (oe->level == 0) {
+	    fprintf(fp, "  [/Title");
+	    ps_string_len(fp, title, titlelen);
+	    fprintf(fp, "/DOCINFO pdfmark\n");
+	}
 
 	count = 0;
 	for (i = 1; i < noe && oe[i].level > oe->level; i++)
