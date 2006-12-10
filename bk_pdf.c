@@ -487,11 +487,6 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	rdaddsc(&rs, text);
 
 	if (o->stream.text) {
-	    char buf[100];
-	    sprintf(buf, "stream%06d", o->number);
-	    fp = fopen(buf, "wb");
-	    fwrite(o->stream.text, 1, o->stream.pos, fp);
-	    fclose(fp);
 	    zcontext = deflate_compress_new(DEFLATE_TYPE_ZLIB);
 	    deflate_compress_data(zcontext, o->stream.text, o->stream.pos,
 				  DEFLATE_END_OF_DATA, &zbuf, &zlen);
