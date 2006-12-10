@@ -1,6 +1,10 @@
-\title Halibut: A Test Document With A Stupidly Long Title Just To
-See If Wrapping Titles Works OK. In Fact This Title Will Span Three
-Lines, Not Just Two. How's That For Ludicrous?
+\define{eur} \u20AC{EUR }
+
+\title Halibut: A Test Document With A Stupidly Long Title (worth \eur\.1000)
+Just To See If Wrapping Titles Works OK. In Fact This Title Will Span Three
+Lines, Not Just Two. How's That For Ludicrous?  More than that, though,
+we'd like to make it more than 255 characters long so that the PostScript
+backend has to treat it specially in order to pass it to pdfmark.
 
 \cfg{xhtml-leaf-smallest-contents}{2}
 \cfg{xhtml-leaf-contains-contents}
@@ -33,8 +37,6 @@ multi-line macro, talking about \coopt
 a bit]
 
 \define{coopt} co\u00F6{-o}pt
-
-\define{eur} \u20AC{EUR }
 
 \versionid $Id$
 
