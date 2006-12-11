@@ -135,7 +135,7 @@ options.
 
 \dd Makes Halibut display its licence (MIT).
 
-\H{putty-manpage-more-information} MORE INFORMATION
+\H{manpage-more-information} MORE INFORMATION
 
 For more information on Halibut, including full details of the input
 file format, look in the full manual. If this is not installed
@@ -143,6 +143,6 @@ locally on your system, you can also find it at the Halibut web site:
 
 \W{http://www.chiark.greenend.org.uk/~sgtatham/halibut/}\cw{http://www.chiark.greenend.org.uk/~sgtatham/halibut/}
 
-\H{putty-manpage-bugs} BUGS
+\H{manpage-bugs} BUGS
 
 This man page isn't terribly complete.
