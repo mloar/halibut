@@ -19,8 +19,6 @@ Currently Halibut supports the following output formats:
 
 \b HTML.
 
-\b Windows Help.
-
 \b Unix \cw{man} page format.
 
 \b GNU \c{info} format.
@@ -28,6 +26,11 @@ Currently Halibut supports the following output formats:
 \b PDF.
 
 \b PostScript.
+
+\b Old-style Windows Help (\cw{.HLP}).
+
+(By setting suitable options, the HTML output can also be made
+suitable for feeding to the newer-style Windows HTML Help compiler.)
 
 \H{intro-features} Features supported by Halibut
 

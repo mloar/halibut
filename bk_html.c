@@ -10,6 +10,13 @@
  *    sensible. Perhaps for the topmost section in the file, no
  *    fragment should be used? (Though it should probably still be
  *    _there_ even if unused.)
+ * 
+ *  - In HHK index mode: subsidiary hhk entries (as in replacing
+ *    `foo, bar' with `foo\n\tbar') can be done by embedding
+ *    sub-<UL>s in the hhk file. This requires me getting round to
+ *    supporting that idiom in the rest of Halibut, but I thought
+ *    I'd record how it's done here in case I turn out to have
+ *    forgotten when I get there.
  */
 
 #include <stdio.h>
@@ -41,10 +48,12 @@ typedef struct {
     int ncdepths;
     int address_section, visible_version_id;
     int leaf_contains_contents, leaf_smallest_contents;
+    int navlinks;
     char *contents_filename;
     char *index_filename;
     char *template_filename;
     char *single_filename;
+    char *chm_filename, *hhp_filename, *hhc_filename, *hhk_filename;
     char **template_fragments;
     int ntfragments;
     char *head_end, *body_start, *body_end, *addr_start, *addr_end;
@@ -77,6 +86,13 @@ struct htmlfile {
     int last_fragment_number;
     int min_heading_depth;
     htmlsect *first, *last;	       /* first/last highest-level sections */
+    /*
+     * The `temp' field is available for use in individual passes
+     * over the file list. For example, the HHK index generation
+     * uses it to ensure no index term references the same file
+     * more than once.
+     */
+    int temp;
 };
 
 struct htmlsect {
@@ -92,6 +108,7 @@ typedef struct {
     htmlfile *head, *tail;
     htmlfile *single, *index;
     tree234 *frags;
+    tree234 *files;
 } htmlfilelist;
 
 typedef struct {
@@ -127,6 +144,8 @@ typedef struct {
     enum {
 	HO_NEUTRAL, HO_IN_TAG, HO_IN_EMPTY_TAG, HO_IN_TEXT
     } state;
+    int hackflags;		       /* used for icky .HH* stuff */
+    int hacklimit;		       /* text size limit, again for .HH* */
     /*
      * Stuff beyond here deals with the higher syntactic level: it
      * tracks how many levels of <ul> are currently open when
@@ -134,6 +153,21 @@ typedef struct {
      */
     int contents_level;
 } htmloutput;
+
+/*
+ * Nasty hacks that modify the behaviour of htmloutput files. All
+ * of these are flag bits set in ho.hackflags. HO_HACK_QUOTEQUOTES
+ * has the same effect as the `quote_quotes' parameter to
+ * html_text_limit_internal, except that it's set globally on an
+ * entire htmloutput structure; HO_HACK_QUOTENOTHING suppresses
+ * quoting of any HTML special characters (for .HHP files);
+ * HO_HACK_OMITQUOTES completely suppresses the generation of
+ * double quotes at all (turning them into single quotes, for want
+ * of a better idea).
+ */
+#define HO_HACK_QUOTEQUOTES 1
+#define HO_HACK_QUOTENOTHING 2
+#define HO_HACK_OMITQUOTES 4
 
 static int html_fragment_compare(void *av, void *bv)
 {
@@ -145,6 +179,14 @@ static int html_fragment_compare(void *av, void *bv)
 	return cmp;
     else
 	return strcmp(a->fragment, b->fragment);
+}
+
+static int html_filename_compare(void *av, void *bv)
+{
+    char *a = (char *)av;
+    char *b = (char *)bv;
+
+    return strcmp(a, b);
 }
 
 static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
@@ -187,6 +229,7 @@ static void html_fragment(htmloutput *ho, char const *fragment);
 static char *html_format(paragraph *p, char *template_string);
 static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
 				    char *text);
+static char *html_sanitise_filename(htmlfilelist *files, char *text);
 
 static void html_contents_entry(htmloutput *ho, int depth, htmlsect *s,
 				htmlfile *thisfile, keywordlist *keywords,
@@ -215,10 +258,13 @@ static htmlconfig html_configure(paragraph *source) {
     ret.address_section = TRUE;
     ret.leaf_contains_contents = FALSE;
     ret.leaf_smallest_contents = 4;
+    ret.navlinks = TRUE;
     ret.single_filename = dupstr("Manual.html");
     ret.contents_filename = dupstr("Contents.html");
     ret.index_filename = dupstr("IndexPage.html");
     ret.template_filename = dupstr("%n.html");
+    ret.chm_filename = ret.hhp_filename = NULL;
+    ret.hhc_filename = ret.hhk_filename = NULL;
     ret.ntfragments = 1;
     ret.template_fragments = snewn(ret.ntfragments, char *);
     ret.template_fragments[0] = dupstr("%b");
@@ -333,10 +379,18 @@ static htmlconfig html_configure(paragraph *source) {
 		    error(err_cfginsufarg, &p->fpos, p->origkeyword, 1);
 	    } else if (!ustricmp(k, L"html-chapter-numeric")) {
 		ret.achapter.just_numbers = utob(uadv(k));
+	    } else if (!ustricmp(k, L"html-suppress-navlinks")) {
+		ret.navlinks = !utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-chapter-suffix")) {
 		ret.achapter.number_suffix = uadv(k);
 	    } else if (!ustricmp(k, L"html-leaf-level")) {
-		ret.leaf_level = utoi(uadv(k));
+		wchar_t *u = uadv(k);
+		if (!ustricmp(u, L"infinite") ||
+		    !ustricmp(u, L"infinity") ||
+		    !ustricmp(u, L"inf"))
+		    ret.leaf_level = -1;   /* represents infinity */
+		else
+		    ret.leaf_level = utoi(u);
 	    } else if (!ustricmp(k, L"html-section-numeric")) {
 		wchar_t *q = uadv(k);
 		int n = 0;
@@ -446,8 +500,39 @@ static htmlconfig html_configure(paragraph *source) {
 		ret.pre_versionid = uadv(k);
 	    } else if (!ustricmp(k, L"html-post-versionid")) {
 		ret.post_versionid = uadv(k);
+	    } else if (!ustricmp(k, L"html-mshtmlhelp-chm")) {
+		sfree(ret.chm_filename);
+		ret.chm_filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(k, L"html-mshtmlhelp-project")) {
+		sfree(ret.hhp_filename);
+		ret.hhp_filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(k, L"html-mshtmlhelp-contents")) {
+		sfree(ret.hhc_filename);
+		ret.hhc_filename = dupstr(adv(p->origkeyword));
+	    } else if (!ustricmp(k, L"html-mshtmlhelp-index")) {
+		sfree(ret.hhk_filename);
+		ret.hhk_filename = dupstr(adv(p->origkeyword));
 	    }
 	}
+    }
+
+    /*
+     * Enforce that the CHM and HHP filenames must either be both
+     * present or both absent. If one is present but not the other,
+     * turn both off.
+     */
+    if (!ret.chm_filename ^ !ret.hhp_filename) {
+	error(err_chmnames);
+	sfree(ret.chm_filename); ret.chm_filename = NULL;
+	sfree(ret.hhp_filename); ret.hhp_filename = NULL;
+    }
+    /*
+     * And if we're not generating an HHP, there's no need for HHC
+     * or HHK.
+     */
+    if (!ret.hhp_filename) {
+	sfree(ret.hhc_filename); ret.hhc_filename = NULL;
+	sfree(ret.hhk_filename); ret.hhk_filename = NULL;
     }
 
     /*
@@ -485,9 +570,11 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		  indexdata *idx, void *unused)
 {
     paragraph *p;
+    htmlsect *topsect;
     htmlconfig conf;
-    htmlfilelist files = { NULL, NULL, NULL, NULL, NULL };
+    htmlfilelist files = { NULL, NULL, NULL, NULL, NULL, NULL };
     htmlsectlist sects = { NULL, NULL }, nonsects = { NULL, NULL };
+    char *hhk_filename;
     int has_index;
 
     IGNORE(unused);
@@ -504,6 +591,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	p->private_data = NULL;
 
     files.frags = newtree234(html_fragment_compare);
+    files.files = newtree234(html_filename_compare);
 
     /*
      * Start by figuring out into which file each piece of the
@@ -518,7 +606,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
      * for each section.
      */
     {
-	htmlsect *topsect, *sect;
+	htmlsect *sect;
 	int d;
 
 	topsect = html_new_sect(&sects, NULL, &conf);
@@ -563,9 +651,13 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		}
 	    }
 
-	/* And the index, if we have one. */
+	/*
+	 * And the index, if we have one. Note that we don't output
+	 * an index as an HTML file if we're outputting one as a
+	 * .HHK.
+	 */
 	has_index = (count234(idx->entries) > 0);
-	if (has_index) {
+	if (has_index && !conf.hhk_filename) {
 	    sect = html_new_sect(&sects, NULL, &conf);
 	    sect->text = NULL;
 	    sect->type = INDEX;
@@ -776,6 +868,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    ho.ver = conf.htmlver;
 	    ho.state = HO_NEUTRAL;
 	    ho.contents_level = 0;
+	    ho.hackflags = 0;	       /* none of these thankyouverymuch */
+	    ho.hacklimit = -1;
 
 	    /* <!DOCTYPE>. */
 	    switch (conf.htmlver) {
@@ -902,7 +996,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	     * Write out a nav bar. Special case: we don't do this
 	     * if there is only one file.
 	     */
-	    if (files.head != files.tail) {
+	    if (conf.navlinks && files.head != files.tail) {
 		element_open(&ho, "p");
 		if (conf.nav_attr)
 		    html_raw_as_attr(&ho, conf.nav_attr);
@@ -925,7 +1019,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		if (f != files.head)
 		    element_close(&ho, "a");
 
-		if (has_index) {
+		if (has_index && files.index) {
 		    html_text(&ho, conf.nav_separator);
 		    if (f != files.index) {
 			element_open(&ho, "a");
@@ -1379,7 +1473,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		 */
 		int done_version_ids = FALSE;
 
-		element_empty(&ho, "hr");
+		if (conf.address_section)
+		    element_empty(&ho, "hr");
 
 		if (conf.body_end)
 		    html_raw(&ho, conf.body_end);
@@ -1460,6 +1555,295 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
     }
 
     /*
+     * Before we start outputting the HTML Help files, check
+     * whether there's even going to _be_ an index file: we omit it
+     * if the index contains nothing.
+     */
+    hhk_filename = conf.hhk_filename;
+    if (hhk_filename) {
+	int ok = FALSE;
+	int i;
+	indexentry *entry;
+
+	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
+	    htmlindex *hi = (htmlindex *)entry->backend_data;
+
+	    if (hi->nrefs > 0) {
+		ok = TRUE;	       /* found an index entry */
+		break;
+	    }
+	}
+
+	if (!ok)
+	    hhk_filename = NULL;
+    }
+
+    /*
+     * Output the MS HTML Help supporting files, if requested.
+     */
+    if (conf.hhp_filename) {
+	htmlfile *f;
+	htmloutput ho;
+
+	ho.charset = CS_CP1252;	       /* as far as I know, HHP files are */
+	ho.restrict_charset = CS_CP1252;   /* hardwired to this charset */
+	ho.cstate = charset_init_state;
+	ho.ver = HTML_4;	       /* *shrug* */
+	ho.state = HO_NEUTRAL;
+	ho.contents_level = 0;
+	ho.hackflags = HO_HACK_QUOTENOTHING;
+
+	ho.fp = fopen(conf.hhp_filename, "w");
+	if (!ho.fp)
+	    error(err_cantopenw, conf.hhp_filename);
+
+	fprintf(ho.fp,
+		"[OPTIONS]\n"
+		"Compatibility=1.1 or later\n"
+		"Compiled file=%s\n"
+		"Default Window=main\n"
+		"Default topic=%s\n"
+		"Display compile progress=Yes\n"
+		"Full-text search=Yes\n"
+		"Title=", conf.chm_filename, files.head->filename);
+
+	ho.hacklimit = 255;
+	html_words(&ho, topsect->title->words, NOTHING,
+		   NULL, keywords, &conf);
+
+	fprintf(ho.fp, "\n");
+
+	/*
+	 * These two entries don't seem to be remotely necessary
+	 * for a successful run of the help _compiler_, but
+	 * omitting them causes the GUI Help Workshop to behave
+	 * rather strangely if you try to load the help project
+	 * into that and edit it.
+	 */
+	if (conf.hhc_filename)
+	    fprintf(ho.fp, "Contents file=%s\n", conf.hhc_filename);
+	if (hhk_filename)
+	    fprintf(ho.fp, "Index file=%s\n", hhk_filename);
+
+	fprintf(ho.fp, "\n[WINDOWS]\nmain=\"");
+
+	ho.hackflags |= HO_HACK_OMITQUOTES;
+	ho.hacklimit = 255;
+	html_words(&ho, topsect->title->words, NOTHING,
+		   NULL, keywords, &conf);
+
+	fprintf(ho.fp, "\",\"%s\",\"%s\",\"%s\",,,,,,"
+		"0x42520,,0x3876,[271,372,593,566],,,,,,,0\n",
+		conf.hhc_filename ? conf.hhc_filename : "",
+		hhk_filename ? hhk_filename : "",
+		files.head->filename);
+
+	/*
+	 * The [FILES] section is also not necessary for
+	 * compilation (hhc appears to build up a list of needed
+	 * files just by following links from the given starting
+	 * points), but useful for loading the project into HHW.
+	 */
+	fprintf(ho.fp, "\n[FILES]\n");
+	for (f = files.head; f; f = f->next)
+	    fprintf(ho.fp, "%s\n", f->filename);
+
+	fclose(ho.fp);
+    }
+    if (conf.hhc_filename) {
+	htmlfile *f;
+	htmlsect *s, *a;
+	htmloutput ho;
+	int currdepth = 0;
+
+	ho.fp = fopen(conf.hhc_filename, "w");
+	if (!ho.fp)
+	    error(err_cantopenw, conf.hhc_filename);
+
+	ho.charset = CS_CP1252;	       /* as far as I know, HHC files are */
+	ho.restrict_charset = CS_CP1252;   /* hardwired to this charset */
+	ho.cstate = charset_init_state;
+	ho.ver = HTML_4;	       /* *shrug* */
+	ho.state = HO_NEUTRAL;
+	ho.contents_level = 0;
+	ho.hackflags = HO_HACK_QUOTEQUOTES;
+
+	/*
+	 * Magic DOCTYPE which seems to work for .HHC files. I'm
+	 * wary of trying to change it!
+	 */
+	fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML//EN\">\n"
+		"<HTML><HEAD>\n"
+		"<META HTTP-EQUIV=\"Content-Type\" "
+		"CONTENT=\"text/html; charset=%s\">\n"
+		"</HEAD><BODY><UL>\n",
+		charset_to_mimeenc(conf.output_charset));
+
+	for (f = files.head; f; f = f->next) {
+	    /*
+	     * For each HTML file, write out a contents entry.
+	     */
+	    int depth, leaf = TRUE;
+
+	    /*
+	     * Determine the depth of this file in the contents
+	     * tree.
+	     * 
+	     * If the file contains no sections, it is assumed to
+	     * have depth zero.
+	     */
+	    depth = 0;
+	    if (f->first)
+		for (a = f->first->parent; a && a->type != TOP; a = a->parent)
+		    depth++;
+
+	    /*
+	     * Determine if this file is a leaf file, by
+	     * trawling the section list to see if there's any
+	     * section with an ancestor in this file but which
+	     * is not itself in this file.
+	     *
+	     * Special case: for contents purposes, the TOP
+	     * file is not considered to be the parent of the
+	     * chapter files, so it's always a leaf.
+	     * 
+	     * A file with no sections in it is also a leaf.
+	     */
+	    if (f->first && f->first->type != TOP) {
+		for (s = f->first; s; s = s->next) {
+		    htmlsect *a;
+
+		    if (leaf && s->file != f) {
+			for (a = s; a; a = a->parent)
+			    if (a->file == f) {
+				leaf = FALSE;
+				break;
+			    }
+		    }
+		}
+	    }
+
+	    /*
+	     * Now write out our contents entry.
+	     */
+	    while (currdepth < depth) {
+		fprintf(ho.fp, "<UL>\n");
+		currdepth++;
+	    }
+	    while (currdepth > depth) {
+		fprintf(ho.fp, "</UL>\n");
+		currdepth--;
+	    }
+	    /* fprintf(ho.fp, "<!-- depth=%d -->", depth); */
+	    fprintf(ho.fp, "<LI><OBJECT TYPE=\"text/sitemap\">"
+		    "<PARAM NAME=\"Name\" VALUE=\"");
+	    ho.hacklimit = 255;
+	    if (f->first->title)
+		html_words(&ho, f->first->title->words, NOTHING,
+			   NULL, keywords, &conf);
+	    else if (f->first->type == INDEX)
+		html_text(&ho, conf.index_text);
+	    fprintf(ho.fp, "\"><PARAM NAME=\"Local\" VALUE=\"%s\">"
+		    "<PARAM NAME=\"ImageNumber\" VALUE=\"%d\"></OBJECT>\n",
+		    f->filename, leaf ? 11 : 1);
+	}
+
+	while (currdepth > 0) {
+	    fprintf(ho.fp, "</UL>\n");
+	    currdepth--;
+	}
+
+	fprintf(ho.fp, "</UL></BODY></HTML>\n");
+
+	cleanup(&ho);
+    }
+    if (hhk_filename) {
+	htmlfile *f;
+	htmloutput ho;
+	indexentry *entry;
+	int i;
+
+	/*
+	 * First make a pass over all HTML files and set their
+	 * `temp' fields to zero, because we're about to use them.
+	 */
+	for (f = files.head; f; f = f->next)
+	    f->temp = 0;
+
+	ho.fp = fopen(hhk_filename, "w");
+	if (!ho.fp)
+	    error(err_cantopenw, hhk_filename);
+
+	ho.charset = CS_CP1252;	       /* as far as I know, HHK files are */
+	ho.restrict_charset = CS_CP1252;   /* hardwired to this charset */
+	ho.cstate = charset_init_state;
+	ho.ver = HTML_4;	       /* *shrug* */
+	ho.state = HO_NEUTRAL;
+	ho.contents_level = 0;
+	ho.hackflags = HO_HACK_QUOTEQUOTES;
+
+	/*
+	 * Magic DOCTYPE which seems to work for .HHK files. I'm
+	 * wary of trying to change it!
+	 */
+	fprintf(ho.fp, "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML//EN\">\n"
+		"<HTML><HEAD>\n"
+		"<META HTTP-EQUIV=\"Content-Type\" "
+		"CONTENT=\"text/html; charset=%s\">\n"
+		"</HEAD><BODY><UL>\n",
+		charset_to_mimeenc(conf.output_charset));
+
+	/*
+	 * Go through the index terms and output each one.
+	 */
+	for (i = 0; (entry = index234(idx->entries, i)) != NULL; i++) {
+	    htmlindex *hi = (htmlindex *)entry->backend_data;
+	    int j;
+
+	    if (hi->nrefs > 0) {
+		fprintf(ho.fp, "<LI><OBJECT TYPE=\"text/sitemap\">\n"
+			"<PARAM NAME=\"Name\" VALUE=\"");
+		ho.hacklimit = 255;
+		html_words(&ho, entry->text, NOTHING,
+			   NULL, keywords, &conf);
+		fprintf(ho.fp, "\">\n");
+
+		for (j = 0; j < hi->nrefs; j++) {
+		    htmlindexref *hr =
+			(htmlindexref *)hi->refs[j]->private_data;
+
+		    /*
+		     * Use the temp field to ensure we don't
+		     * reference the same file more than once.
+		     */
+		    if (!hr->section->file->temp) {
+			fprintf(ho.fp, "<PARAM NAME=\"Local\" VALUE=\"%s\">\n",
+				hr->section->file->filename);
+			hr->section->file->temp = 1;
+		    }
+
+		    hr->referenced = TRUE;
+		}
+
+		fprintf(ho.fp, "</OBJECT>\n");
+
+		/*
+		 * Now go through those files and re-clear the temp
+		 * fields ready for the _next_ index term.
+		 */
+		for (j = 0; j < hi->nrefs; j++) {
+		    htmlindexref *hr =
+			(htmlindexref *)hi->refs[j]->private_data;
+		    hr->section->file->temp = 0;
+		}
+	    }
+	}
+
+	fprintf(ho.fp, "</UL></BODY></HTML>\n");
+	cleanup(&ho);
+    }
+
+    /*
      * Go through and check that no index fragments were referenced
      * without being generated, or indeed vice versa.
      * 
@@ -1491,6 +1875,11 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	}
 	freetree234(files.frags);
     }
+    /*
+     * The strings in files.files are all owned by their containing
+     * htmlfile structures, so there's no need to free them here.
+     */
+    freetree234(files.files);
     {
 	htmlsect *sect, *tmp;
 	sect = sects.head;
@@ -1584,8 +1973,12 @@ static void html_file_section(htmlconfig *cfg, htmlfilelist *files,
 	 * we invent a fresh file and put this section at its head.
 	 * Otherwise, we put it in the same file as its parent
 	 * section.
+	 * 
+	 * Another special value of cfg->leaf_level is -1, which
+	 * means infinity (i.e. it's considered to always be
+	 * greater than depth).
 	 */
-	if (ldepth > cfg->leaf_level) {
+	if (cfg->leaf_level > 0 && ldepth > cfg->leaf_level) {
 	    /*
 	     * We know that sect->parent cannot be NULL. The only
 	     * circumstance in which it can be is if sect is at
@@ -1641,7 +2034,8 @@ static htmlfile *html_new_file(htmlfilelist *list, char *filename)
 	list->head = ret;
     list->tail = ret;
 
-    ret->filename = dupstr(filename);
+    ret->filename = html_sanitise_filename(list, dupstr(filename));
+    add234(list->files, ret->filename);
     ret->last_fragment_number = 0;
     ret->min_heading_depth = INT_MAX;
     ret->first = ret->last = NULL;
@@ -1943,8 +2337,16 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
     char outbuf[256];
     int bytes, err;
 
+    if (ho->hackflags & (HO_HACK_QUOTEQUOTES | HO_HACK_OMITQUOTES))
+	quote_quotes = TRUE;	       /* override the input value */
+
     if (maxlen > 0 && textlen > maxlen)
 	textlen = maxlen;
+    if (ho->hacklimit >= 0) {
+	if (textlen > ho->hacklimit)
+	    textlen = ho->hacklimit;
+	ho->hacklimit -= textlen;
+    }
 
     while (textlen > 0) {
 	/* Scan ahead for characters we really can't display in HTML. */
@@ -1978,19 +2380,25 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 	     * HTML.
 	     */
 	    if (ho->fp) {
-		if (*text == L'<')
-		    fprintf(ho->fp, "&lt;");
-		else if (*text == L'>')
-		    fprintf(ho->fp, "&gt;");
-		else if (*text == L'&')
-		    fprintf(ho->fp, "&amp;");
-		else if (*text == L'"')
-		    fprintf(ho->fp, "&quot;");
-		else if (*text == L' ') {
-		    assert(nbsp);
-		    fprintf(ho->fp, "&nbsp;");
-		} else
-		    assert(!"Can't happen");
+		if (*text == L'"' && (ho->hackflags & HO_HACK_OMITQUOTES)) {
+		    fputc('\'', ho->fp);
+		} else if (ho->hackflags & HO_HACK_QUOTENOTHING) {
+		    fputc(*text, ho->fp);
+		} else {
+		    if (*text == L'<')
+			fprintf(ho->fp, "&lt;");
+		    else if (*text == L'>')
+			fprintf(ho->fp, "&gt;");
+		    else if (*text == L'&')
+			fprintf(ho->fp, "&amp;");
+		    else if (*text == L'"')
+			fprintf(ho->fp, "&quot;");
+		    else if (*text == L' ') {
+			assert(nbsp);
+			fprintf(ho->fp, "&nbsp;");
+		    } else
+			assert(!"Can't happen");
+		}
 	    }
 	    text++, textlen--;
 	}
@@ -2157,6 +2565,69 @@ static char *html_sanitise_fragment(htmlfilelist *files, htmlfile *file,
 
 	    sprintf(text + len, "-%d", ++suffix);
 	}
+    }
+
+    return text;
+}
+
+static char *html_sanitise_filename(htmlfilelist *files, char *text)
+{
+    /*
+     * Unceremoniously rip out any character that might cause
+     * difficulty in some filesystem or another, or be otherwise
+     * inconvenient.
+     * 
+     * That doesn't leave much punctuation. I permit alphanumerics
+     * and +-.=_ only.
+     */
+    char *p = text, *q = text;
+
+    while (*p) {
+	if ((*p>='A' && *p<='Z') ||
+	    (*p>='a' && *p<='z') ||
+	    (*p>='0' && *p<='9') ||
+	    *p=='-' || *p=='_' || *p=='+' || *p=='.' || *p=='=')
+	    *q++ = *p;
+	p++;
+    }
+    *q = '\0';
+
+    /* If there's nothing left, make something valid up */
+    if (!*text) {
+	static const char anonfrag[] = "anon.html";
+	text = sresize(text, lenof(anonfrag), char);
+	strcpy(text, anonfrag);
+    }
+
+    /*
+     * Now we check for clashes with other filenames, and adjust
+     * this one if necessary by appending a hyphen followed by a
+     * number just before the file extension (if any).
+     */
+    {
+	int len, extpos;
+	int suffix = 1;
+
+	p = NULL;
+
+	while (find234(files->files, text, NULL)) {
+	    if (!p) {
+		len = strlen(text);
+		p = text;
+		text = snewn(len+20, char);
+
+		for (extpos = len; extpos > 0 && p[extpos-1] != '.'; extpos--);
+		if (extpos > 0)
+		    extpos--;
+		else
+		    extpos = len;
+	    }
+
+	    sprintf(text, "%.*s-%d%s", extpos, p, ++suffix, p+extpos);
+	}
+
+	if (p)
+	    sfree(p);
     }
 
     return text;

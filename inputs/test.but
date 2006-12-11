@@ -279,6 +279,11 @@ Umm.
 
 Ahh.
 
+\H{app-\\two} Section with inconvenient keyword
+
+If you apply this file together with \cw{doc/chm.but}, this section
+should test \cw{html_sanitise_filename()}.
+
 \U Bibliography
 
 \B{book} Some text describing a book.

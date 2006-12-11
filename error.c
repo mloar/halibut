@@ -333,8 +333,13 @@ static void do_error(int code, va_list ap) {
       case err_pfnoafm:
 	fpos = *va_arg(ap, filepos *);
 	sp = va_arg(ap, char *);
-	sprintf(error, "No metrics available for Type 1 font '%.200s'", sp);
+	sprintf(error, "no metrics available for Type 1 font '%.200s'", sp);
 	flags = FILEPOS;
+	break;
+      case err_chmnames:
+	sprintf(error, "only one of html-mshtmlhelp-chm and "
+		"html-mshtmlhelp-hhp found");
+	flags = PREFIX;
 	break;
       case err_whatever:
 	sp = va_arg(ap, char *);

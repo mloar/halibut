@@ -442,6 +442,10 @@ parameter after the command-line option \i\c{--html} (see
 and so Halibut assumes you want the whole document to be placed in
 that file.
 
+You can also specify the special name \c{infinity} (or \c{infinite}
+or \c{inf}) if you want to ensure that \e{every} section and
+subsection ends up in a separate file no matter how deep you go.
+
 }
 
 \dt \I{\cw{\\cfg\{html-contents-depth\}}}\cw{\\cfg\{html-contents-depth\}\{}\e{level}\cw{\}\{}\e{depth}\cw{\}}
@@ -765,6 +769,11 @@ visibly in the \i\cw{<ADDRESS>} section at the bottom of each HTML
 file. If it is set to \c{false}, they will only be included as HTML
 comments.
 
+\dt \I{\cw{\\cfg\{html-suppress-navlinks\}}}\cw{\\cfg\{html-suppress-navlinks\}\{}\e{boolean}\cw{\}}
+
+\dd If this is set to \c{true}, the usual \i{navigation links} at the
+top of each HTML file will be suppressed.
+
 \dt \I{\cw{\\cfg\{html-suppress-address\}}}\cw{\\cfg\{html-suppress-address\}\{}\e{boolean}\cw{\}}
 
 \dd If this is set to \c{true}, the \i\cw{<ADDRESS>} section at the
@@ -783,6 +792,108 @@ support this can automatically identify the \i{author} of the document.
 name="description">} tag in the output HTML files, so that browsers
 which support this can easily pick out a brief \I{description, of
 document}description of the document.
+
+\S{output-html-mshtmlhelp} Generating MS Windows \i{HTML Help}
+
+The HTML files output from Halibut's HTML back end can be used as
+input to the MS Windows HTML Help compiler. In order to do this, you
+also need some auxiliary files: a project file, and (probably) a
+contents file and an index file. Halibut can optionally generate
+those as well.
+
+To enable the generation of MS HTML Help auxiliary files, use the
+following configuration directives:
+
+\dt \I\cw{\\cfg\{html-mshtmlhelp-project\}}\cw{\\cfg\{html-mshtmlhelp-project\}\{}\e{filename}\cw{\}}
+
+\dd Instructs Halibut to output an HTML Help project file with the
+specified name. You will almost certainly want the filename to end
+in the extension \c{.hhp} (although Halibut will not enforce this).
+If you use this option, you must also use the
+\cw{html-mshtmlhelp-chm} option to specify the desired name of the
+compiled help file.
+
+\dt \I\cw{\\cfg\{html-mshtmlhelp-chm\}}\cw{\\cfg\{html-mshtmlhelp-chm\}\{}\e{filename}\cw{\}}
+
+\dd Specifies the desired name of the compiled HTML Help file. You
+will almost certainly want this to have the extension \c{.chm}
+(although Halibut will not enforce this). The name you specify here
+will be written into the help project file. If you specify this
+option, you must also use the \cw{html-mshtmlhelp-project} option to
+request a help project file in the first place.
+
+\dt \I\cw{\\cfg\{html-mshtmlhelp-contents\}}\cw{\\cfg\{html-mshtmlhelp-contents\}\{}\e{filename}\cw{\}}
+
+\dd Instructs Halibut to output an HTML Help contents file with the
+specified name, and refer to it in the help project file. You will
+almost certainly want the filename to end in the extension \c{.hhc}
+(although Halibut will not enforce this). This option will be
+ignored if you have not also specified a help project file.
+
+\lcont{
+
+Creating a contents file like this causes the HTML Help viewer to
+display a contents tree in the pane to the left of the main text
+window. You can choose to generate an HTML Help project without this
+feature, in which case the user will still be able to navigate
+around the document by using the ordinary internal links in the HTML
+files themselves just as if it were a web page. However, using a
+contents file is recommended.
+
+}
+
+\dt \I\cw{\\cfg\{html-mshtmlhelp-index\}}\cw{\\cfg\{html-mshtmlhelp-index\}\{}\e{filename}\cw{\}}
+
+\dd Instructs Halibut to output an HTML Help index file with the
+specified name, and refer to it in the help project file. You will
+almost certainly want the filename to end in the extension \c{.hhk}
+(although Halibut will not enforce this). This option will be
+ignored if you have not also specified a help project file.
+
+\lcont{
+
+Specifying this option suppresses the generation of an HTML-based
+index file (see \cw{\\cfg\{html-index-filename\}} in
+\k{output-html-file}).
+
+Creating an index file like this causes the HTML Help viewer to
+provide a list of index terms in a pane to the left of the main text
+window. You can choose to generate an HTML Help project without this
+feature, in which case a conventional HTML index will be generated
+instead (assuming you have any index terms at all defined) and the
+user will still be able to use that. However, using an index file is
+recommended.
+
+Halibut will not output an index file at all, or link to one from
+the help project file, if your document contains no index entries.
+
+}
+
+If you use the above options, Halibut will output a help project
+file which you should be able to feed straight to the command-line
+MS HTML Help compiler (\cw{HHC.EXE}), or load into the MS HTML Help
+Workshop (\cw{HHW.EXE}).
+
+You may also wish to alter other HTML configuration options to make
+the resulting help file look more like a help file and less like a
+web page. A suggested set of additional configuration options for
+HTML Help is as follows:
+
+\b \cw{\\cfg\{html-leaf-level\}\{infinite\}}, because HTML Help
+works best with lots of small files (\q{topics}) rather than a few
+large ones. In particular, the contents and index mechanisms can
+only reference files, not subsections within files.
+
+\b \cw{\\cfg\{html-leaf-contains-contents\}\{false\}}, to suppress
+the contents list above the main text of each bottom-level file.
+
+\b \cw{\\cfg\{html-suppress-navlinks\}\{true\}}, because HTML Help
+has its own navigation facilities and it looks a bit strange to
+duplicate them.
+
+\b \cw{\\cfg\{html-suppress-address\}\{true\}}, because the
+\cw{<address>} section makes less sense in a help file than it does
+on a web page.
 
 \S{output-html-defaults} Default settings
 
@@ -847,12 +958,19 @@ The \i{default settings} for Halibut's HTML output format are:
 \H{output-whlp} Windows Help
 
 This output format generates data that can be used by the \i{Windows
-Help} program \cw{WINHELP.EXE}. There are two actual files
+Help} program \cw{WINHLP32.EXE}. There are two actual files
 generated, one ending in \c{.hlp} and the other ending in \c{.cnt}.
 
-Currently, the output is hardcoded to be in the \q{\i{Win1252}}
-character set. (If anyone knows how character sets are encoded in
-Windows Help, we'd appreciate help.)
+Note that as of 2006, MS is discontinuing the Windows Help format in
+favour of the newer HTML Help format (\c{.chm} files). Halibut is
+not currently able to generate \c{.chm} files directly, but its HTML
+back end can write out project files suitable for use as input to
+the MS HTML Help compiler. See \k{output-html-mshtmlhelp} for more
+information on this.
+
+Currently, the Windows Help output is hardcoded to be in the
+\q{\i{Win1252}} character set. (If anyone knows how character sets
+are encoded in Windows Help files, we'd appreciate help.)
 
 The Windows Help output format supports the following configuration
 directives:

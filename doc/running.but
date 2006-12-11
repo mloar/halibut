@@ -14,18 +14,20 @@ This will generate a large set of \i{output files}:
 \b \i\c{output.txt} will be a \i{plain text} version of the input
 document.
 
-\b \i\c{output.hlp} and \i\c{output.cnt} will be a \i{Windows Help}
-version of the same thing. (Most of the text is in \c{output.hlp};
-\c{output.cnt} contains additional contents data used by the Windows
-help topic selector. If you lose the latter, the former should still
-be usable, but it will look less modern.)
+\b \i\c{output.hlp} and \i\c{output.cnt} will be an old-style
+\i{Windows Help} version of the same thing. (Most of the text is in
+\c{output.hlp}; \c{output.cnt} contains additional contents data
+used by the Windows help topic selector. If you lose the latter, the
+former should still be usable, but it will look less modern.)
 
 \lcont{
-Note that Halibut does not require any external software such as a
-\i{Help compiler}. It \e{directly} generates Windows Help files, and
-therefore it doesn't need to be run on Windows to do so: it can
-generate them even when run from an automated script on a Unix
-machine.
+
+Note that to do this Halibut does not require any external software
+such as a \i{Help compiler}. It \e{directly} generates old-style
+Windows Help files, and therefore it doesn't need to be run on
+Windows to do so: it can generate them even when run from an
+automated script on a Unix machine.
+
 }
 
 \b \c{output.1} will be a Unix \i{\cw{man} page}.
@@ -81,9 +83,10 @@ line, using the \c{-C} option).
 
 \dt \i\cw{--winhelp}[\cw{=}\e{filename}]
 
-\dd Specifies that you want to generate Windows Help output. You can
-optionally specify a file name (e.g. \c{--winhelp=myfile.hlp}), in
-which case Halibut will change the name of the output file as well.
+\dd Specifies that you want to generate old-style Windows Help
+output. You can optionally specify a file name (e.g.
+\c{--winhelp=myfile.hlp}), in which case Halibut will change the
+name of the output file as well.
 
 \lcont{
 

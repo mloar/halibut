@@ -3,6 +3,12 @@
 \IM{Windows Help} Windows Help
 \IM{Windows Help} Help, Windows
 
+\IM{HTML Help} HTML Help
+\IM{HTML Help} Windows HTML Help
+\IM{HTML Help} MS HTML Help
+\IM{HTML Help} Microsoft HTML Help
+\IM{HTML Help} \cw{.chm} files
+
 \IM{Help compiler} Help compiler, lack of need for
 
 \IM{plain text} plain text
@@ -326,12 +332,33 @@ configuration directive
 \IM{\\cfg\{html-suppress-address\}}
 \cw{\\cfg\{html-suppress-address\}}
 
+\IM{\\cfg\{html-suppress-navlinks\}} \c{html-suppress-navlinks}
+configuration directive
+\IM{\\cfg\{html-suppress-navlinks\}}
+\cw{\\cfg\{html-suppress-navlinks\}}
+
 \IM{\\cfg\{html-author\}} \c{html-author} configuration directive
 \IM{\\cfg\{html-author\}} \cw{\\cfg\{html-author\}}
 
 \IM{\\cfg\{html-description\}} \c{html-description} configuration
 directive
 \IM{\\cfg\{html-description\}} \cw{\\cfg\{html-description\}}
+
+\IM{\\cfg\{html-mshtmlhelp-project\}} \c{html-mshtmlhelp-project}
+configuration directive
+\IM{\\cfg\{html-mshtmlhelp-project\}} \cw{\\cfg\{html-mshtmlhelp-project\}}
+
+\IM{\\cfg\{html-mshtmlhelp-chm\}} \c{html-mshtmlhelp-chm}
+configuration directive
+\IM{\\cfg\{html-mshtmlhelp-chm\}} \cw{\\cfg\{html-mshtmlhelp-chm\}}
+
+\IM{\\cfg\{html-mshtmlhelp-contents\}} \c{html-mshtmlhelp-contents}
+configuration directive
+\IM{\\cfg\{html-mshtmlhelp-contents\}} \cw{\\cfg\{html-mshtmlhelp-contents\}}
+
+\IM{\\cfg\{html-mshtmlhelp-index\}} \c{html-mshtmlhelp-index}
+configuration directive
+\IM{\\cfg\{html-mshtmlhelp-index\}} \cw{\\cfg\{html-mshtmlhelp-index\}}
 
 \IM{\\cfg\{winhelp-topic\}} \c{winhelp-topic} configuration directive
 \IM{\\cfg\{winhelp-topic\}} \cw{\\cfg\{winhelp-topic\}}
