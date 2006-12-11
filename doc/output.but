@@ -1347,7 +1347,7 @@ and no \cw{\\cfg\{info-dir-entry\}} directives.
 
 \H{output-paper} Paper formats
 
-These output formats (currently PostScript and PDF) generate printable
+These output formats (currently PDF and PostScript) generate printable
 manuals. As such, they share a number of configuration directives.
 
 \S{output-pdf} \i{PDF}
