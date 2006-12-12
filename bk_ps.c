@@ -70,7 +70,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	/* XXX This may request the same font multiple times. */
 	if (!fe->font->info->fp)
 	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
-    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 2\n");
+    fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 3\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
 	if (fe->font->info->fp)
@@ -78,7 +78,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%EndComments\n");
 
     fprintf(fp, "%%%%BeginProlog\n");
-    fprintf(fp, "%%%%BeginResource: procset Halibut 0 2\n");
+    fprintf(fp, "%%%%BeginResource: procset Halibut 0 3\n");
     /*
      * Supply a prologue function which allows a reasonably
      * compressed representation of the text on the pages.
@@ -108,6 +108,8 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
      * "p" generates a named destination referencing this page.
      * "x" generates a link to a named destination.
      * "u" generates a link to a URI.
+     * "o" generates an outline entry.
+     * "m" generates a general pdfmark.
      *
      * They all do nothing if pdfmark is undefined.
      */
@@ -120,10 +122,16 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	    "  /u { 2 dict dup /Subtype /URI put dup /URI 4 -1 roll put\n"
 	    "       [ /Action 3 -1 roll /Rect 5 -1 roll /Border [0 0 0]\n"
 	    "       /Subtype /Link /ANN pdfmark } bind def\n"
-	    "} {\n"
+	    "  /o { [ /Count 3 -1 roll /Dest 5 -1 roll /Title 7 -1 roll\n"
+	    "       /OUT pdfmark } bind def\n"
+	    "  /m /pdfmark load def\n"
+	    "}\n");
+    fprintf(fp, "{\n"
 	    "  /p { pop } bind def\n"
 	    "  /x { pop pop } bind def\n"
 	    "  /u /x load def\n"
+	    "  /o { pop pop pop } bind def\n"
+	    "  /m /cleartomark load def\n"
 	    "} ifelse\n");
 
     fprintf(fp, "%%%%EndResource\n");
@@ -163,9 +171,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	     doc->paper_height / FUNITS_PER_PT);
     ps_token(fp, &cc, "} if\n");
 
-    /* Outline etc, only if pdfmark is supported */
-    ps_token(fp, &cc, "/pdfmark where { pop %% if\n");
-    ps_token(fp, &cc, "  [/PageMode/UseOutlines/DOCVIEW pdfmark\n");
+    ps_token(fp, &cc, "[/PageMode/UseOutlines/DOCVIEW m\n");
     noe = doc->n_outline_elements;
     for (oe = doc->outline_elements; noe; oe++, noe--) {
 	char *title;
@@ -173,9 +179,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
 	title = pdf_outline_convert(oe->pdata->outline_title, &titlelen);
 	if (oe->level == 0) {
-	    ps_token(fp, &cc, "  [/Title");
+	    ps_token(fp, &cc, "[/Title");
 	    ps_string_len(fp, &cc, title, titlelen);
-	    ps_token(fp, &cc, "/DOCINFO pdfmark\n");
+	    ps_token(fp, &cc, "/DOCINFO m\n");
 	}
 
 	count = 0;
@@ -184,13 +190,11 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		count++;
 	if (oe->level > 0) count = -count;
 
-	ps_token(fp, &cc, "  [/Title");
 	ps_string_len(fp, &cc, title, titlelen);
 	sfree(title);
-	ps_token(fp, &cc, "/Dest%s/Count %d/OUT pdfmark\n",
+	ps_token(fp, &cc, "%s %d o\n",
 		(char *)oe->pdata->first->page->spare, count);
     }
-    ps_token(fp, &cc, "} if\n");
 
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
