@@ -3,12 +3,19 @@
  */
 
 #include <assert.h>
+#include <stdarg.h>
 #include "halibut.h"
 #include "paper.h"
 
+/* Ideal number of characters per line, for use in PostScript code */
+#define PS_WIDTH 79
+/* Absolute maxiumum characters per line, for use in DSC comments */
+#define PS_MAXWIDTH 255
+
 static void ps_comment(FILE *fp, char const *leader, word *words);
-static void ps_string_len(FILE *fp, char const *str, int len);
-static void ps_string(FILE *fp, char const *str);
+static void ps_token(FILE *fp, int *cc, char const *fmt, ...);
+static void ps_string_len(FILE *fp, int *cc, char const *str, int len);
+static void ps_string(FILE *fp, int *cc, char const *str);
 
 paragraph *ps_config_filename(char *filename)
 {
@@ -27,7 +34,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     paragraph *p;
     outline_element *oe;
     int noe;
-
+    int cc; /* Character count on current line */
 
     IGNORE(keywords);
     IGNORE(idx);
@@ -143,21 +150,22 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	if (p->type == para_VersionID)
 	    ps_comment(fp, "% ", p->words);
 
+    cc = 0;
     /*
      * Request the correct page size.  We might want to bracket this
      * with "%%BeginFeature: *PageSize A4" or similar, and "%%EndFeature",
      * but that would require us to have a way of getting the name of
      * the page size given its dimensions.
      */
-    fprintf(fp, "/setpagedevice where {\n");
-    fprintf(fp, "  pop 2 dict dup /PageSize [%g %g] put setpagedevice\n",
-	    doc->paper_width / FUNITS_PER_PT,
-	    doc->paper_height / FUNITS_PER_PT);
-    fprintf(fp, "} if\n");
+    ps_token(fp, &cc, "/setpagedevice where {\n");
+    ps_token(fp, &cc, "  pop 2 dict dup /PageSize [%g %g] put setpagedevice\n",
+	     doc->paper_width / FUNITS_PER_PT,
+	     doc->paper_height / FUNITS_PER_PT);
+    ps_token(fp, &cc, "} if\n");
 
     /* Outline etc, only if pdfmark is supported */
-    fprintf(fp, "/pdfmark where { pop %% if\n");
-    fprintf(fp, "  [/PageMode/UseOutlines/DOCVIEW pdfmark\n");
+    ps_token(fp, &cc, "/pdfmark where { pop %% if\n");
+    ps_token(fp, &cc, "  [/PageMode/UseOutlines/DOCVIEW pdfmark\n");
     noe = doc->n_outline_elements;
     for (oe = doc->outline_elements; noe; oe++, noe--) {
 	char *title;
@@ -165,9 +173,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
 	title = pdf_outline_convert(oe->pdata->outline_title, &titlelen);
 	if (oe->level == 0) {
-	    fprintf(fp, "  [/Title");
-	    ps_string_len(fp, title, titlelen);
-	    fprintf(fp, "/DOCINFO pdfmark\n");
+	    ps_token(fp, &cc, "  [/Title");
+	    ps_string_len(fp, &cc, title, titlelen);
+	    ps_token(fp, &cc, "/DOCINFO pdfmark\n");
 	}
 
 	count = 0;
@@ -176,13 +184,13 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		count++;
 	if (oe->level > 0) count = -count;
 
-	fprintf(fp, "  [/Title");
-	ps_string_len(fp, title, titlelen);
+	ps_token(fp, &cc, "  [/Title");
+	ps_string_len(fp, &cc, title, titlelen);
 	sfree(title);
-	fprintf(fp, "/Dest%s/Count %d/OUT pdfmark\n",
+	ps_token(fp, &cc, "/Dest%s/Count %d/OUT pdfmark\n",
 		(char *)oe->pdata->first->page->spare, count);
     }
-    fprintf(fp, "} if\n");
+    ps_token(fp, &cc, "} if\n");
 
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
@@ -213,17 +221,17 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	sprintf(fname, "f%d", font_index++);
 	fe->name = dupstr(fname);
 
-	fprintf(fp, "/%s findfont dup length dict begin\n",
+	ps_token(fp, &cc, "/%s findfont dup length dict begin\n",
 	    fe->font->info->name);
-	fprintf(fp, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
-	fprintf(fp, "/Encoding [\n");
+	ps_token(fp, &cc, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
+	ps_token(fp, &cc, "/Encoding [\n");
 	for (i = 0; i < 256; i++)
-	    fprintf(fp, "/%s%c", fe->vector[i] ? fe->vector[i] : ".notdef",
-		    i % 4 == 3 ? '\n' : ' ');
-	fprintf(fp, "] def\n");
-	fprintf(fp, "currentdict end\n");
-	fprintf(fp, "/fontname-%s exch definefont /%s exch def\n\n",
-	       fe->name, fe->name);
+	    ps_token(fp, &cc, "/%s",
+		     fe->vector[i] ? fe->vector[i] : ".notdef");
+	ps_token(fp, &cc, "] def\n");
+	ps_token(fp, &cc, "currentdict end\n");
+	ps_token(fp, &cc, "/fontname-%s exch definefont /%s exch def\n",
+		 fe->name, fe->name);
     }
     fprintf(fp, "%%%%EndSetup\n");
 
@@ -240,22 +248,23 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
 	pageno++;
 	fprintf(fp, "%%%%Page: %d %d\n", pageno, pageno);
-	fprintf(fp, "save %s p\n", (char *)page->spare);
+	cc = 0;
+	ps_token(fp, &cc, "save %s p\n", (char *)page->spare);
 	
 	for (xr = page->first_xref; xr; xr = xr->next) {
-	    fprintf(fp, "[%g %g %g %g]",
+	    ps_token(fp, &cc, "[%g %g %g %g]",
 		    xr->lx/FUNITS_PER_PT, xr->by/FUNITS_PER_PT,
 		    xr->rx/FUNITS_PER_PT, xr->ty/FUNITS_PER_PT);
 	    if (xr->dest.type == PAGE) {
-		fprintf(fp, "%s x\n", (char *)xr->dest.page->spare);
+		ps_token(fp, &cc, "%s x\n", (char *)xr->dest.page->spare);
 	    } else {
-		ps_string(fp, xr->dest.url);
-		fprintf(fp, "u\n");
+		ps_string(fp, &cc, xr->dest.url);
+		ps_token(fp, &cc, "u\n");
 	    }
 	}
 
 	for (r = page->first_rect; r; r = r->next) {
-	    fprintf(fp, "%g %g %g %g r\n",
+	    ps_token(fp, &cc, "%g %g %g %g r\n",
 		    r->x / FUNITS_PER_PT, r->y / FUNITS_PER_PT,
 		    r->w / FUNITS_PER_PT, r->h / FUNITS_PER_PT);
 	}
@@ -272,25 +281,26 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 		 frag_end && frag_end->y == frag->y;
 		 frag_end = frag_end->next);
 
-	    fprintf(fp, "%g[", frag->y / FUNITS_PER_PT);
+	    ps_token(fp, &cc, "%g[", frag->y / FUNITS_PER_PT);
 
 	    while (frag && frag != frag_end) {
 
 		if (frag->fe != fe || frag->fontsize != fs)
-		    fprintf(fp, "[%s %d]", frag->fe->name, frag->fontsize);
+		    ps_token(fp, &cc, "[%s %d]",
+			     frag->fe->name, frag->fontsize);
 		fe = frag->fe;
 		fs = frag->fontsize;
 
-		fprintf(fp, "%g", frag->x/FUNITS_PER_PT);
-		ps_string(fp, frag->text);
+		ps_token(fp, &cc, "%g", frag->x/FUNITS_PER_PT);
+		ps_string(fp, &cc, frag->text);
 
 		frag = frag->next;
 	    }
 
-	    fprintf(fp, "]t\n");
+	    ps_token(fp, &cc, "]t\n");
 	}
 
-	fprintf(fp, "restore showpage\n");
+	ps_token(fp, &cc, "restore showpage\n");
     }
 
     fprintf(fp, "%%%%EOF\n");
@@ -300,9 +310,10 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     sfree(filename);
 }
 
-static void ps_comment(FILE *fp, char const *leader, word *words)
-{
-    fprintf(fp, "%s", leader);
+static void ps_comment(FILE *fp, char const *leader, word *words) {
+    int cc = 0;
+
+    cc += fprintf(fp, "%s", leader);
 
     for (; words; words = words->next) {
 	char *text;
@@ -332,14 +343,30 @@ static void ps_comment(FILE *fp, char const *leader, word *words)
 	    break;
 	}
 
-	fputs(text, fp);
+	if (cc + strlen(text) > PS_MAXWIDTH)
+	    text[PS_MAXWIDTH - cc] = 0;
+	cc += fprintf(fp, "%s", text);
 	sfree(text);
     }
 
     fprintf(fp, "\n");
 }
 
-static void ps_string_len(FILE *fp, char const *str, int len) {
+static void ps_token(FILE *fp, int *cc, char const *fmt, ...) {
+    va_list ap;
+
+    va_start(ap, fmt);
+    if (*cc >= PS_WIDTH - 10) {
+	fprintf(fp, "\n");
+	*cc = 0;
+    }
+    *cc += vfprintf(fp, fmt, ap);
+    /* Assume that \n only occurs at the end of a string */
+    if (fmt[strlen(fmt) - 1] == '\n')
+	*cc = 0;
+}
+
+static void ps_string_len(FILE *fp, int *cc, char const *str, int len) {
     char const *c;
     int score = 0;
 
@@ -352,26 +379,33 @@ static void ps_string_len(FILE *fp, char const *str, int len) {
 	    score -= 1;
     }
     if (score > 0) {
-	fprintf(fp, "<");
+	ps_token(fp, cc, "<");
 	for (c = str; c < str+len; c++) {
-	    fprintf(fp, "%02X", 0xFF & (int)*c);
+	    ps_token(fp, cc, "%02X", 0xFF & (int)*c);
 	}
-	fprintf(fp, ">");
+	ps_token(fp, cc, ">");
     } else {
-	fprintf(fp, "(");
+	*cc += fprintf(fp, "(");
 	for (c = str; c < str+len; c++) {
+	    if (*cc >= PS_WIDTH - 4) {
+		fprintf(fp, "\\\n");
+		*cc = 0;
+	    }
 	    if (*c < ' ' || *c > '~') {
-		fprintf(fp, "\\%03o", 0xFF & (int)*c);
+		*cc += fprintf(fp, "\\%03o", 0xFF & (int)*c);
 	    } else {
-		if (*c == '(' || *c == ')' || *c == '\\')
+		if (*c == '(' || *c == ')' || *c == '\\') {
 		    fputc('\\', fp);
+		    (*cc)++;
+		}
 		fputc(*c, fp);
+		(*cc)++;
 	    }
 	}
-	fprintf(fp, ")");
+	*cc += fprintf(fp, ")");
     }
 }
 
-static void ps_string(FILE *fp, char const *str) {
-    ps_string_len(fp, str, strlen(str));
+static void ps_string(FILE *fp, int *cc, char const *str) {
+    ps_string_len(fp, cc, str, strlen(str));
 }
