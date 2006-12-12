@@ -1633,7 +1633,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		   NULL, keywords, &conf);
 
 	fprintf(ho.fp, "\",\"%s\",\"%s\",\"%s\",,,,,,"
-		"0x42520,,0x3876,[271,372,593,566],,,,,,,0\n",
+		"0x42520,,0x3876,,,,,,,,0\n",
 		conf.hhc_filename ? conf.hhc_filename : "",
 		hhk_filename ? hhk_filename : "",
 		files.head->filename);
