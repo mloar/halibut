@@ -20,7 +20,7 @@ static void do_error(int code, va_list ap) {
     char *sp, *sp2;
     wchar_t *wsp, *wsp2;
     filepos fpos, fpos2, *fposp;
-    int flags;
+    int flags = 0;
 
     switch(code) {
       case err_nomemory:	       /* no arguments */
