@@ -4087,8 +4087,17 @@ static const struct ps_std_font_data {
     }},
 };
 
+/*
+ * Rough kludge to get ligatures in until this is all rewritten.  All
+ * the standard fonts have the same ligatures anyway.
+ */
+static ligature const ps_std_ligs[]  = {
+    {31,34,160}, {31,37,162}, {0xFFFF,0xFFFF,0xFFFF}
+};
+
 void init_std_fonts(void) {
     int i, j;
+    ligature const *lig;
     kern_pair const *kern;
     static int done = FALSE;
 
@@ -4103,6 +4112,9 @@ void init_std_fonts(void) {
 	fi->kerns = newtree234(kern_cmp);
 	for (kern = ps_std_fonts[i].kerns; kern->left != 0xFFFF; kern++)
 	    add234(fi->kerns, (void *)kern);
+	fi->ligs = newtree234(lig_cmp);
+	for (lig = ps_std_ligs; lig->left != 0xFFFF; lig++)
+	    add234(fi->ligs, (void *)lig);
 	for (j = 0; j < (int)lenof(fi->bmp); j++)
 	    fi->bmp[j] = 0xFFFF;
 	for (j = 0; j < fi->nglyphs; j++) {

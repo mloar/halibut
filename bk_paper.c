@@ -141,20 +141,24 @@ enum {
     word_PageXref = word_NotWordType + 1
 };
 
+/* Flags for render_string() */
+#define RS_NOLIG	1
+
 static font_data *make_std_font(font_list *fontlist, char const *name);
 static void wrap_paragraph(para_data *pdata, word *words,
 			   int w, int i1, int i2, paper_conf *conf);
 static page_data *page_breaks(line_data *first, line_data *last,
 			      int page_height, int ncols, int headspace);
 static int render_string(page_data *page, font_data *font, int fontsize,
-			 int x, int y, wchar_t *str);
+			 int x, int y, wchar_t *str, unsigned flags);
 static int render_line(line_data *ldata, int left_x, int top_y,
 		       xref_dest *dest, keywordlist *keywords, indexdata *idx,
 		       paper_conf *conf);
 static void render_para(para_data *pdata, paper_conf *conf,
 			keywordlist *keywords, indexdata *idx,
 			paragraph *index_placeholder, page_data *index_page);
-static int string_width(font_data *font, wchar_t const *string, int *errs);
+static int string_width(font_data *font, wchar_t const *string, int *errs,
+			unsigned flags);
 static int paper_width_simple(para_data *pdata, word *text, paper_conf *conf);
 static para_data *code_paragraph(int indent, word *words, paper_conf *conf);
 static para_data *rule_paragraph(int indent, paper_conf *conf);
@@ -182,7 +186,7 @@ static int fonts_ok(wchar_t *string, ...)
     va_start(ap, string);
     while ( (font = va_arg(ap, font_data *)) != NULL) {
 	int errs;
-	(void) string_width(font, string, &errs);
+	(void) string_width(font, string, &errs, 0);
 	if (errs) {
 	    ret = FALSE;
 	    break;
@@ -1016,13 +1020,13 @@ void *paper_pre_backend(paragraph *sourceform, keywordlist *keywords,
 
 	    width = conf->pagenum_fontsize *
 		string_width(conf->fbase.fonts[FONT_NORMAL], page->number,
-			     NULL);
+			     NULL, 0);
 
 	    render_string(page, conf->fbase.fonts[FONT_NORMAL],
 			  conf->pagenum_fontsize,
 			  conf->left_margin + (conf->base_width - width)/2,
 			  conf->bottom_margin - conf->footer_distance,
-			  page->number);
+			  page->number, 0);
 	}
     }
 
@@ -1369,6 +1373,21 @@ int kern_cmp(void *a, void *b)
     return 0;
 }
 
+int lig_cmp(void *a, void *b)
+{
+    ligature const *la = a, *lb = b;
+
+    if (la->left < lb->left)
+	return -1;
+    if (la->left > lb->left)
+	return 1;
+    if (la->right < lb->right)
+	return -1;
+    if (la->right > lb->right)
+	return 1;
+    return 0;
+}
+
 /* This wouldn't be necessary if C had closures. */
 static font_info *glyph_cmp_fi;
 
@@ -1392,7 +1411,7 @@ void font_index_glyphs(font_info *fi) {
 	  glyph_cmp);
 }
 
-int find_glyph(font_info *fi, char const *name) {
+int find_glyph(font_info const *fi, char const *name) {
     int i, j, k, r;
 
     i = -1;
@@ -1481,27 +1500,53 @@ static int find_kern(font_data *font, int lindex, int rindex)
     return kp->kern;
 }
 
-static int string_width(font_data *font, wchar_t const *string, int *errs)
+static int find_lig(font_data *font, int lindex, int rindex)
+{
+    ligature wantlig;
+    ligature const *lig;
+
+    if (lindex == 0xFFFF || rindex == 0xFFFF)
+	return 0xFFFF;
+    wantlig.left = lindex;
+    wantlig.right = rindex;
+    lig = find234(font->info->ligs, &wantlig, NULL);
+    if (lig == NULL)
+	return 0xFFFF;
+    return lig->lig;
+}
+
+static int utoglyph(font_info const *fi, wchar_t u) {
+    return (u < 0 || u > 0xFFFF ? 0xFFFF : fi->bmp[u]);
+}
+
+static int string_width(font_data *font, wchar_t const *string, int *errs,
+			unsigned flags)
 {
     int width = 0;
-    int index, oindex;
+    int nindex, index, oindex, lindex;
 
     if (errs)
 	*errs = 0;
 
     oindex = 0xFFFF;
+    index = utoglyph(font->info, *string);
     for (; *string; string++) {
-	index = (*string < 0 || *string > 0xFFFF ? 0xFFFF :
-		 font->info->bmp[*string]);
+	nindex = utoglyph(font->info, string[1]);
 
 	if (index == 0xFFFF) {
 	    if (errs)
 		*errs = 1;
 	} else {
+	    if (!(flags & RS_NOLIG) &&
+		(lindex = find_lig(font, index, nindex)) != 0xFFFF) {
+		index = lindex;
+		continue;
+	    }
 	    width += find_kern(font, oindex, index) +
 		font->info->widths[index];
 	}
 	oindex = index;
+	index = nindex;
     }
 
     return width;
@@ -1529,6 +1574,7 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces)
     struct paper_width_ctx *ctx = (struct paper_width_ctx *)vctx;
     int style, type, findex, width, errs;
     wchar_t *str;
+    unsigned flags = 0;
 
     switch (word->type) {
       case word_HyperLink:
@@ -1548,6 +1594,8 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces)
 	      style == word_Emph ? FONT_EMPH :
 	      FONT_CODE);
 
+    if (style == word_Code || style == word_WeakCode) flags |= RS_NOLIG;
+
     if (type == word_Normal) {
 	str = word->text;
     } else if (type == word_WhiteSpace) {
@@ -1564,7 +1612,7 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces)
 	    str = ctx->conf->rquote;
     }
 
-    width = string_width(ctx->pdata->fonts[findex], str, &errs);
+    width = string_width(ctx->pdata->fonts[findex], str, &errs, flags);
 
     if (errs && word->alt)
 	return paper_width_list(vctx, word->alt, NULL, nspaces);
@@ -1584,7 +1632,7 @@ static int paper_width_simple(para_data *pdata, word *text, paper_conf *conf)
     ctx.pdata = pdata;
     ctx.minspacewidth =
 	(pdata->sizes[FONT_NORMAL] *
-	 string_width(pdata->fonts[FONT_NORMAL], L" ", NULL));
+	 string_width(pdata->fonts[FONT_NORMAL], L" ", NULL, 0));
     ctx.conf = conf;
 
     return paper_width_list(&ctx, text, NULL, NULL);
@@ -1612,7 +1660,7 @@ static void wrap_paragraph(para_data *pdata, word *words,
     }
 
     spacewidth = (pdata->sizes[FONT_NORMAL] *
-		  string_width(pdata->fonts[FONT_NORMAL], L" ", NULL));
+		  string_width(pdata->fonts[FONT_NORMAL], L" ", NULL, 0));
     if (spacewidth == 0) {
 	/*
 	 * A font without a space?! Disturbing. I hope this never
@@ -1934,24 +1982,32 @@ static void add_string_to_page(page_data *page, int x, int y,
  * Returns the updated x coordinate.
  */
 static int render_string(page_data *page, font_data *font, int fontsize,
-			 int x, int y, wchar_t *str)
+			 int x, int y, wchar_t *str, unsigned flags)
 {
     char *text;
-    int textpos, textwid, kern, glyph, oglyph;
+    int textpos, textwid, kern, nglyph, glyph, oglyph, lig;
     font_encoding *subfont = NULL, *sf;
 
     text = snewn(1 + ustrlen(str), char);
     textpos = textwid = 0;
 
     glyph = 0xFFFF;
+    nglyph = utoglyph(font->info, *str);
     while (*str) {
 	oglyph = glyph;
-	glyph = (*str < 0 || *str > 0xFFFF ? 0xFFFF :
-		 font->info->bmp[*str]);
+	glyph = nglyph;
+	nglyph = utoglyph(font->info, str[1]);
 
 	if (glyph == 0xFFFF) {
 	    str++;
 	    continue;		       /* nothing more we can do here */
+	}
+
+	if (!(flags & RS_NOLIG) &&
+	    (lig = find_lig(font, glyph, nglyph)) != 0xFFFF) {
+	    nglyph = lig;
+	    str++;
+	    continue;
 	}
 
 	/*
@@ -2024,6 +2080,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 	int style, type, findex, errs;
 	wchar_t *str;
 	xref_dest dest;
+	unsigned flags = 0;
 
 	switch (text->type) {
 	    /*
@@ -2150,11 +2207,13 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		  style == word_Emph ? FONT_EMPH :
 		  FONT_CODE);
 
+	if (style == word_Code || style == word_WeakCode) flags |= RS_NOLIG;
+
 	if (type == word_Normal) {
 	    str = text->text;
 	} else if (type == word_WhiteSpace) {
 	    x += pdata->sizes[findex] *
-		string_width(pdata->fonts[findex], L" ", NULL);
+		string_width(pdata->fonts[findex], L" ", NULL, 0);
 	    if (nspaces && findex != FONT_CODE) {
 		x += (*nspace+1) * shortfall / nspaces;
 		x -= *nspace * shortfall / nspaces;
@@ -2168,7 +2227,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		str = conf->rquote;
 	}
 
-	(void) string_width(pdata->fonts[findex], str, &errs);
+	(void) string_width(pdata->fonts[findex], str, &errs, flags);
 
 	if (errs && text->alt)
 	    x = render_text(page, pdata, ldata, x, y, text->alt, NULL,
@@ -2176,7 +2235,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 			    conf);
 	else
 	    x = render_string(page, pdata->fonts[findex],
-			      pdata->sizes[findex], x, y, str);
+			      pdata->sizes[findex], x, y, str, flags);
 
 	if (*xr)
 	    (*xr)->rx = x;
@@ -2368,14 +2427,14 @@ static void render_para(para_data *pdata, paper_conf *conf,
 			      pdata->sizes[FONT_NORMAL],
 			      conf->left_margin + x,
 			      (conf->paper_height - conf->top_margin -
-			       pdata->last->ypos), L".");
+			       pdata->last->ypos), L".", 0);
 
 	render_string(pdata->last->page,
 		      pdata->fonts[FONT_NORMAL],
 		      pdata->sizes[FONT_NORMAL],
 		      conf->paper_width - conf->right_margin - wid,
 		      (conf->paper_height - conf->top_margin -
-		       pdata->last->ypos), num);
+		       pdata->last->ypos), num, 0);
     }
 
     /*

@@ -14,6 +14,7 @@
 
 typedef struct document_Tag document;
 typedef struct kern_pair_Tag kern_pair;
+typedef struct ligature_Tag ligature;
 typedef struct font_info_Tag font_info;
 typedef struct font_data_Tag font_data;
 typedef struct font_encoding_Tag font_encoding;
@@ -48,6 +49,13 @@ struct kern_pair_Tag {
     unsigned short left, right;
     /* Kern amount, in internal units. */
     int kern;
+};
+
+/*
+ * ... and this one represents a ligature.
+ */
+struct ligature_Tag {
+    unsigned short left, right, lig;
 };
 
 /*
@@ -88,6 +96,8 @@ struct font_info_Tag {
     unsigned short *glyphsbyname;
     /* A tree of kern_pairs */
     tree234 *kerns;
+    /* ... and one of ligatures */
+    tree234 *ligs;
     /*
      * For reasonably speedy lookup, we set up a 65536-element
      * table representing the Unicode BMP (I can conveniently
@@ -363,8 +373,9 @@ struct outline_element_Tag {
  * Functions exported from bk_paper.c
  */
 int kern_cmp(void *, void *); /* use when setting up kern_pairs */
+int lig_cmp(void *, void *); /* use when setting up ligatures */
 void font_index_glyphs(font_info *fi);
-int find_glyph(font_info *fi, char const *name);
+int find_glyph(font_info const *fi, char const *name);
 
 
 /*

@@ -60,6 +60,7 @@ void read_afm_file(input *in) {
     fi->widths = NULL;
     fi->fp = NULL;
     fi->kerns = newtree234(kern_cmp);
+    fi->ligs = newtree234(lig_cmp);
     fi->fontbbox[0] = fi->fontbbox[1] = fi->fontbbox[2] = fi->fontbbox[3] = 0;
     fi->capheight = fi->xheight = fi->ascent = fi->descent = 0;
     fi->stemh = fi->stemv = fi->italicangle = 0;
