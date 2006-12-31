@@ -224,6 +224,26 @@ characters, to be precise. And their code equivalents, \c{\\},
 \i\c{\{}, \c{\}}.  The ` and ' characters (grave and apostrophe)
 are special in some output formats.
 
+Now let's exercise the paper backends a little.  This is the entire
+Adobe Standard Latin character set, which should be enough to cause
+us to need to encode the main font twice:
+
+\cfg{input-charset}{ISO-8859-1}
+
+A Æ Á Â Ä À Å Ã B C Ç D E É Ê Ë È Ð F G H I Í Î Ï Ì J K L \u0141 M N Ñ O Ó Ô Ö
+\u0152 Ò Ø Õ P Q R S \u0160 T Þ U Ú Û Ü Ù V W X Y Ý \u017d
+a á â ´ ä æ à & å ^ ~ * @ ã b \\ | \{ \} [ ] ¦ \u2022
+c \u02c7 ç ¸ ¢ \u02c6 : , © ¤ d \u2020 \u2021 ° ¨ ÷ $ \u02d9 \u0131
+e é ê ë è 8 \u2026 \u2014 \u2013 = ð ! ¡ f \ufb01 5 \ufb02 \u0192 4 \u2044
+g ß \u2039 \u203a ` > « » h - \u02dd i í î ï ì j k l \u0142 < ¬
+m \u2212 \u00B5 × n 9 ñ # o ó ô ö \u0153 ò 1 ½ ¼ ¹ ª º ø õ
+p \u00b6 ( ) % \u2030 . · + ±
+q ? ¿ " \u201e \u201c \u201d \u2018 \u2019 \u201a '
+r ® \u02da s \u0161 \u00A7 ; 7 6 / £ t þ 3 ¾ ³ \u02dc \u2122 2 ²
+u ú û ü ù _ v w x y ý ÿ ¥ z \u017e 0
+
+\cfg{input-charset}{ASCII}
+
 \S{subhead} First subheading
 
 So here's a \I{subheading}\I{subsection}subsection. Just
