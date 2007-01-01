@@ -256,6 +256,20 @@ An index tag containing non-alternatived Unicode: \i{\u00BFChe?}
 
 An invisible index tag: \I{she seems to have an invisible tag}yeah.
 
+An index tag inside another tag: jackdaws love my \e{big \i{sphinx}}
+of quartz.
+
+Similarly, we should support things like hyperlinks
+\e{\W{http://www.tartarus.org/}{at the beginning} of emphasised sections},
+and \e{in the \W{http://www.tartarus.org/}{middle} of them}, and also
+\e{at the \W{http://home.att.net/~cecw/lastpage.htm}{end}}.
+
+\#{FIXME: Unfortunately, we still don't quite do the right thing with
+references:
+How about a \e{reference to \k{subhead} here}? And at
+\e{the end: \k{subhead}} and \e{\k{subhead}: the start}?
+}
+
 \S2{sub-sub}{Florble} Smaller heading still
 
 A tiny section. Awww. How cute. Actually, this one's a \e{florble},

@@ -237,16 +237,31 @@ void mark_attr_ends(word *words)
 
     wp = NULL;
     for (w = words; w; w = w->next) {
-	if (isattr(w->type)) {
-	    int before = (wp && isattr(wp->type) &&
-			  sameattr(wp->type, w->type));
-	    int after = (w->next && isattr(w->next->type) &&
-			 sameattr(w->next->type, w->type));
-	    w->aux |= (before ?
-		       (after ? attr_Always : attr_Last) :
-		       (after ? attr_First : attr_Only));
+	int both;
+	if (!isvis(w->type))
+	    /* Invisible elements should not affect this calculation */
+	    continue;
+	both = (isattr(w->type) &&
+		wp && isattr(wp->type) &&
+		sameattr(wp->type, w->type));
+	w->aux |= both ? attr_Always : attr_First;
+	if (wp && !both) {
+	    /* If previous considered word turns out to have been
+	     * the end of a run, tidy it up. */
+	    int wp_attr = attraux(wp->aux);
+	    wp->aux = (wp->aux & ~attr_mask) |
+		((wp_attr == attr_Always) ? attr_Last
+			 /* attr_First */ : attr_Only);
 	}
 	wp = w;
+    }
+
+    /* Tidy up last word touched */
+    if (wp) {
+	int wp_attr = attraux(wp->aux);
+	wp->aux = (wp->aux & ~attr_mask) |
+	    ((wp_attr == attr_Always) ? attr_Last
+		     /* attr_First */ : attr_Only);
     }
 }
 

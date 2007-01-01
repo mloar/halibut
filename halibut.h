@@ -185,6 +185,7 @@ enum {
     quote_Close = 0x0020,
     quote_mask  = 0x0030
 };
+#define isvis(x) ( ( (x) >= word_Normal && (x) <= word_LowerXref ) )
 #define isattr(x) ( ( (x) > word_Normal && (x) < word_WhiteSpace ) || \
                     ( (x) > word_WhiteSpace && (x) < word_internal_endattrs ) )
 #define sameattr(x,y) ( (((x)-(y)) & 3) == 0 )
