@@ -1810,6 +1810,16 @@ while (<M>) { /KPX (\S+) (\S+) (\S+)/ and exists $g{$1} and exists $g{$2} and
   print "{$g{$1},$g{$2},$3}, "; } print "\n"' $i |\
     fold -sw 68 | sed 's/^/    /'
   printf '    {0xFFFF,0xFFFF,0}\n};\n'
+  printf 'static const ligature %s_ligs[] = {\n' $(echo $i | tr 'A-Z\-' a-z_)
+  perl -e '
+open G, "stdchars.txt" or die;
+chomp(@g = <G>); %g = map(($_, $i++), @g);
+open M, "$ARGV[0].afm" or die;
+while (<M>) { / N (\S+) / and $l = $1;
+  while (/ L (\S+) (\S+) /g) { exists $g{$l} and exists $g{$1} and
+    exists $g{$2} and print "{$g{$l},$g{$1},$g{$2}}, "; } } print "\n"' $i |\
+    fold -sw 68 | sed 's/^/    /'
+  printf '    {0xFFFF,0xFFFF,0xFFFF}\n};\n'
 done
 
 cat <<DECL
@@ -1817,11 +1827,13 @@ cat <<DECL
 static const struct ps_std_font_data {
     char const *name;
     kern_pair const *kerns;
+    ligature const *ligs;
     int widths[lenof(ps_std_glyphs)-1];
 } ps_std_fonts[] = {
 DECL
 for i in $fonts; do
-  printf '    { "%s", %s_kerns, {\n' $i $(echo $i | tr 'A-Z\-' a-z_)
+  printf '    { "%s",\n\t%s_kerns, %s_ligs, {\n' $i \
+    $(echo $i | tr 'A-Z\-' a-z_) $(echo $i | tr 'A-Z\-' a-z_)
   perl -e '
 open M, "$ARGV[0].afm" or die;
 while (<M>) { /WX (\d+) ; N (\S+)/ and $m{$2} = $1; }
@@ -2066,6 +2078,10 @@ static const kern_pair times_roman_kerns[] = {
     {119,142,-65}, {119,194,-65}, {120,142,-65}, {120,194,-65}, 
     {0xFFFF,0xFFFF,0}
 };
+static const ligature times_roman_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 static const kern_pair times_italic_kerns[] = {
     {0,2,-30}, {0,59,-30}, {0,6,-35}, {0,14,-40}, {0,72,-40}, 
     {0,73,-40}, {0,74,-40}, {0,75,-40}, {0,76,-40}, {0,77,-40}, 
@@ -2286,6 +2302,10 @@ static const kern_pair times_italic_kerns[] = {
     {48,142,-74}, {48,194,-74}, {50,142,-55}, {50,194,-55}, 
     {119,142,-55}, {119,194,-55}, {120,142,-55}, {120,194,-55}, 
     {0xFFFF,0xFFFF,0}
+};
+static const ligature times_italic_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
 };
 static const kern_pair times_bold_kerns[] = {
     {0,2,-55}, {0,59,-55}, {0,6,-55}, {0,14,-45}, {0,72,-45}, 
@@ -2520,6 +2540,10 @@ static const kern_pair times_bold_kerns[] = {
     {120,194,-70}, 
     {0xFFFF,0xFFFF,0}
 };
+static const ligature times_bold_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 static const kern_pair times_bolditalic_kerns[] = {
     {0,2,-65}, {0,59,-65}, {0,6,-60}, {0,14,-50}, {0,72,-50}, 
     {0,73,-50}, {0,74,-50}, {0,75,-50}, {0,76,-50}, {0,77,-50}, 
@@ -2734,6 +2758,10 @@ static const kern_pair times_bolditalic_kerns[] = {
     {49,97,-10}, {49,98,-10}, {50,142,-37}, {50,194,-37}, 
     {119,142,-37}, {119,194,-37}, {120,142,-37}, {120,194,-37}, 
     {0xFFFF,0xFFFF,0}
+};
+static const ligature times_bolditalic_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
 };
 static const kern_pair helvetica_kerns[] = {
     {0,2,-30}, {0,59,-30}, {0,6,-30}, {0,14,-30}, {0,72,-30}, 
@@ -3023,6 +3051,10 @@ static const kern_pair helvetica_kerns[] = {
     {121,112,-15}, 
     {0xFFFF,0xFFFF,0}
 };
+static const ligature helvetica_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 static const kern_pair helvetica_oblique_kerns[] = {
     {0,2,-30}, {0,59,-30}, {0,6,-30}, {0,14,-30}, {0,72,-30}, 
     {0,73,-30}, {0,74,-30}, {0,75,-30}, {0,76,-30}, {0,77,-30}, 
@@ -3311,6 +3343,10 @@ static const kern_pair helvetica_oblique_kerns[] = {
     {121,112,-15}, 
     {0xFFFF,0xFFFF,0}
 };
+static const ligature helvetica_oblique_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 static const kern_pair helvetica_bold_kerns[] = {
     {0,2,-40}, {0,59,-40}, {0,6,-50}, {0,14,-40}, {0,72,-40}, 
     {0,73,-40}, {0,74,-40}, {0,75,-40}, {0,76,-40}, {0,77,-40}, 
@@ -3566,6 +3602,10 @@ static const kern_pair helvetica_bold_kerns[] = {
     {51,97,10}, {51,98,10}, {121,30,10}, {121,95,10}, {121,96,10}, 
     {121,97,10}, {121,98,10}, 
     {0xFFFF,0xFFFF,0}
+};
+static const ligature helvetica_bold_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
 };
 static const kern_pair helvetica_boldoblique_kerns[] = {
     {0,2,-40}, {0,59,-40}, {0,6,-50}, {0,14,-40}, {0,72,-40}, 
@@ -3823,29 +3863,51 @@ static const kern_pair helvetica_boldoblique_kerns[] = {
     {121,97,10}, {121,98,10}, 
     {0xFFFF,0xFFFF,0}
 };
+static const ligature helvetica_boldoblique_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 static const kern_pair courier_kerns[] = {
     
     {0xFFFF,0xFFFF,0}
+};
+static const ligature courier_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
 };
 static const kern_pair courier_oblique_kerns[] = {
     
     {0xFFFF,0xFFFF,0}
 };
+static const ligature courier_oblique_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 static const kern_pair courier_bold_kerns[] = {
     
     {0xFFFF,0xFFFF,0}
+};
+static const ligature courier_bold_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
 };
 static const kern_pair courier_boldoblique_kerns[] = {
     
     {0xFFFF,0xFFFF,0}
 };
+static const ligature courier_boldoblique_ligs[] = {
+    {31,34,160}, {31,37,162}, 
+    {0xFFFF,0xFFFF,0xFFFF}
+};
 
 static const struct ps_std_font_data {
     char const *name;
     kern_pair const *kerns;
+    ligature const *ligs;
     int widths[lenof(ps_std_glyphs)-1];
 } ps_std_fonts[] = {
-    { "Times-Roman", times_roman_kerns, {
+    { "Times-Roman",
+	times_roman_kerns, times_roman_ligs, {
 	722, 667, 667, 722, 611, 556, 722, 722, 333, 389, 722, 611, 889, 
 	722, 722, 556, 722, 667, 556, 611, 722, 722, 944, 722, 722, 611, 
 	444, 500, 444, 500, 444, 333, 500, 500, 278, 278, 500, 278, 778, 
@@ -3865,7 +3927,8 @@ static const struct ps_std_font_data {
 	180, 760, 333, 500, 278, 500, 500, 278, 250, 500, 500, 750, 300, 
 	333, 980, 500, 300, 500, 500, 500, 
     }},
-    { "Times-Italic", times_italic_kerns, {
+    { "Times-Italic",
+	times_italic_kerns, times_italic_ligs, {
 	611, 611, 667, 722, 611, 611, 722, 722, 333, 444, 667, 556, 833, 
 	667, 722, 611, 722, 611, 500, 556, 722, 611, 833, 611, 556, 556, 
 	500, 500, 444, 500, 444, 278, 500, 500, 278, 278, 444, 278, 722, 
@@ -3885,7 +3948,8 @@ static const struct ps_std_font_data {
 	214, 760, 333, 500, 333, 500, 500, 278, 250, 500, 500, 750, 300, 
 	333, 980, 500, 300, 500, 500, 500, 
     }},
-    { "Times-Bold", times_bold_kerns, {
+    { "Times-Bold",
+	times_bold_kerns, times_bold_ligs, {
 	722, 667, 722, 722, 667, 611, 778, 778, 389, 500, 778, 667, 944, 
 	722, 778, 611, 778, 722, 556, 667, 722, 722, 1000, 722, 722, 667, 
 	500, 556, 444, 556, 444, 333, 500, 556, 278, 333, 556, 278, 833, 
@@ -3905,7 +3969,8 @@ static const struct ps_std_font_data {
 	278, 747, 333, 500, 333, 500, 500, 278, 250, 500, 500, 750, 300, 
 	333, 1000, 500, 300, 500, 500, 500, 
     }},
-    { "Times-BoldItalic", times_bolditalic_kerns, {
+    { "Times-BoldItalic",
+	times_bolditalic_kerns, times_bolditalic_ligs, {
 	667, 667, 667, 722, 667, 667, 722, 778, 389, 500, 667, 611, 889, 
 	722, 722, 611, 722, 667, 556, 611, 722, 667, 889, 667, 611, 611, 
 	500, 500, 444, 500, 444, 333, 500, 556, 278, 278, 500, 278, 778, 
@@ -3925,7 +3990,8 @@ static const struct ps_std_font_data {
 	278, 747, 333, 500, 333, 500, 500, 278, 250, 500, 500, 750, 300, 
 	333, 1000, 500, 300, 500, 500, 500, 
     }},
-    { "Helvetica", helvetica_kerns, {
+    { "Helvetica",
+	helvetica_kerns, helvetica_ligs, {
 	667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 
 	722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 
 	556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 
@@ -3945,7 +4011,8 @@ static const struct ps_std_font_data {
 	191, 737, 333, 556, 278, 556, 556, 278, 278, 556, 556, 834, 333, 
 	333, 1000, 556, 333, 556, 556, 556, 
     }},
-    { "Helvetica-Oblique", helvetica_oblique_kerns, {
+    { "Helvetica-Oblique",
+	helvetica_oblique_kerns, helvetica_oblique_ligs, {
 	667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 
 	722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 
 	556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 
@@ -3965,7 +4032,8 @@ static const struct ps_std_font_data {
 	191, 737, 333, 556, 278, 556, 556, 278, 278, 556, 556, 834, 333, 
 	333, 1000, 556, 333, 556, 556, 556, 
     }},
-    { "Helvetica-Bold", helvetica_bold_kerns, {
+    { "Helvetica-Bold",
+	helvetica_bold_kerns, helvetica_bold_ligs, {
 	722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 
 	722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 
 	556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 
@@ -3985,7 +4053,8 @@ static const struct ps_std_font_data {
 	238, 737, 333, 556, 333, 556, 556, 278, 278, 556, 556, 834, 333, 
 	333, 1000, 556, 333, 556, 556, 556, 
     }},
-    { "Helvetica-BoldOblique", helvetica_boldoblique_kerns, {
+    { "Helvetica-BoldOblique",
+	helvetica_boldoblique_kerns, helvetica_boldoblique_ligs, {
 	722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 
 	722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 
 	556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 
@@ -4005,7 +4074,8 @@ static const struct ps_std_font_data {
 	238, 737, 333, 556, 333, 556, 556, 278, 278, 556, 556, 834, 333, 
 	333, 1000, 556, 333, 556, 556, 556, 
     }},
-    { "Courier", courier_kerns, {
+    { "Courier",
+	courier_kerns, courier_ligs, {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
@@ -4025,7 +4095,8 @@ static const struct ps_std_font_data {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 
     }},
-    { "Courier-Oblique", courier_oblique_kerns, {
+    { "Courier-Oblique",
+	courier_oblique_kerns, courier_oblique_ligs, {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
@@ -4045,7 +4116,8 @@ static const struct ps_std_font_data {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 
     }},
-    { "Courier-Bold", courier_bold_kerns, {
+    { "Courier-Bold",
+	courier_bold_kerns, courier_bold_ligs, {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
@@ -4065,7 +4137,8 @@ static const struct ps_std_font_data {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 
     }},
-    { "Courier-BoldOblique", courier_boldoblique_kerns, {
+    { "Courier-BoldOblique",
+	courier_boldoblique_kerns, courier_boldoblique_ligs, {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
@@ -4085,14 +4158,6 @@ static const struct ps_std_font_data {
 	600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 
 	600, 600, 600, 600, 600, 600, 600, 
     }},
-};
-
-/*
- * Rough kludge to get ligatures in until this is all rewritten.  All
- * the standard fonts have the same ligatures anyway.
- */
-static ligature const ps_std_ligs[]  = {
-    {31,34,160}, {31,37,162}, {0xFFFF,0xFFFF,0xFFFF}
 };
 
 void init_std_fonts(void) {
@@ -4113,7 +4178,7 @@ void init_std_fonts(void) {
 	for (kern = ps_std_fonts[i].kerns; kern->left != 0xFFFF; kern++)
 	    add234(fi->kerns, (void *)kern);
 	fi->ligs = newtree234(lig_cmp);
-	for (lig = ps_std_ligs; lig->left != 0xFFFF; lig++)
+	for (lig = ps_std_fonts[i].ligs; lig->left != 0xFFFF; lig++)
 	    add234(fi->ligs, (void *)lig);
 	for (j = 0; j < (int)lenof(fi->bmp); j++)
 	    fi->bmp[j] = 0xFFFF;
