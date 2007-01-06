@@ -1350,12 +1350,78 @@ static font_encoding *new_font_encoding(font_data *font)
     fe->free_pos = 0x21;
 
     for (i = 0; i < 256; i++) {
-	fe->vector[i] = NULL;
-	fe->indices[i] = -1;
+	fe->vector[i] = NOGLYPH;
 	fe->to_unicode[i] = 0xFFFF;
     }
 
     return fe;
+}
+
+static subfont_map_entry *encode_glyph_at(glyph g, wchar_t u,
+					  font_encoding *fe, int pos)
+{
+    subfont_map_entry *sme = snew(subfont_map_entry);
+
+    sme->subfont = fe;
+    sme->position = pos;
+    fe->vector[pos] = g;
+    fe->to_unicode[pos] = u;
+    add234(fe->font->subfont_map, sme);
+    return sme;
+}
+
+static int new_sfmap_cmp(void *a, void *b)
+{
+    glyph ga = *(glyph *)a;
+    subfont_map_entry *sb = b;
+    glyph gb = sb->subfont->vector[sb->position];
+
+    if (ga < gb) return -1;
+    if (ga > gb) return 1;
+    return 0;
+}
+
+static subfont_map_entry *encode_glyph(glyph g, wchar_t u, font_data *font)
+{
+    subfont_map_entry *sme;
+    int c;
+
+    sme = find234(font->subfont_map, &g, new_sfmap_cmp);
+    if (sme) return sme;
+
+    /*
+     * This character is not yet in a subfont. Assign one.
+     */
+    if (font->latest_subfont->free_pos >= 0x100)
+	font->latest_subfont = new_font_encoding(font);
+
+    c = font->latest_subfont->free_pos++;
+    if (font->latest_subfont->free_pos == 0x7F)
+	font->latest_subfont->free_pos = 0xA1;
+
+    return encode_glyph_at(g, u, font->latest_subfont, c);
+}
+
+static int sfmap_cmp(void *a, void *b)
+{
+    subfont_map_entry *sa = a, *sb = b;
+    glyph ga = sa->subfont->vector[sa->position];
+    glyph gb = sb->subfont->vector[sb->position];
+
+    if (ga < gb) return -1;
+    if (ga > gb) return 1;
+    return 0;
+}
+
+int width_cmp(void *a, void *b)
+{
+    glyph_width const *wa = a, *wb = b;
+
+    if (wa->glyph < wb->glyph)
+	return -1;
+    if (wa->glyph > wb->glyph)
+	return 1;
+    return 0;
 }
 
 int kern_cmp(void *a, void *b)
@@ -1388,50 +1454,12 @@ int lig_cmp(void *a, void *b)
     return 0;
 }
 
-/* This wouldn't be necessary if C had closures. */
-static font_info *glyph_cmp_fi;
-
-static int glyph_cmp(void const *a, void const *b)
-{
-    return strcmp(glyph_cmp_fi->glyphs[*(unsigned short *)a],
-		  glyph_cmp_fi->glyphs[*(unsigned short *)b]);
-}
-
-/*
- * Set up the glyphsbyname index for a font.
- */
-void font_index_glyphs(font_info *fi) {
-    int i;
-
-    fi->glyphsbyname = snewn(fi->nglyphs, unsigned short);
-    for (i = 0; i < fi->nglyphs; i++)
-	fi->glyphsbyname[i] = i;
-    glyph_cmp_fi = fi;
-    qsort(fi->glyphsbyname, fi->nglyphs, sizeof(fi->glyphsbyname[0]),
-	  glyph_cmp);
-}
-
-int find_glyph(font_info const *fi, char const *name) {
-    int i, j, k, r;
-
-    i = -1;
-    j = fi->nglyphs;
-    while (j-i > 1) {
-	k = (i + j) / 2;
-	r = strcmp(fi->glyphs[fi->glyphsbyname[k]], name);
-	if (r == 0)
-	    return fi->glyphsbyname[k];
-	else if (r > 0)
-	    j = k;
-	else
-	    i = k;
-    }
-    return -1;
+static int utoglyph(font_info const *fi, wchar_t u) {
+    return (u < 0 || u > 0xFFFF ? NOGLYPH : fi->bmp[u]);
 }
 
 static font_data *make_std_font(font_list *fontlist, char const *name)
 {
-    int nglyphs;
     font_info const *fi;
     font_data *f;
     font_encoding *fe;
@@ -1449,8 +1477,7 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
 
     f->list = fontlist;
     f->info = fi;
-    nglyphs = f->info->nglyphs;
-    f->subfont_map = snewn(nglyphs, subfont_map_entry);
+    f->subfont_map = newtree234(sfmap_cmp);
 
     /*
      * Our first subfont will contain all of US-ASCII. This isn't
@@ -1463,34 +1490,33 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
     fe->free_pos = 0xA1;	       /* only the top half is free */
     f->latest_subfont = fe;
 
-    for (i = 0; i < nglyphs; i++) {
-	wchar_t ucs;
-	ucs = ps_glyph_to_unicode(f->info->glyphs[i]);
-	if (ucs >= 0x20 && ucs <= 0x7E) {
-	    fe->vector[ucs] = f->info->glyphs[i];
-	    fe->indices[ucs] = i;
-	    fe->to_unicode[ucs] = ucs;
-	    f->subfont_map[i].subfont = fe;
-	    f->subfont_map[i].position = ucs;
-	} else {
-	    /*
-	     * This character is not yet assigned to a subfont.
-	     */
-	    f->subfont_map[i].subfont = NULL;
-	    f->subfont_map[i].position = 0;
-	}
+    for (i = 0x21; i <= 0x7E; i++) {
+	glyph g = utoglyph(fi, i);
+	if (g != NOGLYPH)
+	    encode_glyph_at(g, i, fe, i);
     }
 
     return f;
 }
 
 /* NB: arguments are glyph numbers from font->bmp. */
+int find_width(font_data *font, glyph index)
+{
+    glyph_width wantw;
+    glyph_width const *w;
+
+    wantw.glyph = index;
+    w = find234(font->info->widths, &wantw, NULL);
+    if (!w) return 0;
+    return w->width;
+}
+
 static int find_kern(font_data *font, int lindex, int rindex)
 {
     kern_pair wantkp;
     kern_pair const *kp;
 
-    if (lindex == 0xFFFF || rindex == 0xFFFF)
+    if (lindex == NOGLYPH || rindex == NOGLYPH)
 	return 0;
     wantkp.left = lindex;
     wantkp.right = rindex;
@@ -1505,18 +1531,14 @@ static int find_lig(font_data *font, int lindex, int rindex)
     ligature wantlig;
     ligature const *lig;
 
-    if (lindex == 0xFFFF || rindex == 0xFFFF)
-	return 0xFFFF;
+    if (lindex == NOGLYPH || rindex == NOGLYPH)
+	return NOGLYPH;
     wantlig.left = lindex;
     wantlig.right = rindex;
     lig = find234(font->info->ligs, &wantlig, NULL);
     if (lig == NULL)
-	return 0xFFFF;
+	return NOGLYPH;
     return lig->lig;
-}
-
-static int utoglyph(font_info const *fi, wchar_t u) {
-    return (u < 0 || u > 0xFFFF ? 0xFFFF : fi->bmp[u]);
 }
 
 static int string_width(font_data *font, wchar_t const *string, int *errs,
@@ -1528,22 +1550,21 @@ static int string_width(font_data *font, wchar_t const *string, int *errs,
     if (errs)
 	*errs = 0;
 
-    oindex = 0xFFFF;
+    oindex = NOGLYPH;
     index = utoglyph(font->info, *string);
     for (; *string; string++) {
 	nindex = utoglyph(font->info, string[1]);
 
-	if (index == 0xFFFF) {
+	if (index == NOGLYPH) {
 	    if (errs)
 		*errs = 1;
 	} else {
 	    if (!(flags & RS_NOLIG) &&
-		(lindex = find_lig(font, index, nindex)) != 0xFFFF) {
+		(lindex = find_lig(font, index, nindex)) != NOGLYPH) {
 		index = lindex;
 		continue;
 	    }
-	    width += find_kern(font, oindex, index) +
-		font->info->widths[index];
+	    width += find_kern(font, oindex, index) + find_width(font, index);
 	}
 	oindex = index;
 	index = nindex;
@@ -1987,24 +2008,25 @@ static int render_string(page_data *page, font_data *font, int fontsize,
     char *text;
     int textpos, textwid, kern, nglyph, glyph, oglyph, lig;
     font_encoding *subfont = NULL, *sf;
+    subfont_map_entry *sme;
 
     text = snewn(1 + ustrlen(str), char);
     textpos = textwid = 0;
 
-    glyph = 0xFFFF;
+    glyph = NOGLYPH;
     nglyph = utoglyph(font->info, *str);
     while (*str) {
 	oglyph = glyph;
 	glyph = nglyph;
 	nglyph = utoglyph(font->info, str[1]);
 
-	if (glyph == 0xFFFF) {
+	if (glyph == NOGLYPH) {
 	    str++;
 	    continue;		       /* nothing more we can do here */
 	}
 
 	if (!(flags & RS_NOLIG) &&
-	    (lig = find_lig(font, glyph, nglyph)) != 0xFFFF) {
+	    (lig = find_lig(font, glyph, nglyph)) != NOGLYPH) {
 	    nglyph = lig;
 	    str++;
 	    continue;
@@ -2013,29 +2035,8 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 	/*
 	 * Find which subfont this character is going in.
 	 */
-	sf = font->subfont_map[glyph].subfont;
-
-	if (!sf) {
-	    int c;
-
-	    /*
-	     * This character is not yet in a subfont. Assign one.
-	     */
-	    if (font->latest_subfont->free_pos >= 0x100)
-		font->latest_subfont = new_font_encoding(font);
-
-	    c = font->latest_subfont->free_pos++;
-	    if (font->latest_subfont->free_pos == 0x7F)
-		font->latest_subfont->free_pos = 0xA1;
-
-	    font->subfont_map[glyph].subfont = font->latest_subfont;
-	    font->subfont_map[glyph].position = c;
-	    font->latest_subfont->vector[c] = font->info->glyphs[glyph];
-	    font->latest_subfont->indices[c] = glyph;
-	    font->latest_subfont->to_unicode[c] = *str;
-
-	    sf = font->latest_subfont;
-	}
+	sme = encode_glyph(glyph, *str, font);
+	sf = sme->subfont;
 
 	kern = find_kern(font, oglyph, glyph) * fontsize;
 
@@ -2053,8 +2054,8 @@ static int render_string(page_data *page, font_data *font, int fontsize,
 	    subfont = sf;
 	}
 
-	text[textpos++] = font->subfont_map[glyph].position;
-	textwid += font->info->widths[glyph] * fontsize;
+	text[textpos++] = sme->position;
+	textwid += find_width(font, glyph) * fontsize;
 
 	str++;
     }

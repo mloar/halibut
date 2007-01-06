@@ -12,7 +12,12 @@
 #define UNITS_PER_PT 1000
 #define FUNITS_PER_PT 1000.0
 
+/* Glyphs are represented by integer indicies into a table of names. */
+typedef unsigned short glyph;
+#define NOGLYPH 0xFFFF
+
 typedef struct document_Tag document;
+typedef struct glyph_width_Tag glyph_width;
 typedef struct kern_pair_Tag kern_pair;
 typedef struct ligature_Tag ligature;
 typedef struct font_info_Tag font_info;
@@ -42,11 +47,20 @@ struct document_Tag {
 };
 
 /*
+ * This data structure represents the normal width of a single glyph
+ * in a font.
+ */
+struct glyph_width_Tag {
+    glyph glyph;
+    int width;
+};
+
+/*
  * This data structure represents a kerning pair within a font.
  */
 struct kern_pair_Tag {
-    /* Glyph indices, in font_data.glyphs. */
-    unsigned short left, right;
+    /* Glyph indices. */
+    glyph left, right;
     /* Kern amount, in internal units. */
     int kern;
 };
@@ -55,7 +69,7 @@ struct kern_pair_Tag {
  * ... and this one represents a ligature.
  */
 struct ligature_Tag {
-    unsigned short left, right, lig;
+    glyph left, right, lig;
 };
 
 /*
@@ -81,19 +95,8 @@ struct font_info_Tag {
      * Lengths of the unencrypted and encrypted portions of the font.
      */
     long length1, length2;
-    /*
-     * An array of pointers to the available glyph names, and their
-     * corresponding character widths. These two arrays have
-     * parallel indices.
-     */
-    int nglyphs;
-    const char *const *glyphs;
-    const int *widths;
-    /*
-     * Glyph indices sorted into glyph-name order, for name-to-index
-     * mapping.
-     */
-    unsigned short *glyphsbyname;
+    /* A tree of glyph_widths */
+    tree234 *widths;
     /* A tree of kern_pairs */
     tree234 *kerns;
     /* ... and one of ligatures */
@@ -105,7 +108,7 @@ struct font_info_Tag {
      * know that no glyph in the Adobe Glyph List falls outside
      * it), whose elements are indices into the above two arrays.
      */
-    unsigned short bmp[65536];
+    glyph bmp[65536];
     /*
      * Various bits of metadata needed for the /FontDescriptor dictionary
      * in PDF.
@@ -128,12 +131,12 @@ struct font_data_Tag {
     font_info const *info;
     /*
      * At some point I'm going to divide the font into sub-fonts
-     * with largely non-overlapping encoding vectors. This array
+     * with largely non-overlapping encoding vectors. This tree
      * will track which glyphs go into which subfonts. Also here I
      * keep track of the latest subfont of any given font, so I can
      * go back and extend its encoding.
      */
-    subfont_map_entry *subfont_map;
+    tree234 *subfont_map;
     font_encoding *latest_subfont;
     /*
      * The font list to which this font belongs.
@@ -156,8 +159,7 @@ struct font_encoding_Tag {
     char *name;			       /* used by client backends */
 
     font_data *font;		       /* the parent font structure */
-    const char *vector[256];	       /* the actual encoding vector */
-    int indices[256];		       /* indices back into main font struct */
+    glyph vector[256];		       /* the actual encoding vector */
     wchar_t to_unicode[256];	       /* PDF will want to know this */
     int free_pos;		       /* space left to extend encoding */
 };
@@ -372,15 +374,16 @@ struct outline_element_Tag {
 /*
  * Functions exported from bk_paper.c
  */
+int width_cmp(void *, void *); /* use when setting up widths */
 int kern_cmp(void *, void *); /* use when setting up kern_pairs */
 int lig_cmp(void *, void *); /* use when setting up ligatures */
-void font_index_glyphs(font_info *fi);
-int find_glyph(font_info const *fi, char const *name);
-
+int find_width(font_data *, glyph);
 
 /*
  * Functions and data exported from psdata.c.
  */
+glyph glyph_intern(char const *);
+char const *glyph_extern(glyph);
 wchar_t ps_glyph_to_unicode(char const *glyph);
 extern const char *const ps_std_glyphs[];
 void init_std_fonts(void);

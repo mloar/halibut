@@ -159,14 +159,14 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 
 	for (i = 0; i < 256; i++) {
 	    char buf[20];
-	    if (!fe->vector[i])
+	    if (fe->vector[i] == NOGLYPH)
 		continue;
 	    if (i != prev + 1) {
 		sprintf(buf, "\n%d", i);
 		objtext(font, buf);
 	    }
 	    objtext(font, i % 8 ? "/" : "\n/");
-	    objtext(font, fe->vector[i]);
+	    objtext(font, glyph_extern(fe->vector[i]));
 	    prev = i;
 	}
 
@@ -190,7 +190,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    font_info const *fi = fe->font->info;
 	    int flags;
 	    for (i = 0; i < 256; i++)
-		if (fe->indices[i] >= 0) {
+		if (fe->vector[i] != NOGLYPH) {
 		    if (firstchar < 0) firstchar = i;
 		    lastchar = i;
 		}
@@ -202,10 +202,10 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(widths, "[\n");
 	    for (i = firstchar; i <= lastchar; i++) {
 		double width;
-		if (fe->indices[i] < 0)
+		if (fe->vector[i] == NOGLYPH)
 		    width = 0.0;
 		else
-		    width = fi->widths[fe->indices[i]];
+		    width = find_width(fe->font, fe->vector[i]);
 		sprintf(buf, "%g\n", 1000.0 * width / FUNITS_PER_PT);
 		objtext(widths, buf);
 	    }

@@ -55,9 +55,7 @@ void read_afm_file(input *in) {
 
     fi = snew(font_info);
     fi->name = NULL;
-    fi->nglyphs = 0;
-    fi->glyphs = NULL;
-    fi->widths = NULL;
+    fi->widths = newtree234(width_cmp);
     fi->fp = NULL;
     fi->kerns = newtree234(kern_cmp);
     fi->ligs = newtree234(lig_cmp);
@@ -153,19 +151,17 @@ void read_afm_file(input *in) {
 	    }
 	    fi->italicangle = atof(val);
 	} else if (strcmp(key, "StartCharMetrics") == 0) {
-	    char const **glyphs;
-	    int *widths;
-	    int i;
+	    int nglyphs, i;
 	    if (!(val = strtok(NULL, " \t"))) {
 		error(err_afmval, &in->pos, key, 1);
 		goto giveup;
 	    }
-	    fi->nglyphs = atoi(val);
+	    nglyphs = atoi(val);
 	    sfree(line);
-	    glyphs = snewn(fi->nglyphs, char const *);
-	    widths = snewn(fi->nglyphs, int);
-	    for (i = 0; i < fi->nglyphs; i++) {
-		glyphs[i] = NULL;
+	    for (i = 0; i < nglyphs; i++) {
+		int width = 0;
+		glyph g = NOGLYPH;
+
 		line = afm_read_line(in);
 		if (line == NULL)
 		    goto giveup;
@@ -177,14 +173,14 @@ void read_afm_file(input *in) {
 			    error(err_afmval, &in->pos, key, 1);
 			    goto giveup;
 			}
-			widths[i] = atoi(val);
+			width = atoi(val);
 		    } else if (strcmp(key, "N") == 0) {
 			if (!(val = strtok(NULL, " \t")) ||
 			    !strcmp(val, ";")) {
 			    error(err_afmval, &in->pos, key, 1);
 			    goto giveup;
 			}
-			glyphs[i] = dupstr(val);
+			g = glyph_intern(val);
 		    }
 		    do {
 			key = strtok(NULL, " \t");
@@ -192,21 +188,22 @@ void read_afm_file(input *in) {
 		    key = strtok(NULL, " \t");
 		}
 		sfree(line);
+		if (width != 0 && g != NOGLYPH) {
+		    wchar_t ucs;
+		    glyph_width *w = snew(glyph_width);
+		    w->glyph = g;
+		    w->width = width;
+		    add234(fi->widths, w);
+		    ucs = ps_glyph_to_unicode(glyph_extern(g));
+		    if (ucs < 0xFFFF)
+			fi->bmp[ucs] = g;
+		}
 	    }
 	    line = afm_read_line(in);
 	    if (!line || !afm_require_key(line, "EndCharMetrics", in))
 		goto giveup;
 	    sfree(line);
-	    fi->glyphs = glyphs;
-	    fi->widths = widths;
 
-	    for (i = 0; i < fi->nglyphs; i++) {
-		wchar_t ucs;
-		ucs = ps_glyph_to_unicode(fi->glyphs[i]);
-		if (ucs < 0xFFFF)
-		    fi->bmp[ucs] = i;
-	    }
-	    font_index_glyphs(fi);
 	} else if (strcmp(key, "StartKernPairs") == 0 ||
 		   strcmp(key, "StartKernPairs0") == 0) {
 	    int nkerns, i;
@@ -234,8 +231,8 @@ void read_afm_file(input *in) {
 			error(err_afmval, &in->pos, key, 3);
 			goto giveup;
 		    }
-		    l = find_glyph(fi, nl);
-		    r = find_glyph(fi, nr);
+		    l = glyph_intern(nl);
+		    r = glyph_intern(nr);
 		    if (l == -1 || r == -1) continue;
 		    kp = snew(kern_pair);
 		    kp->left = l;

@@ -230,8 +230,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	ps_token(fp, &cc, "{1 index /FID ne {def} {pop pop} ifelse} forall\n");
 	ps_token(fp, &cc, "/Encoding [\n");
 	for (i = 0; i < 256; i++)
-	    ps_token(fp, &cc, "/%s",
-		     fe->vector[i] ? fe->vector[i] : ".notdef");
+	    ps_token(fp, &cc, "/%s", glyph_extern(fe->vector[i]));
 	ps_token(fp, &cc, "] def\n");
 	ps_token(fp, &cc, "currentdict end\n");
 	ps_token(fp, &cc, "/fontname-%s exch definefont /%s exch def\n",
