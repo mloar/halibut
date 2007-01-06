@@ -384,7 +384,7 @@ int find_width(font_data *, glyph);
  */
 glyph glyph_intern(char const *);
 char const *glyph_extern(glyph);
-wchar_t ps_glyph_to_unicode(char const *glyph);
+wchar_t ps_glyph_to_unicode(glyph);
 extern const char *const ps_std_glyphs[];
 void init_std_fonts(void);
 const int *ps_std_font_widths(char const *fontname);

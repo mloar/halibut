@@ -1687,10 +1687,8 @@ static const unsigned short ps_codes_alphabetic[] = {
     0xFF5A, 0x305E, 0x30BE, 0x24B5, 0x0290, 0x01B6, 0x305A, 0x30BA, 
 };
 
-wchar_t ps_glyph_to_unicode(char const *glyphname)
+wchar_t ps_glyph_to_unicode(glyph g)
 {
-    glyph g = glyph_intern(glyphname);
-    
     if (g == NOGLYPH) return 0xFFFF;
     return ps_codes_alphabetic[g];
 }
@@ -4486,7 +4484,7 @@ void init_std_fonts(void) {
 	    w->glyph = glyph_intern(ps_std_glyphs[j]);
 	    w->width = ps_std_fonts[i].widths[j];
 	    add234(fi->widths, w);
-	    ucs = ps_glyph_to_unicode(ps_std_glyphs[j]);
+	    ucs = ps_glyph_to_unicode(w->glyph);
 	    assert(ucs != 0xFFFF);
 	    fi->bmp[ucs] = w->glyph;
 	}

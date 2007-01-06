@@ -194,7 +194,7 @@ void read_afm_file(input *in) {
 		    w->glyph = g;
 		    w->width = width;
 		    add234(fi->widths, w);
-		    ucs = ps_glyph_to_unicode(glyph_extern(g));
+		    ucs = ps_glyph_to_unicode(g);
 		    if (ucs < 0xFFFF)
 			fi->bmp[ucs] = g;
 		}
