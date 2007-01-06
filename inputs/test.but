@@ -244,6 +244,13 @@ u ú û ü ù _ v w x y ý ÿ ¥ z \u017e 0
 
 \cfg{input-charset}{ASCII}
 
+Testing ligatures in normal (fi), empasised (\e{fi}), code (\c{fi}) and
+weak code (\cw{fi}).  The latter two should not be ligated.
+
+\c Also in a code paragraph (fi) with bold (fi) and italic (fi).
+\e                                          bb              ii
+\c There should be no ligation there.
+
 \S{subhead} First subheading
 
 So here's a \I{subheading}\I{subsection}subsection. Just
