@@ -225,6 +225,11 @@ struct para_data_Tag {
 	JUST, LEFT, RIGHT
     } justification;
     /*
+     * Sometimes (in code paragraphs) we want to override the flags
+     * passed to render_string().
+     */
+    unsigned extraflags;
+    /*
      * For constructing the page outline.
      */
     int outline_level;		       /* 0=title 1=C 2=H 3=S 4=S2... */

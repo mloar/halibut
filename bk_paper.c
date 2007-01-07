@@ -1106,6 +1106,7 @@ static para_data *make_para_data(int ptype, int paux, int indent, int rmargin,
     pdata->rect_type = RECT_NONE;
     pdata->contents_entry = NULL;
     pdata->justification = JUST;
+    pdata->extraflags = 0;
 
     /*
      * Choose fonts for this paragraph.
@@ -2209,6 +2210,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 		  FONT_CODE);
 
 	if (style == word_Code || style == word_WeakCode) flags |= RS_NOLIG;
+	flags |= pdata->extraflags;
 
 	if (type == word_Normal) {
 	    str = text->text;
@@ -2482,6 +2484,7 @@ static para_data *code_paragraph(int indent, word *words, paper_conf *conf)
     pdata->rect_type = RECT_NONE;
     pdata->contents_entry = NULL;
     pdata->justification = LEFT;
+    pdata->extraflags = RS_NOLIG;
 
     for (; words; words = words->next) {
 	wchar_t *t, *e, *start;
@@ -2612,6 +2615,7 @@ static para_data *rule_paragraph(int indent, paper_conf *conf)
     pdata->rect_type = RECT_RULE;
     pdata->contents_entry = NULL;
     pdata->justification = LEFT;
+    pdata->extraflags = 0;
 
     standard_line_spacing(pdata, conf);
 
