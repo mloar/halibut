@@ -49,13 +49,10 @@
  * 
  *  - title pages
  * 
- *  - ability to import other Type 1 fonts
+ *  - ability to use Type 1 fonts without AFM files
  *     * we need to parse the font to extract its metrics
- *     * then we pass the font bodily to both PS and PDF so it can
- * 	 be included in the output file
  * 
  *  - character substitution for better typography?
- *     * fi, fl, ffi, ffl ligatures
  *     * use real ellipsis rather than ...
  *     * a hyphen in a word by itself might prefer to be an en-dash
  *     * (Americans might even want a convenient way to use an
