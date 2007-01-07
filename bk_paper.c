@@ -1490,7 +1490,7 @@ static font_data *make_std_font(font_list *fontlist, char const *name)
     fe->free_pos = 0xA1;	       /* only the top half is free */
     f->latest_subfont = fe;
 
-    for (i = 0x21; i <= 0x7E; i++) {
+    for (i = 0x20; i <= 0x7E; i++) {
 	glyph g = utoglyph(fi, i);
 	if (g != NOGLYPH)
 	    encode_glyph_at(g, i, fe, i);
