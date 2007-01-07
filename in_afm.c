@@ -181,6 +181,28 @@ void read_afm_file(input *in) {
 			    goto giveup;
 			}
 			g = glyph_intern(val);
+		    } else if (strcmp(key, "L") == 0) {
+			glyph succ, lig;
+			if (!(val = strtok(NULL, " \t")) ||
+			    !strcmp(val, ";")) {
+			    error(err_afmval, &in->pos, key, 1);
+			    goto giveup;
+			}
+			succ = glyph_intern(val);
+			if (!(val = strtok(NULL, " \t")) ||
+			    !strcmp(val, ";")) {
+			    error(err_afmval, &in->pos, key, 1);
+			    goto giveup;
+			}
+			lig = glyph_intern(val);
+			if (g != NOGLYPH && succ != NOGLYPH &&
+			    lig != NOGLYPH) {
+			    ligature *l = snew(ligature);
+			    l->left = g;
+			    l->right = succ;
+			    l->lig = lig;
+			    add234(fi->ligs, l);
+			}
 		    }
 		    do {
 			key = strtok(NULL, " \t");
