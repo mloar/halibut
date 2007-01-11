@@ -1440,8 +1440,11 @@ tree234 *copytree234(tree234 *t, copyfn234 copyfn, void *copyfnstate) {
     tree234 *t2;
 
     t2 = newtree234(t->cmp);
-    t2->root = copynode234(t->root, copyfn, copyfnstate);
-    t2->root->parent = NULL;
+    if (t->root) {
+	t2->root = copynode234(t->root, copyfn, copyfnstate);
+	t2->root->parent = NULL;
+    } else
+	t2->root = NULL;
 
     return t2;
 }
@@ -2122,11 +2125,12 @@ int main(void) {
     tree = newtree234(mycmp);
     cmp = mycmp;
     arraylen = 0;
-    for (i = 0; i < 16; i++) {
-	addtest(strings[i]);
+    for (i = 0; i < 17; i++) {
 	tree2 = copytree234(tree, NULL, NULL);
 	splittest(tree2, array, arraylen);
 	freetree234(tree2);
+	if (i < 16)
+	    addtest(strings[i]);
     }
     freetree234(tree);
 
