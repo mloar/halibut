@@ -87,14 +87,9 @@ struct font_info_Tag {
      */
     const char *name;
     /*
-     * The file containing this font, if any.
+     * Pointer to data about the file containing the font, if any.
      */
-    FILE *fp;
-    filepos pos;
-    /*
-     * Lengths of the unencrypted and encrypted portions of the font.
-     */
-    long length1, length2;
+    void *fontfile;
     /* A tree of glyph_widths */
     tree234 *widths;
     /* A tree of kern_pairs */
@@ -405,5 +400,6 @@ char *pdf_outline_convert(wchar_t *s, int *len);
  */
 void pf_part1(font_info *fi, char **bufp, size_t *lenp);
 void pf_part2(font_info *fi, char **bufp, size_t *lenp);
+void pf_writeps(font_info const *fi, FILE *ofp);
 
 #endif

@@ -1582,6 +1582,7 @@ struct {
 } magics[] = {
     { "%!FontType1-",     12, &read_pfa_file },
     { "%!PS-AdobeFont-",  15, &read_pfa_file },
+    { "\x80\x01",          2, &read_pfb_file },
     { "StartFontMetrics", 16, &read_afm_file },
 };
 

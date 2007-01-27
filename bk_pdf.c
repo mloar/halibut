@@ -236,7 +236,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(fontdesc, buf);
 	    sprintf(buf, "/StemV %g\n", fi->stemv);
 	    objtext(fontdesc, buf);
-	    if (fi->fp) {
+	    if (fi->fontfile) {
 		object *fontfile = new_object(&olist);
 		size_t len;
 		char *ffbuf;
@@ -487,13 +487,20 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	rdaddsc(&rs, text);
 
 	if (o->stream.text) {
+	    if (!o->main.text)
+		rdaddsc(&o->main, "<<\n");
+#ifdef PDF_NOCOMPRESS
+	    zlen = o->stream.pos;
+	    zbuf = snewn(zlen, char);
+	    memcpy(zbuf, o->stream.text, zlen);
+	    sprintf(text, "/Length %d\n>>\n", zlen);
+#else	    
 	    zcontext = deflate_compress_new(DEFLATE_TYPE_ZLIB);
 	    deflate_compress_data(zcontext, o->stream.text, o->stream.pos,
 				  DEFLATE_END_OF_DATA, &zbuf, &zlen);
 	    deflate_compress_free(zcontext);
-	    if (!o->main.text)
-		rdaddsc(&o->main, "<<\n");
 	    sprintf(text, "/Filter/FlateDecode\n/Length %d\n>>\n", zlen);
+#endif
 	    rdaddsc(&o->main, text);
 	}
 

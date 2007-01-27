@@ -68,12 +68,12 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     fprintf(fp, "%%%%DocumentNeededResources:\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
-	if (!fe->font->info->fp)
+	if (!fe->font->info->fontfile)
 	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
     fprintf(fp, "%%%%DocumentSuppliedResources: procset Halibut 0 3\n");
     for (fe = doc->fonts->head; fe; fe = fe->next)
 	/* XXX This may request the same font multiple times. */
-	if (fe->font->info->fp)
+	if (fe->font->info->fontfile)
 	    fprintf(fp, "%%%%+ font %s\n", fe->font->info->name);
     fprintf(fp, "%%%%EndComments\n");
 
@@ -198,15 +198,9 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	/* XXX This may request the same font multiple times. */
-	if (fe->font->info->fp) {
-	    char buf[512];
-	    size_t len;
+	if (fe->font->info->fontfile) {
 	    fprintf(fp, "%%%%BeginResource: font %s\n", fe->font->info->name);
-	    rewind(fe->font->info->fp);
-	    do {
-		len = fread(buf, 1, sizeof(buf), fe->font->info->fp);
-		fwrite(buf, 1, len, fp);
-	    } while (len == sizeof(buf));
+	    pf_writeps(fe->font->info, fp);
 	    fprintf(fp, "%%%%EndResource\n");
 	} else {
 	    fprintf(fp, "%%%%IncludeResource: font %s\n",

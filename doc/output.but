@@ -1673,14 +1673,15 @@ built into all PDF and most PostScript implementations.  These are:
 
 \b \cw{Courier-BoldOblique}
 
-These fonts can be used without further formality.  To use any other font,
-Halibut needs at least to know its measurements, which are provided in an
-\i{Adobe Font Metrics} (\I{AFM files}AFM) file.  Halibut can also
-\I{embedding fonts}embed
-\i{Type 1 fonts} in its PDF and PostScript output if provided with an
-ASCII-format (\I{PFA files}PFA) font file.  To provide an AFM or PFA file
-to Halibut, simply name it on Halibut's command line.  If both are named,
-the AFM file must come first.
+These fonts can be used without further formality.  To use any other
+font, Halibut needs at least to know its measurements, which are
+provided in an \i{Adobe Font Metrics} (\I{AFM files}AFM) file.
+Halibut can also \I{embedding fonts}embed \i{Type 1 fonts} in its PDF
+and PostScript output if provided with font file in either hexadecimal (\I{PFA
+files}PFA) or IBM PC (\I{PFB files}PFB) format.  To provide
+an AFM, PFA, or PFB file to Halibut, simply name it on Halibut's command
+line.  If a PFA or PFB file is specified, the corresponding AFM file
+must come first.
 
 \ii{Font sizes} are specified in PostScript \i{points} (72 to the inch).
 

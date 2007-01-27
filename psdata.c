@@ -4473,7 +4473,7 @@ void init_std_fonts(void) {
     if (done) return;
     for (i = 0; i < (int)lenof(ps_std_fonts); i++) {
 	font_info *fi = snew(font_info);
-	fi->fp = NULL;
+	fi->fontfile = NULL;
 	fi->name = ps_std_fonts[i].name;
 	fi->widths = newtree234(width_cmp);
 	for (j = 0; j < (int)lenof(fi->bmp); j++)

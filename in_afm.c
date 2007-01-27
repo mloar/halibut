@@ -56,7 +56,7 @@ void read_afm_file(input *in) {
     fi = snew(font_info);
     fi->name = NULL;
     fi->widths = newtree234(width_cmp);
-    fi->fp = NULL;
+    fi->fontfile = NULL;
     fi->kerns = newtree234(kern_cmp);
     fi->ligs = newtree234(lig_cmp);
     fi->fontbbox[0] = fi->fontbbox[1] = fi->fontbbox[2] = fi->fontbbox[3] = 0;
