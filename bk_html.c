@@ -1580,6 +1580,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
     /*
      * Output the MS HTML Help supporting files, if requested.
+     *
+     * A good unofficial reference for these is <http://chmspec.nongnu.org/>.
      */
     if (conf.hhp_filename) {
 	htmlfile *f;
@@ -1599,6 +1601,8 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 	fprintf(ho.fp,
 		"[OPTIONS]\n"
+		/* Binary TOC required for Next/Previous nav to work */
+		"Binary TOC=Yes\n"
 		"Compatibility=1.1 or later\n"
 		"Compiled file=%s\n"
 		"Default Window=main\n"
@@ -1633,7 +1637,17 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		   NULL, keywords, &conf);
 
 	fprintf(ho.fp, "\",\"%s\",\"%s\",\"%s\",,,,,,"
-		"0x42520,,0x3876,,,,,,,,0\n",
+		/* This first magic number is fsWinProperties, controlling
+		 * Navigation Pane options and the like.
+		 * Constants HHWIN_PROP_* in htmlhelp.h. */
+		"0x62520,,"
+		/* This second number is fsToolBarFlags, mainly controlling
+		 * toolbar buttons. Constants HHWIN_BUTTON_*.
+		 * NOTE: there are two pairs of bits for Next/Previous
+		 * buttons: 7/8 (which do nothing useful), and 21/22
+		 * (which work). (Neither of these are exposed in the HHW
+		 * UI, but they work fine in HH.) We use the latter. */
+		"0x60304e,,,,,,,,0\n",
 		conf.hhc_filename ? conf.hhc_filename : "",
 		hhk_filename ? hhk_filename : "",
 		files.head->filename);
