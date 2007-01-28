@@ -739,8 +739,8 @@ available variants are:
 
 \dd This directive lets you specify a \i{template}, with exactly the
 same syntax used in \cw{\\cfg\{html-template-filename\}} (see
-\k{output-html-file}), to be used for the anchor names (\i\cw{<a
-name="...">}) used to allow URLs to refer to specific sections
+\k{output-html-file}), to be used for the anchor names (\i\cw{<A
+NAME="...">}) used to allow URLs to refer to specific sections
 within a particular HTML file. So if you set this to \cq{%k},
 for example, then each individual section in your document will be
 addressable by means of a URL ending in a \c{#} followed by your
@@ -914,7 +914,7 @@ has its own navigation facilities and it looks a bit strange to
 duplicate them.
 
 \b \cw{\\cfg\{html-suppress-address\}\{true\}}, because the
-\cw{<address>} section makes less sense in a help file than it does
+\cw{<ADDRESS>} section makes less sense in a help file than it does
 on a web page.
 
 \S{output-html-defaults} Default settings

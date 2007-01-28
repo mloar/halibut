@@ -976,7 +976,7 @@ The three special paragraph types are:
 
 \dd This defines the overall title of the entire document. This
 title is treated specially in some output formats (for example, it's
-used in a \cw{<title>} tag in the HTML output), so it needs a
+used in a \cw{<TITLE>} tag in the HTML output), so it needs a
 special paragraph type to point it out.
 
 \dt \i\cw{\\copyright}
