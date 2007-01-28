@@ -769,10 +769,32 @@ visibly in the \i\cw{<ADDRESS>} section at the bottom of each HTML
 file. If it is set to \c{false}, they will only be included as HTML
 comments.
 
+\dt \I{\cw{\\cfg\{html-rellinks\}}}\cw{\\cfg\{html-rellinks\}\{}\e{boolean}\cw{\}}
+
+\dd If this is set to \c{true}, machine-readable relational links will
+be emitted in each HTML file (\I{\cw{<LINK>} tags}\cw{<LINK
+REL="}\e{next}\cw{">} and so on within the \i\cw{<HEAD>} section)
+providing links to related files. The same set of links are provided
+as in the navigation bar (with which this should not be confused).
+
+\lcont{
+
+Some browsers make use of this semantic information, for instance to
+allow easy navigation through related pages, and to prefetch the next
+page. However, many browsers ignore this markup, so it would be unwise
+to rely on it for navigation.
+
+The use and rendering of this information is entirely up to the
+browser; none of the other Halibut options for the navigation bar will
+have any effect.
+
+}
+
 \dt \I{\cw{\\cfg\{html-suppress-navlinks\}}}\cw{\\cfg\{html-suppress-navlinks\}\{}\e{boolean}\cw{\}}
 
-\dd If this is set to \c{true}, the usual \i{navigation links} at the
-top of each HTML file will be suppressed.
+\dd If this is set to \c{true}, the usual \i{navigation links} within
+the \e{body} of each HTML file (near the top of the rendered page) will
+be suppressed.
 
 \dt \I{\cw{\\cfg\{html-suppress-address\}}}\cw{\\cfg\{html-suppress-address\}\{}\e{boolean}\cw{\}}
 
@@ -951,6 +973,8 @@ The \i{default settings} for Halibut's HTML output format are:
 \c \cfg{html-version}{html4}
 \c \cfg{html-template-fragment}{%b}
 \c \cfg{html-versionid}{true}
+\c \cfg{html-include-rellinks}{false}
+\c \cfg{html-suppress-navlinks{false}
 \c \cfg{html-suppress-address}{false}
 \c \cfg{html-author}{}
 \c \cfg{html-description}{}

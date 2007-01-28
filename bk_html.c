@@ -49,6 +49,7 @@ typedef struct {
     int address_section, visible_version_id;
     int leaf_contains_contents, leaf_smallest_contents;
     int navlinks;
+    int rellinks;
     char *contents_filename;
     char *index_filename;
     char *template_filename;
@@ -259,6 +260,7 @@ static htmlconfig html_configure(paragraph *source) {
     ret.leaf_contains_contents = FALSE;
     ret.leaf_smallest_contents = 4;
     ret.navlinks = TRUE;
+    ret.rellinks = FALSE;
     ret.single_filename = dupstr("Manual.html");
     ret.contents_filename = dupstr("Contents.html");
     ret.index_filename = dupstr("IndexPage.html");
@@ -381,6 +383,8 @@ static htmlconfig html_configure(paragraph *source) {
 		ret.achapter.just_numbers = utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-suppress-navlinks")) {
 		ret.navlinks = !utob(uadv(k));
+	    } else if (!ustricmp(k, L"html-rellinks")) {
+		ret.rellinks = utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-chapter-suffix")) {
 		ret.achapter.number_suffix = uadv(k);
 	    } else if (!ustricmp(k, L"html-leaf-level")) {
@@ -956,6 +960,40 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    }
 	    element_close(&ho, "title");
 	    html_nl(&ho);
+
+	    if (conf.rellinks) {
+
+		if (prevf) {
+		    element_empty(&ho, "link");
+		    element_attr(&ho, "rel", "previous");
+		    element_attr(&ho, "href", prevf->filename);
+		    html_nl(&ho);
+		}
+
+		/* FIXME: link rel="up" */
+
+		if (f != files.head) {
+		    element_empty(&ho, "link");
+		    element_attr(&ho, "rel", "ToC");
+		    element_attr(&ho, "href", files.head->filename);
+		    html_nl(&ho);
+		}
+
+		if (has_index && files.index && f != files.index) {
+		    element_empty(&ho, "link");
+		    element_attr(&ho, "rel", "index");
+		    element_attr(&ho, "href", files.index->filename);
+		    html_nl(&ho);
+		}
+
+		if (f->next) {
+		    element_empty(&ho, "link");
+		    element_attr(&ho, "rel", "next");
+		    element_attr(&ho, "href", f->next->filename);
+		    html_nl(&ho);
+		}
+
+	    }
 
 	    if (conf.head_end)
 		html_raw(&ho, conf.head_end);

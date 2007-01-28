@@ -337,6 +337,9 @@ configuration directive
 \IM{\\cfg\{html-suppress-navlinks\}}
 \cw{\\cfg\{html-suppress-navlinks\}}
 
+\IM{\\cfg\{html-rellinks\}} \c{html-rellinks} configuration directive
+\IM{\\cfg\{html-rellinks\}} \cw{\\cfg\{html-rellinks\}}
+
 \IM{\\cfg\{html-author\}} \c{html-author} configuration directive
 \IM{\\cfg\{html-author\}} \cw{\\cfg\{html-author\}}
 
