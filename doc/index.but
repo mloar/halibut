@@ -305,6 +305,9 @@ configuration directive
 \IM{\\cfg\{html-nav-next-text\}} \c{html-nav-next-text} configuration directive
 \IM{\\cfg\{html-nav-next-text\}} \cw{\\cfg\{html-nav-next-text\}}
 
+\IM{\\cfg\{html-nav-up-text\}} \c{html-nav-up-text} configuration directive
+\IM{\\cfg\{html-nav-up-text\}} \cw{\\cfg\{html-nav-up-text\}}
+
 \IM{\\cfg\{html-nav-separator\}} \c{html-nav-separator} configuration directive
 \IM{\\cfg\{html-nav-separator\}} \cw{\\cfg\{html-nav-separator\}}
 

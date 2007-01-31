@@ -664,8 +664,10 @@ the index.
 
 \dt \I{\cw{\\cfg\{html-nav-next-text\}}}\cw{\\cfg\{html-nav-next-text\}\{}\e{text}\cw{\}}
 
-\dd The text used for the \q{previous page} and \q{next page} links on
-the navigation bar.
+\dt \I{\cw{\\cfg\{html-nav-up-text\}}}\cw{\\cfg\{html-nav-up-text\}\{}\e{text}\cw{\}}
+
+\dd The text used for the \q{previous page}, \q{next page}, and \q{up}
+links on the navigation bar.
 
 \dt \I{\cw{\\cfg\{html-nav-separator\}}}\cw{\\cfg\{html-nav-separator\}\{}\e{text}\cw{\}}
 
@@ -965,6 +967,7 @@ The \i{default settings} for Halibut's HTML output format are:
 \c \cfg{html-post-versionid}{]}
 \c \cfg{html-nav-prev-text}{Previous}
 \c \cfg{html-nav-next-text}{Next}
+\c \cfg{html-nav-up-text}{Up}
 \c \cfg{html-nav-separator}{ | }
 \c
 \c \cfg{html-output-charset}{ASCII}

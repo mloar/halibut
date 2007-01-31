@@ -61,7 +61,7 @@ typedef struct {
     char *body_tag, *nav_attr;
     wchar_t *author, *description;
     wchar_t *index_text, *contents_text, *preamble_text, *title_separator;
-    wchar_t *nav_prev_text, *nav_next_text, *nav_separator;
+    wchar_t *nav_prev_text, *nav_next_text, *nav_up_text, *nav_separator;
     wchar_t *index_main_sep, *index_multi_sep;
     wchar_t *pre_versionid, *post_versionid;
     int restrict_charset, output_charset;
@@ -282,6 +282,7 @@ static htmlconfig html_configure(paragraph *source) {
     ret.title_separator = L" - ";
     ret.nav_prev_text = L"Previous";
     ret.nav_next_text = L"Next";
+    ret.nav_up_text = L"Up";
     ret.nav_separator = L" | ";
     ret.index_main_sep = L": ";
     ret.index_multi_sep = L", ";
@@ -494,6 +495,8 @@ static htmlconfig html_configure(paragraph *source) {
 		ret.nav_prev_text = uadv(k);
 	    } else if (!ustricmp(k, L"html-nav-next-text")) {
 		ret.nav_next_text = uadv(k);
+	    } else if (!ustricmp(k, L"html-nav-up-text")) {
+		ret.nav_up_text = uadv(k);
 	    } else if (!ustricmp(k, L"html-nav-separator")) {
 		ret.nav_separator = uadv(k);
 	    } else if (!ustricmp(k, L"html-index-main-separator")) {
@@ -970,13 +973,22 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		    html_nl(&ho);
 		}
 
-		/* FIXME: link rel="up" */
-
 		if (f != files.head) {
 		    element_empty(&ho, "link");
 		    element_attr(&ho, "rel", "ToC");
 		    element_attr(&ho, "href", files.head->filename);
 		    html_nl(&ho);
+		}
+
+		if (conf.leaf_level > 0) {
+		    htmlsect *p = f->first->parent;
+		    assert(p == f->last->parent);
+		    if (p) {
+			element_empty(&ho, "link");
+			element_attr(&ho, "rel", "up");
+			element_attr(&ho, "href", p->file->filename);
+			html_nl(&ho);
+		    }
 		}
 
 		if (has_index && files.index && f != files.index) {
@@ -1056,6 +1068,22 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 		html_text(&ho, conf.contents_text);
 		if (f != files.head)
 		    element_close(&ho, "a");
+
+		/* We don't bother with "Up" links for leaf-level 1,
+		 * as they would be identical to the "Contents" links. */
+		if (conf.leaf_level >= 2) {
+		    htmlsect *p = f->first->parent;
+		    assert(p == f->last->parent);
+		    html_text(&ho, conf.nav_separator);
+		    if (p) {
+			element_open(&ho, "a");
+			element_attr(&ho, "href", p->file->filename);
+		    }
+		    html_text(&ho, conf.nav_up_text);
+		    if (p) {
+			element_close(&ho, "a");
+		    }
+		}
 
 		if (has_index && files.index) {
 		    html_text(&ho, conf.nav_separator);
