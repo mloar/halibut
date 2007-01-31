@@ -260,7 +260,7 @@ static htmlconfig html_configure(paragraph *source) {
     ret.leaf_contains_contents = FALSE;
     ret.leaf_smallest_contents = 4;
     ret.navlinks = TRUE;
-    ret.rellinks = FALSE;
+    ret.rellinks = TRUE;
     ret.single_filename = dupstr("Manual.html");
     ret.contents_filename = dupstr("Contents.html");
     ret.index_filename = dupstr("IndexPage.html");

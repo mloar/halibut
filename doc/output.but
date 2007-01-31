@@ -781,8 +781,9 @@ as in the navigation bar (with which this should not be confused).
 
 Some browsers make use of this semantic information, for instance to
 allow easy navigation through related pages, and to prefetch the next
-page. However, many browsers ignore this markup, so it would be unwise
-to rely on it for navigation.
+page. (Search engines can also make use of it.) However, many browsers
+ignore this markup, so it would be unwise to rely on it for
+navigation.
 
 The use and rendering of this information is entirely up to the
 browser; none of the other Halibut options for the navigation bar will
@@ -973,7 +974,7 @@ The \i{default settings} for Halibut's HTML output format are:
 \c \cfg{html-version}{html4}
 \c \cfg{html-template-fragment}{%b}
 \c \cfg{html-versionid}{true}
-\c \cfg{html-include-rellinks}{false}
+\c \cfg{html-rellinks}{true}
 \c \cfg{html-suppress-navlinks{false}
 \c \cfg{html-suppress-address}{false}
 \c \cfg{html-author}{}
