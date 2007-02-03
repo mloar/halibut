@@ -28,15 +28,19 @@ struct sfnt_decode_Tag {
     size_t dest_offset;
 };
 
+#if 0 /* unused */
 static void decode_uint8(void *src, void *dest) {
     *(unsigned int *)dest = *(unsigned char *)src;
 }
 #define d_uint8 decode_uint8, 1
+#endif
 
+#if 0 /* unused */
 static void decode_int8(void *src, void *dest) {
     *(int *)dest = *(signed char *)src;
 }
 #define d_int8 decode_int8, 1
+#endif
 
 static void decode_uint16(void *src, void *dest) {
     unsigned char *cp = src;
@@ -58,19 +62,25 @@ static void decode_uint32(void *src, void *dest) {
 }
 #define d_uint32 decode_uint32, 4
 
+#if 0 /* unused */
 static void decode_int32(void *src, void *dest) {
     signed char *cp = src;
     unsigned char *ucp = src;
     *(int *)dest = (cp[0] << 24) + (ucp[1] << 16) + (ucp[2] << 8)  + ucp[3];
 }
 #define d_int32 decode_int32, 4
+#endif
 
 static void decode_skip(void *src, void *dest) {
+    IGNORE(src);
+    IGNORE(dest);
     /* do nothing */
 }
 #define d_skip(n) decode_skip, (n), 0
 
 static void decode_end(void *src, void *dest) {
+    IGNORE(src);
+    IGNORE(dest);
     /* never called */
 }
 #define d_end decode_end, 0, 0
@@ -359,7 +369,8 @@ static char *sfnt_psname(font_info *fi) {
 static void sfnt_mapglyphs(sfnt *sf) {
     t_post post;
     void *ptr, *end;
-    unsigned char *sptr, tmp[256];
+    unsigned char *sptr;
+    char tmp[256];
     glyph *extraglyphs;
     unsigned nextras, i, g;
 
@@ -376,16 +387,20 @@ static void sfnt_mapglyphs(sfnt *sf) {
 	sf->glyphsbyindex = (glyph *)tt_std_glyphs;
 	break;
       case 0x00020000:
-	if ((char *)ptr + 2 > end) return;
+	if ((char *)ptr + 2 > (char *)end) return;
 	decode_uint16(ptr, &sf->nglyphs);
 	ptr = (char *)ptr + 2;
-	if ((char *)ptr + 2*sf->nglyphs > end) return;
+	if ((char *)ptr + 2*sf->nglyphs > (char *)end) return;
 	nextras = 0;
-	for (sptr = (char *)ptr + 2*sf->nglyphs; sptr < end; sptr += *sptr+1)
+	for (sptr = (unsigned char *)ptr + 2*sf->nglyphs;
+	     sptr < (unsigned char *)end;
+	     sptr += *sptr+1)
 	    nextras++;
 	extraglyphs = snewn(nextras, glyph);
 	i = 0;
-	for (sptr = (char *)ptr + 2*sf->nglyphs; sptr < end; sptr += *sptr+1) {
+	for (sptr = (unsigned char *)ptr + 2*sf->nglyphs;
+	     sptr < (unsigned char *)end;
+	     sptr += *sptr+1) {
 	    memcpy(tmp, sptr + 1, *sptr);
 	    tmp[*sptr] = 0;
 	    assert(i < nextras);
@@ -535,7 +550,7 @@ void read_sfnt_file(input *in) {
     size_t off = 0, got;
     FILE *fp = in->currfp;
     font_info *fi = snew(font_info);
-    size_t i;
+/*    size_t i; */
     void *ptr, *end;
 
     fi->name = NULL;
