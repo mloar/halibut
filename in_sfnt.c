@@ -461,9 +461,9 @@ void sfnt_getmetrics(font_info *fi) {
 /*
  * Get mapping data from 'cmap' table
  *
- * We look for either a (0, 0), (0, 1), (0, 2), (0, 3), or (3, 1) table,
- * all of these being versions of UCS-2.  We only handle format 4 of this
- * table, since that seems to be the only one in use.
+ * We look for either a (0, 3), or (3, 1) table, both of these being
+ * versions of UCS-2.  We only handle format 4 of this table, since
+ * that seems to be the only one in use.
  */
 void sfnt_getmap(font_info *fi) {
     sfnt *sf = fi->fontfile;
