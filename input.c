@@ -1584,6 +1584,8 @@ struct {
     { "%!PS-AdobeFont-",  15, &read_pfa_file },
     { "\x80\x01",          2, &read_pfb_file },
     { "StartFontMetrics", 16, &read_afm_file },
+    { "\x00\x01\x00\x00",  4, &read_sfnt_file },
+    { "true",		   4, &read_sfnt_file },
 };
 
 paragraph *read_input(input *in, indexdata *idx) {

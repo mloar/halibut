@@ -200,7 +200,10 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	/* XXX This may request the same font multiple times. */
 	if (fe->font->info->fontfile) {
 	    fprintf(fp, "%%%%BeginResource: font %s\n", fe->font->info->name);
-	    pf_writeps(fe->font->info, fp);
+	    if (fe->font->info->filetype == TYPE1)
+		pf_writeps(fe->font->info, fp);
+	    else
+		sfnt_writeps(fe->font->info, fp);
 	    fprintf(fp, "%%%%EndResource\n");
 	} else {
 	    fprintf(fp, "%%%%IncludeResource: font %s\n",

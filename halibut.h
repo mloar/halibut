@@ -404,6 +404,11 @@ void read_pfa_file(input *in);
 void read_pfb_file(input *in);
 
 /*
+ * in_sfnt.c
+ */
+void read_sfnt_file(input *in);
+
+/*
  * keywords.c
  */
 struct keywordlist_Tag {

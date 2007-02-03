@@ -197,6 +197,7 @@ static void pf_identify(t1_font *tf) {
     for (fi = all_fonts; fi; fi = fi->next) {
 	if (strcmp(fi->name, fontname) == 0) {
 	    fi->fontfile = tf;
+	    fi->filetype = TYPE1;
 	    sfree(fontname);
 	    return;
 	}

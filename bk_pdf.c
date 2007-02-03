@@ -236,7 +236,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(fontdesc, buf);
 	    sprintf(buf, "/StemV %g\n", fi->stemv);
 	    objtext(fontdesc, buf);
-	    if (fi->fontfile) {
+	    if (fi->fontfile && fi->filetype == TYPE1) {
 		object *fontfile = new_object(&olist);
 		size_t len;
 		char *ffbuf;

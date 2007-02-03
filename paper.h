@@ -90,6 +90,7 @@ struct font_info_Tag {
      * Pointer to data about the file containing the font, if any.
      */
     void *fontfile;
+    enum { TYPE1, TRUETYPE } filetype;
     /* A tree of glyph_widths */
     tree234 *widths;
     /* A tree of kern_pairs */
@@ -386,6 +387,7 @@ glyph glyph_intern(char const *);
 char const *glyph_extern(glyph);
 wchar_t ps_glyph_to_unicode(glyph);
 extern const char *const ps_std_glyphs[];
+extern glyph const tt_std_glyphs[];
 void init_std_fonts(void);
 const int *ps_std_font_widths(char const *fontname);
 const kern_pair *ps_std_font_kerns(char const *fontname);
@@ -401,5 +403,10 @@ char *pdf_outline_convert(wchar_t *s, int *len);
 void pf_part1(font_info *fi, char **bufp, size_t *lenp);
 void pf_part2(font_info *fi, char **bufp, size_t *lenp);
 void pf_writeps(font_info const *fi, FILE *ofp);
+
+/*
+ * Backend functions exported by in_sfnt.c
+ */
+void sfnt_writeps(font_info const *fi, FILE *ofp);
 
 #endif
