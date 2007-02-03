@@ -71,6 +71,7 @@ static t1_data *load_pfb_file(FILE *fp, filepos *pos) {
 	tail->data = snewn(tail->length, unsigned char);
 	if (fread(tail->data, 1, tail->length, fp) != tail->length) abort();
     }
+    tail->next = NULL;
 }
 
 static t1_data *load_pfa_file(FILE *fp, filepos *pos) {
@@ -90,6 +91,7 @@ static t1_data *load_pfa_file(FILE *fp, filepos *pos) {
     }
     ret->data = sresize(ret->data, off, unsigned char);
     ret->length = off;
+    ret->next = NULL;
     return ret;
 }
 
