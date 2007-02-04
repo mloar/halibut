@@ -1125,15 +1125,22 @@ char const **extraglyphs = NULL;
 glyph nextglyph = lenof(ps_glyphs_alphabetic);
 tree234 *extrabyname = NULL;
 
+char const *glyph_extern(glyph glyph) {
+    if (glyph == NOGLYPH) return ".notdef";
+    if (glyph < lenof(ps_glyphs_alphabetic))
+	return ps_glyphs_alphabetic[glyph];
+    else
+	return extraglyphs[glyph - lenof(ps_glyphs_alphabetic)];
+}
+
 static int glyphcmp(void *a, void *b) {
     glyph ga = *(glyph *)a, gb = *(glyph *)b;
-    return strcmp(extraglyphs[ga - lenof(ps_glyphs_alphabetic)],
-		  extraglyphs[gb - lenof(ps_glyphs_alphabetic)]);
+    return strcmp(glyph_extern(ga), glyph_extern(gb));
 }
 
 static int glyphcmp_search(void *a, void *b) {
     glyph gb = *(glyph *)b;
-    return strcmp(a, extraglyphs[gb - lenof(ps_glyphs_alphabetic)]);
+    return strcmp(a, glyph_extern(gb));
 }
 
 glyph glyph_intern(char const *glyphname) {
@@ -1168,14 +1175,6 @@ glyph glyph_intern(char const *glyphname) {
 	add234(extrabyname, gp);
     }
     return k;
-}
-
-char const *glyph_extern(glyph glyph) {
-    if (glyph == NOGLYPH) return ".notdef";
-    if (glyph < lenof(ps_glyphs_alphabetic))
-	return ps_glyphs_alphabetic[glyph];
-    else
-	return extraglyphs[glyph - lenof(ps_glyphs_alphabetic)];
 }
 
 /* ----------------------------------------------------------------------
