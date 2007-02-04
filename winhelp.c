@@ -198,9 +198,13 @@ static void whlp_file_add_char(struct file *f, int data);
 static void whlp_file_add_short(struct file *f, int data);
 static void whlp_file_add_long(struct file *f, int data);
 static void whlp_file_add_cushort(struct file *f, int data);
+#if 0 /* currently unused */
 static void whlp_file_add_csshort(struct file *f, int data);
+#endif
 static void whlp_file_add_culong(struct file *f, int data);
+#if 0 /* currently unused */
 static void whlp_file_add_cslong(struct file *f, int data);
+#endif
 static void whlp_file_fill(struct file *f, int len);
 static void whlp_file_seek(struct file *f, int pos, int whence);
 static int whlp_file_offset(struct file *f);
