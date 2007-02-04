@@ -275,7 +275,7 @@ void sfree(void *p);
 void free_word_list(word *w);
 void free_para_list(paragraph *p);
 word *dup_word_list(word *w);
-char *dupstr(char *s);
+char *dupstr(char const *s);
 
 #define snew(type) ( (type *) smalloc (sizeof (type)) )
 #define snewn(number, type) ( (type *) smalloc ((number) * sizeof (type)) )
