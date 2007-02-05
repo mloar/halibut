@@ -1,6 +1,8 @@
 # -*- sh -*-
 # Build script to build Halibut releases.
 
+module halibut
+
 ifnexist halibut/charset checkout charset halibut/charset
 
 set Ver
