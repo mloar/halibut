@@ -398,6 +398,11 @@ const kern_pair *ps_std_font_kerns(char const *fontname);
 char *pdf_outline_convert(wchar_t *s, int *len);
 
 /*
+ * Function exported from bk_ps.c
+ */
+void ps_token(FILE *fp, int *cc, char const *fmt, ...);
+
+/*
  * Backend functions exported by in_pf.c
  */
 void pf_part1(font_info *fi, char **bufp, size_t *lenp);

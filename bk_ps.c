@@ -13,7 +13,6 @@
 #define PS_MAXWIDTH 255
 
 static void ps_comment(FILE *fp, char const *leader, word *words);
-static void ps_token(FILE *fp, int *cc, char const *fmt, ...);
 static void ps_string_len(FILE *fp, int *cc, char const *str, int len);
 static void ps_string(FILE *fp, int *cc, char const *str);
 
@@ -352,7 +351,7 @@ static void ps_comment(FILE *fp, char const *leader, word *words) {
     fprintf(fp, "\n");
 }
 
-static void ps_token(FILE *fp, int *cc, char const *fmt, ...) {
+void ps_token(FILE *fp, int *cc, char const *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);

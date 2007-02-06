@@ -656,6 +656,7 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
     size_t *breaks, glyfoff, glyflen;
     void *glyfptr, *glyfend, *locaptr, *locaend;
     unsigned *loca;
+    int cc = 0;
 
     /* XXX Unclear that this is the correct format. */
     fprintf(ofp, "%%!PS-TrueTypeFont-%u-%u\n", sf->osd.scaler_type,
@@ -686,8 +687,8 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
     fprintf(ofp, "0 1 %u{currentfile token pop exch def}bind for\n",
 	sf->nglyphs - 1);
     for (i = 0; i < sf->nglyphs; i++)
-	fprintf(ofp, "/%s\n", glyph_extern(sfnt_indextoglyph(sf, i)));
-    fprintf(ofp, "end readonly def\n");
+	ps_token(ofp, &cc, "/%s", glyph_extern(sfnt_indextoglyph(sf, i)));
+    fprintf(ofp, "\nend readonly def\n");
     fprintf(ofp, "/sfnts [<");
     breaks = snewn(sf->osd.numTables + sf->nglyphs, size_t);
     for (i = 0; i < sf->osd.numTables; i++) {
