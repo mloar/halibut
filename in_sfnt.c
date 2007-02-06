@@ -683,9 +683,10 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
     }
     fprintf(ofp, "/PaintType 0 def\n");
     fprintf(ofp, "/CharStrings %u dict dup begin\n", sf->nglyphs);
+    fprintf(ofp, "0 1 %u{currentfile token pop exch def}bind for\n",
+	sf->nglyphs - 1);
     for (i = 0; i < sf->nglyphs; i++)
-	fprintf(ofp, "/%s %u def\n",
-		glyph_extern(sfnt_indextoglyph(sf, i)), i);
+	fprintf(ofp, "/%s\n", glyph_extern(sfnt_indextoglyph(sf, i)));
     fprintf(ofp, "end readonly def\n");
     fprintf(ofp, "/sfnts [<");
     breaks = snewn(sf->osd.numTables + sf->nglyphs, size_t);
