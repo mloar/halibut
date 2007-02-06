@@ -62,14 +62,12 @@ static void decode_uint32(void *src, void *dest) {
 }
 #define d_uint32 decode_uint32, 4
 
-#if 0 /* unused */
 static void decode_int32(void *src, void *dest) {
     signed char *cp = src;
     unsigned char *ucp = src;
     *(int *)dest = (cp[0] << 24) + (ucp[1] << 16) + (ucp[2] << 8)  + ucp[3];
 }
 #define d_int32 decode_int32, 4
-#endif
 
 static void decode_skip(void *src, void *dest) {
     IGNORE(src);
@@ -277,7 +275,7 @@ sfnt_decode namerecord_decode[] = {
 typedef struct t_post_Tag t_post;
 struct t_post_Tag {
     unsigned format;
-    unsigned italicAngle;
+    int italicAngle;
     int underlinePosition;
     int underlineThickness;
     unsigned isFixedPitch;
@@ -286,7 +284,7 @@ struct t_post_Tag {
 };
 sfnt_decode t_post_decode[] = {
     { d_uint32, offsetof(t_post, format) },
-    { d_uint32, offsetof(t_post, italicAngle) },
+    { d_int32,  offsetof(t_post, italicAngle) },
     { d_int16,	offsetof(t_post, underlinePosition) },
     { d_int16,	offsetof(t_post, underlineThickness) },
     { d_uint32,	offsetof(t_post, isFixedPitch) },
@@ -360,13 +358,30 @@ static char *sfnt_psname(font_info *fi) {
     return NULL;
 }
 
+static unsigned short *cmp_glyphsbyindex;
+static int glyphsbyname_cmp(void const *a, void const *b) {
+    glyph ga = cmp_glyphsbyindex[*(unsigned short *)a];
+    glyph gb = cmp_glyphsbyindex[*(unsigned short *)b];
+    if (ga < gb) return -1;
+    if (ga > gb) return 1;
+    return 0;
+}
+static int glyphsbyname_cmp_search(void const *a, void const *b) {
+    glyph ga = *(glyph *)a;
+    glyph gb = cmp_glyphsbyindex[*(unsigned short *)b];
+    if (ga < gb) return -1;
+    if (ga > gb) return 1;
+    return 0;
+}
+
 /*
  * Extract data from the 'post' table (mostly glyph mappings)
  *
  * TODO: cope better with duplicated glyph names (usually .notdef)
  * TODO: when presented with format 3.0, try to use 'CFF' if present.
  */
-static void sfnt_mapglyphs(sfnt *sf) {
+static void sfnt_mapglyphs(font_info *fi) {
+    sfnt *sf = fi->fontfile;
     t_post post;
     void *ptr, *end;
     unsigned char *sptr;
@@ -378,8 +393,10 @@ static void sfnt_mapglyphs(sfnt *sf) {
     if (!sfnt_findtable(sf, TAG_post, &ptr, &end))
 	abort();
     ptr = decode(t_post_decode, ptr, end, &post);
+    
     sf->minmem = post.minMemType42;
     sf->maxmem = post.maxMemType42;
+    fi->italicangle = post.italicAngle / 65536.0;
     if (ptr == NULL) abort();
     switch (post.format) {
       case 0x00010000:
@@ -421,6 +438,24 @@ static void sfnt_mapglyphs(sfnt *sf) {
       default:
 	abort();
     }
+    /* Construct glyphsbyname */
+    sf->glyphsbyname = snewn(sf->nglyphs, unsigned short);
+    for (i = 0; i < sf->nglyphs; i++)
+	sf->glyphsbyname[i] = i;
+    cmp_glyphsbyindex = sf->glyphsbyindex;
+    qsort(sf->glyphsbyname, sf->nglyphs, sizeof(*sf->glyphsbyname),
+	  glyphsbyname_cmp);
+}
+
+static glyph sfnt_indextoglyph(sfnt *sf, unsigned short idx) {
+    return sf->glyphsbyindex[idx];
+}
+
+static unsigned short sfnt_glyphtoindex(sfnt *sf, glyph g) {
+    cmp_glyphsbyindex = sf->glyphsbyindex;
+    return *(unsigned short *)bsearch(&g, sf->glyphsbyname, sf->nglyphs,
+				      sizeof(*sf->glyphsbyname),
+				      glyphsbyname_cmp_search);
 }
 
 /*
@@ -451,7 +486,7 @@ void sfnt_getmetrics(font_info *fi) {
 	abort();
     for (i = 0; i < sf->nglyphs; i++) {
 	glyph_width *w = snew(glyph_width);
-	w->glyph = sf->glyphsbyindex[i];
+	w->glyph = sfnt_indextoglyph(sf, i);
 	j = i < hhea.numOfLongHorMetrics ? i : hhea.numOfLongHorMetrics - 1;
 	w->width = hmtx[j] * UNITS_PER_PT / sf->head.unitsPerEm;
 	add234(fi->widths, w);
@@ -523,7 +558,7 @@ void sfnt_getmap(font_info *fi) {
 			    idx = (k + idDelta[j]) & 0xffff;
 			    if (idx != 0) {
 				if (idx > sf->nglyphs) abort();
-				fi->bmp[k] = sf->glyphsbyindex[idx];
+				fi->bmp[k] = sfnt_indextoglyph(sf, idx);
 			    }
 			}
 		    } else {
@@ -533,7 +568,7 @@ void sfnt_getmap(font_info *fi) {
 			    if (idx != 0) {
 				idx = (idx + idDelta[j]) & 0xffff;
 				if (idx > sf->nglyphs) abort();
-				fi->bmp[k] = sf->glyphsbyindex[idx];
+				fi->bmp[k] = sfnt_indextoglyph(sf, idx);
 			    }
 			}
 		    }
@@ -595,7 +630,7 @@ void read_sfnt_file(input *in) {
     if ((sf->head.version & 0xffff0000) != 0x00010000)
 	abort();
     fi->name = sfnt_psname(fi);
-    sfnt_mapglyphs(sf);
+    sfnt_mapglyphs(fi);
     sfnt_getmetrics(fi);
     sfnt_getmap(fi);
     fi->next = all_fonts;
@@ -649,7 +684,8 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
     fprintf(ofp, "/PaintType 0 def\n");
     fprintf(ofp, "/CharStrings %u dict dup begin\n", sf->nglyphs);
     for (i = 0; i < sf->nglyphs; i++)
-	fprintf(ofp, "/%s %u def\n", glyph_extern(sf->glyphsbyindex[i]), i);
+	fprintf(ofp, "/%s %u def\n",
+		glyph_extern(sfnt_indextoglyph(sf, i)), i);
     fprintf(ofp, "end readonly def\n");
     fprintf(ofp, "/sfnts [<");
     breaks = snewn(sf->osd.numTables + sf->nglyphs, size_t);
