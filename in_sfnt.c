@@ -679,7 +679,7 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
 		(double)sf->head.yMax / sf->head.unitsPerEm);
     } else {
 	/* Non-sensible font. */
-	fprintf(ofp, "/FontBBox [0 0 0 0] readonly def");
+	fprintf(ofp, "/FontBBox [0 0 0 0] readonly def\n");
     }
     fprintf(ofp, "/PaintType 0 def\n");
     fprintf(ofp, "/CharStrings %u dict dup begin\n", sf->nglyphs);
