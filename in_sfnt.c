@@ -121,6 +121,7 @@ sfnt_decode offsubdir_decode[] = {
 };
 
 #define sfnt_00010000	0x00010000
+#define TAG_OS_2	0x4f532f32
 #define TAG_cmap	0x636d6170
 #define TAG_glyf	0x676c7966
 #define TAG_head	0x68656164
@@ -144,6 +145,55 @@ sfnt_decode tabledir_decode[] = {
     { d_uint32, offsetof(tabledir, checkSum) },
     { d_uint32, offsetof(tabledir, offset) },
     { d_uint32, offsetof(tabledir, length) },
+    { d_end }
+};
+
+/* OS/2 and Windows compatibility table */
+typedef struct t_OS_2_Tag t_OS_2;
+struct t_OS_2_Tag {
+    unsigned version;
+    int sTypoAscender, sTypoDescender;
+    int sxHeight, sCapHeight;
+};
+sfnt_decode t_OS_2_v0_decode[] = {
+    { d_uint16, offsetof(t_OS_2, version) },
+    { d_skip(66) }, /* xAvgCharWidth, usWeightClass, usWidthClass, fsType, */
+    /* ySubscriptXSize, ySubscriptYSize, ySubscriptXOffset, */
+    /* ySubscriptYOffset, ySuperscriptXSize, ySuperscriptYSize, */
+    /* ySuperscriptXOffset, ySupercriptYOffset, sFamilyClass, panose, */
+    /* ulUnicodeRange1, ulUnicodeRange2, ulUnicodeRange3, ulUnicodeRange4, */
+    /* achVendID, fsSelection, usFirstCharIndex, usLastCharIndex */
+    { d_end }
+};
+sfnt_decode t_OS_2_v1_decode[] = {
+    { d_uint16, offsetof(t_OS_2, version) },
+    { d_skip(66) }, /* xAvgCharWidth, usWeightClass, usWidthClass, fsType, */
+    /* ySubscriptXSize, ySubscriptYSize, ySubscriptXOffset, */
+    /* ySubscriptYOffset, ySuperscriptXSize, ySuperscriptYSize, */
+    /* ySuperscriptXOffset, ySupercriptYOffset, sFamilyClass, panose, */
+    /* ulUnicodeRange1, ulUnicodeRange2, ulUnicodeRange3, ulUnicodeRange4, */
+    /* achVendID, fsSelection, usFirstCharIndex, usLastCharIndex */
+    { d_int16, offsetof(t_OS_2, sTypoAscender) },
+    { d_int16, offsetof(t_OS_2, sTypoDescender) },
+    { d_skip(14) }, /* sTypoLineGap, usWinAscent, usWinDescent, */
+    /* ulCodePageRange1, ulCodePageRange2 */
+    { d_end }
+};
+sfnt_decode t_OS_2_v2_decode[] = {
+    { d_uint16, offsetof(t_OS_2, version) },
+    { d_skip(66) }, /* xAvgCharWidth, usWeightClass, usWidthClass, fsType, */
+    /* ySubscriptXSize, ySubscriptYSize, ySubscriptXOffset, */
+    /* ySubscriptYOffset, ySuperscriptXSize, ySuperscriptYSize, */
+    /* ySuperscriptXOffset, ySupercriptYOffset, sFamilyClass, panose, */
+    /* ulUnicodeRange1, ulUnicodeRange2, ulUnicodeRange3, ulUnicodeRange4, */
+    /* achVendID, fsSelection, usFirstCharIndex, usLastCharIndex */
+    { d_int16, offsetof(t_OS_2, sTypoAscender) },
+    { d_int16, offsetof(t_OS_2, sTypoDescender) },
+    { d_skip(14) }, /* sTypoLineGap, usWinAscent, usWinDescent, */
+    /* ulCodePageRange1, ulCodePageRange2 */
+    { d_int16, offsetof(t_OS_2, sxHeight) },
+    { d_int16, offsetof(t_OS_2, sCapHeight) },
+    { d_skip(6) }, /* usDefaultChar, usBreakChar, usMaxContext */
     { d_end }
 };
 
@@ -459,15 +509,21 @@ static unsigned short sfnt_glyphtoindex(sfnt *sf, glyph g) {
 }
 
 /*
- * Get data from 'hhea' and 'hmtx' tables
+ * Get data from 'hhea', 'hmtx', and 'OS/2' tables
  */
 void sfnt_getmetrics(font_info *fi) {
     sfnt *sf = fi->fontfile;
     t_hhea hhea;
+    t_OS_2 OS_2;
     void *ptr, *end;
     unsigned i, j;
     unsigned *hmtx;
 
+    /* First, the bounding box from the 'head' table. */
+    fi->fontbbox[0] = sf->head.xMin * FUNITS_PER_PT /  sf->head.unitsPerEm;
+    fi->fontbbox[1] = sf->head.yMin * FUNITS_PER_PT /  sf->head.unitsPerEm;
+    fi->fontbbox[2] = sf->head.xMax * FUNITS_PER_PT /  sf->head.unitsPerEm;
+    fi->fontbbox[3] = sf->head.yMax * FUNITS_PER_PT /  sf->head.unitsPerEm;
     if (!sfnt_findtable(sf, TAG_hhea, &ptr, &end))
 	abort();
     if (decode(t_hhea_decode, ptr, end, &hhea) == NULL)
@@ -491,6 +547,23 @@ void sfnt_getmetrics(font_info *fi) {
 	w->width = hmtx[j] * UNITS_PER_PT / sf->head.unitsPerEm;
 	add234(fi->widths, w);
     }
+    /* Now see if the 'OS/2' table has any useful metrics */
+    if (!sfnt_findtable(sf, TAG_OS_2, &ptr, &end))
+	return;
+    if (decode(uint16_decode, ptr, end, &OS_2.version) == NULL)
+	return;
+    if (OS_2.version >= 2) {
+	if (decode(t_OS_2_v2_decode, ptr, end, &OS_2) == NULL)
+	    return;
+	fi->xheight = OS_2.sxHeight * FUNITS_PER_PT / sf->head.unitsPerEm;
+	fi->capheight = OS_2.sCapHeight * FUNITS_PER_PT / sf->head.unitsPerEm;
+    } else if (OS_2.version == 1) {
+	if (decode(t_OS_2_v1_decode, ptr, end, &OS_2) == NULL)
+	    return;
+    } else
+	return;
+    fi->ascent = OS_2.sTypoAscender * FUNITS_PER_PT / sf->head.unitsPerEm;
+    fi->descent = OS_2.sTypoDescender * FUNITS_PER_PT / sf->head.unitsPerEm;
 }
 
 /*
