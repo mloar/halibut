@@ -775,7 +775,7 @@ comments.
 
 \dd If this is set to \c{true}, machine-readable relational links will
 be emitted in each HTML file (\I{\cw{<LINK>} tags}\cw{<LINK
-REL="}\e{next}\cw{">} and so on within the \i\cw{<HEAD>} section)
+REL="next">} and so on within the \i\cw{<HEAD>} section)
 providing links to related files. The same set of links are provided
 as in the navigation bar (with which this should not be confused).
 
