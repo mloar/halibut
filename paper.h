@@ -393,8 +393,14 @@ const int *ps_std_font_widths(char const *fontname);
 const kern_pair *ps_std_font_kerns(char const *fontname);
 
 /*
- * Function from bk_pdf.c borrowed by bk_ps.c
+ * Functions exported from bk_pdf.c
  */
+typedef struct object_Tag object;
+typedef struct objlist_Tag objlist;
+object *new_object(objlist *list);
+void objtext(object *o, char const *text);
+void objstream(object *o, char const *text);
+void objstream_len(object *o, char const *text, size_t len);
 char *pdf_outline_convert(wchar_t *s, int *len);
 
 /*
@@ -413,5 +419,7 @@ void pf_writeps(font_info const *fi, FILE *ofp);
  * Backend functions exported by in_sfnt.c
  */
 void sfnt_writeps(font_info const *fi, FILE *ofp);
+void sfnt_cmap(font_encoding *fe, object *);
+void sfnt_data(font_info *fi, char **bufp, size_t *lenp);
 
 #endif

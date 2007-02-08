@@ -14,9 +14,6 @@ paragraph *pdf_config_filename(char *filename)
     return cmdline_cfg_simple("pdf-filename", filename, NULL);
 }
 
-typedef struct object_Tag object;
-typedef struct objlist_Tag objlist;
-
 struct object_Tag {
     objlist *list;
     object *next;
@@ -31,10 +28,6 @@ struct objlist_Tag {
     object *head, *tail;
 };
 
-static object *new_object(objlist *list);
-static void objtext(object *o, char const *text);
-static void objstream(object *o, char const *text);
-static void objstream_len(object *o, char const *text, size_t len);
 static void pdf_string(void (*add)(object *, char const *),
 		       object *, char const *);
 static void pdf_string_len(void (*add)(object *, char const *),
@@ -137,8 +130,11 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     objtext(resources, "<<\n/ProcSet [/PDF/Text]\n/Font <<\n");
     for (fe = doc->fonts->head; fe; fe = fe->next) {
 	char fname[40];
+	char buf[80];
 	int i, prev;
-	object *font;
+	object *font, *fontdesc;
+	int flags;
+	font_info const *fi = fe->font->info;
 
 	sprintf(fname, "f%d", font_index++);
 	fe->name = dupstr(fname);
@@ -151,26 +147,13 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	objref(resources, font);
 	objtext(resources, "\n");
 
-	objtext(font, "<<\n/Type /Font\n/Subtype /Type1\n/Name /");
-	objtext(font, fe->name);
-	objtext(font, "\n/BaseFont /");
-	objtext(font, fe->font->info->name);
-	objtext(font, "\n/Encoding <<\n/Type /Encoding\n/Differences [");
 
-	for (i = 0; i < 256; i++) {
-	    char buf[20];
-	    if (fe->vector[i] == NOGLYPH)
-		continue;
-	    if (i != prev + 1) {
-		sprintf(buf, "\n%d", i);
-		objtext(font, buf);
-	    }
-	    objtext(font, i % 8 ? "/" : "\n/");
-	    objtext(font, glyph_extern(fe->vector[i]));
-	    prev = i;
-	}
-
-	objtext(font, "\n]\n>>\n");
+	/*
+	 * Construct those parts of the font descriptor that don't dependd
+	 * on the file format.
+	 */
+	if (!is_std_font(fe->font->info->name)) {
+	    fontdesc = new_object(&olist);
 
 #define FF_FIXEDPITCH	0x00000001
 #define FF_SERIF	0x00000002
@@ -182,36 +165,6 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 #define FF_SMALLCAP	0x00020000
 #define FF_FORCEBOLD	0x00040000
 
-	if (!is_std_font(fe->font->info->name)){
-	    object *widths = new_object(&olist);
-	    object *fontdesc = new_object(&olist);
-	    int firstchar = -1, lastchar = -1;
-	    char buf[80];
-	    font_info const *fi = fe->font->info;
-	    int flags;
-	    for (i = 0; i < 256; i++)
-		if (fe->vector[i] != NOGLYPH) {
-		    if (firstchar < 0) firstchar = i;
-		    lastchar = i;
-		}
-	    sprintf(buf, "/FirstChar %d\n/LastChar %d\n/Widths ",
-		    firstchar, lastchar);
-	    objtext(font, buf);
-	    objref(font, widths);
-	    objtext(font, "\n");
-	    objtext(widths, "[\n");
-	    for (i = firstchar; i <= lastchar; i++) {
-		double width;
-		if (fe->vector[i] == NOGLYPH)
-		    width = 0.0;
-		else
-		    width = find_width(fe->font, fe->vector[i]);
-		sprintf(buf, "%g\n", 1000.0 * width / FUNITS_PER_PT);
-		objtext(widths, buf);
-	    }
-	    objtext(widths, "]\n");
-	    objtext(font, "/FontDescriptor ");
-	    objref(font, fontdesc);
 	    objtext(fontdesc, "<<\n/Type /FontDescriptor\n/Name /");
 	    objtext(fontdesc, fi->name);
 	    flags = 0;
@@ -236,6 +189,76 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(fontdesc, buf);
 	    sprintf(buf, "/StemV %g\n", fi->stemv);
 	    objtext(fontdesc, buf);
+	}
+
+	objtext(font, "<<\n/Type /Font\n/BaseFont /");
+	objtext(font, fe->font->info->name);
+	if (fe->font->info->filetype == TRUETYPE) {
+	    object *cidfont = new_object(&olist);
+	    object *cmap = new_object(&olist);
+	    objtext(font, "/Subtype/Type0\n/Encoding ");
+	    sfnt_cmap(fe, cmap);
+	    objref(font, cmap);
+	    objtext(font, "\n/DescendantFonts[");
+	    objref(font, cidfont);
+	    objtext(font, "]\n");
+	    objtext(cidfont, "<<\n/Type/Font\n/Subtype/CIDFontType2\n"
+		    "/BaseFont/");
+	    objtext(cidfont, fe->font->info->name);
+	    objtext(cidfont, "\n/CIDSystemInfo<</Registry(Adobe)"
+		    "/Ordering(Identity)/Supplement 0>>\n");
+	    objtext(cidfont, "/FontDescriptor ");
+	    objref(cidfont, fontdesc);
+	    objtext(cidfont, ">>\n");
+	} else {
+	    objtext(font, "/Subtype /Type1\n");
+	    objtext(font, "\n/Encoding <<\n/Type /Encoding\n/Differences [");
+
+	    for (i = 0; i < 256; i++) {
+		char buf[20];
+		if (fe->vector[i] == NOGLYPH)
+		    continue;
+		if (i != prev + 1) {
+		    sprintf(buf, "\n%d", i);
+		    objtext(font, buf);
+		}
+		objtext(font, i % 8 ? "/" : "\n/");
+		objtext(font, glyph_extern(fe->vector[i]));
+		prev = i;
+	    }
+
+	    objtext(font, "\n]\n>>\n");
+	    if (!is_std_font(fe->font->info->name)){
+		object *widths = new_object(&olist);
+		int firstchar = -1, lastchar = -1;
+		for (i = 0; i < 256; i++)
+		    if (fe->vector[i] != NOGLYPH) {
+			if (firstchar < 0) firstchar = i;
+			lastchar = i;
+		    }
+		sprintf(buf, "/FirstChar %d\n/LastChar %d\n/Widths ",
+			firstchar, lastchar);
+		objtext(font, buf);
+		objref(font, widths);
+		objtext(font, "\n");
+		objtext(widths, "[\n");
+		for (i = firstchar; i <= lastchar; i++) {
+		    double width;
+		    if (fe->vector[i] == NOGLYPH)
+			width = 0.0;
+		    else
+			width = find_width(fe->font, fe->vector[i]);
+		    sprintf(buf, "%g\n", 1000.0 * width / FUNITS_PER_PT);
+		    objtext(widths, buf);
+		}
+		objtext(widths, "]\n");
+		objtext(font, "/FontDescriptor ");
+		objref(font, fontdesc);
+	    }
+
+	}
+
+	if (!is_std_font(fe->font->info->name)) {
 	    if (fi->fontfile && fi->filetype == TYPE1) {
 		object *fontfile = new_object(&olist);
 		size_t len;
@@ -253,6 +276,17 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		objtext(fontfile, buf);
 		objtext(fontfile, "/Length3 0\n");
 		objtext(fontdesc, "/FontFile ");
+		objref(fontdesc, fontfile);
+	    } else if (fi->fontfile && fi->filetype == TRUETYPE) {
+		object *fontfile = new_object(&olist);
+		size_t len;
+		char *ffbuf;
+
+		sfnt_data((font_info *)fi, &ffbuf, &len);
+		objstream_len(fontfile, ffbuf, len);
+		sprintf(buf, "<<\n/Length1 %lu\n", (unsigned long)len);
+		objtext(fontfile, buf);
+		objtext(fontdesc, "/FontFile2 ");
 		objref(fontdesc, fontfile);
 	    }
 	    objtext(fontdesc, "\n>>\n");
@@ -581,7 +615,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     sfree(filename);
 }
 
-static object *new_object(objlist *list)
+object *new_object(objlist *list)
 {
     object *obj = snew(object);
 
@@ -607,17 +641,17 @@ static object *new_object(objlist *list)
     return obj;
 }
 
-static void objtext(object *o, char const *text)
+void objtext(object *o, char const *text)
 {
     rdaddsc(&o->main, text);
 }
 
-static void objstream_len(object *o, char const *text, size_t len)
+void objstream_len(object *o, char const *text, size_t len)
 {
     rdaddsn(&o->stream, text, len);
 }
 
-static void objstream(object *o, char const *text)
+void objstream(object *o, char const *text)
 {
     rdaddsc(&o->stream, text);
 }
