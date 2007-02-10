@@ -12,6 +12,9 @@
  *
  * The TrueType Reference Manual:
  * <http://developer.apple.com/textfonts/TTRefMan/>
+ *
+ * Microsoft typography specifications:
+ * <http://www.microsoft.com/typography/SpecificationsOverview.mspx>
  */
 
 #include <assert.h>
@@ -127,6 +130,7 @@ sfnt_decode offsubdir_decode[] = {
 #define TAG_head	0x68656164
 #define TAG_hhea	0x68686561
 #define TAG_hmtx	0x686d7478
+#define TAG_kern	0x6b65726e
 #define TAG_loca	0x6c6f6361
 #define TAG_name	0x6e616d65
 #define TAG_post	0x706f7374
@@ -285,6 +289,78 @@ sfnt_decode t_hhea_decode[] = {
 sfnt_decode longhormetric_decode[] = {
     { d_uint16, 0 },
     { d_skip(2) },
+    { d_end }
+};
+
+/* Kerning ('kern') table */
+typedef struct t_kern_Tag t_kern;
+struct t_kern_Tag {
+    unsigned version;
+    unsigned nTables;
+};
+sfnt_decode t_kern_v0_decode[] = {
+    { d_uint16, offsetof(t_kern, version) },
+    { d_uint16, offsetof(t_kern, nTables) },
+    { d_end }
+};
+typedef struct kern_v0_subhdr_Tag kern_v0_subhdr;
+struct kern_v0_subhdr_Tag {
+    unsigned version;
+    unsigned length;
+    unsigned coverage;
+};
+sfnt_decode kern_v0_subhdr_decode[] = {
+    { d_uint16, offsetof(kern_v0_subhdr, version) },
+    { d_uint16, offsetof(kern_v0_subhdr, length) },
+    { d_uint16, offsetof(kern_v0_subhdr, coverage) },
+    { d_end }
+};
+#define KERN_V0_HORIZ		0x0001
+#define KERN_V0_MINIMUM		0x0002
+#define KERN_V0_CROSSSTREAM	0x0004
+#define KERN_V0_OVERRIDE	0x0008
+#define KERN_V0_FORMAT		0xff00
+#define KERN_V0_FORMAT_0	0x0000
+sfnt_decode t_kern_v1_decode[] = {
+    { d_uint32, offsetof(t_kern, version) },
+    { d_uint32, offsetof(t_kern, nTables) },
+    { d_end }
+};
+typedef struct kern_v1_subhdr_Tag kern_v1_subhdr;
+struct kern_v1_subhdr_Tag {
+    unsigned length;
+    unsigned coverage;
+};
+sfnt_decode kern_v1_subhdr_decode[] = {
+    { d_uint32, offsetof(kern_v1_subhdr, length) },
+    { d_uint16, offsetof(kern_v1_subhdr, coverage) },
+    { d_skip(2) }, /* tupleIndex */
+    { d_end }
+};
+#define KERN_V1_VERTICAL	0x8000
+#define KERN_V1_CROSSSTREAM	0x4000
+#define KERN_V1_VARIATION	0x2000
+#define KERN_V1_FORMAT		0x00ff
+#define KERN_V1_FORMAT_0	0x0000
+typedef struct kern_f0_Tag kern_f0;
+struct kern_f0_Tag {
+    unsigned nPairs;
+};
+sfnt_decode kern_f0_decode[] = {
+    { d_uint16, offsetof(kern_f0, nPairs) },
+    { d_skip(6) }, /* searchRange, entrySelector, rangeShift */
+    { d_end }
+};
+typedef struct kern_f0_pair_Tag kern_f0_pair;
+struct kern_f0_pair_Tag {
+    unsigned left;
+    unsigned right;
+    int value;
+};
+sfnt_decode kern_f0_pair_decode[] = {
+    { d_uint16, offsetof(kern_f0_pair, left) },
+    { d_uint16, offsetof(kern_f0_pair, right) },
+    { d_int16, offsetof(kern_f0_pair, value) },
     { d_end }
 };
 
@@ -570,6 +646,72 @@ void sfnt_getmetrics(font_info *fi) {
 }
 
 /*
+ * Get kerning data from a 'kern' table
+ *
+ * 'kern' tables have two gratuitously different header formats, one
+ * used by Apple and one by Microsoft.  Happily, the kerning tables
+ * themselves use the same formats.  Halibut only supports simple kern
+ * pairs for horizontal kerning of horizontal text, and ignores
+ * everything else.
+ */
+static void sfnt_getkern(font_info *fi) {
+    sfnt *sf = fi->fontfile;
+    t_kern kern;
+    unsigned version, i, j;
+    void *ptr, *end;
+
+    if (!sfnt_findtable(sf, TAG_kern, &ptr, &end))
+	return;
+    if (!decode(uint16_decode, ptr, end, &version))
+	return;
+    if (version == 0)
+	ptr = decode(t_kern_v0_decode, ptr, end, &kern);
+    else if (version == 1)
+	ptr = decode(t_kern_v1_decode, ptr, end, &kern);
+    else return;
+    if (ptr == NULL) return;
+    for (i = 0; i < kern.nTables; i++) {
+	kern_f0 f0;
+	kern_pair *kerns;
+	if (version == 0) {
+	    kern_v0_subhdr sub;
+	    ptr = decode(kern_v0_subhdr_decode, ptr, end, &sub);
+	    if (ptr == NULL) return;
+	    if (sub.version != 0 ||
+		(sub.coverage & (KERN_V0_HORIZ | KERN_V0_MINIMUM |
+				 KERN_V0_CROSSSTREAM | KERN_V0_FORMAT)) !=
+		(KERN_V0_HORIZ | KERN_V0_FORMAT_0)) {
+		ptr = (char *)ptr + sub.length - 6;
+		continue;
+	    }
+	} else {
+	    kern_v1_subhdr sub;
+	    ptr = decode(kern_v1_subhdr_decode, ptr, end, &sub);
+	    if (ptr == NULL) return;
+	    if ((sub.coverage & (KERN_V1_VERTICAL | KERN_V1_CROSSSTREAM |
+				KERN_V1_VARIATION | KERN_V1_FORMAT)) !=
+		KERN_V0_FORMAT_0) {
+		ptr = (char *)ptr + sub.length - 8;
+		continue;
+	    }
+	}
+	ptr = decode(kern_f0_decode, ptr, end, &f0);
+	if (ptr == NULL) return;
+	kerns = snewn(f0.nPairs, kern_pair);
+	for (j = 0; j < f0.nPairs; j++) {
+	    kern_f0_pair p;
+	    kern_pair *kp = kerns + j;
+	    ptr = decode(kern_f0_pair_decode, ptr, end, &p);
+	    if (ptr == NULL) return;
+	    kp->left = sfnt_indextoglyph(sf, p.left);
+	    kp->right = sfnt_indextoglyph(sf, p.right);
+	    kp->kern = p.value * UNITS_PER_PT / (int)sf->head.unitsPerEm;
+	    add234(fi->kerns, kp);
+	}
+    }
+}
+
+/*
  * Get mapping data from 'cmap' table
  *
  * We look for either a (0, 3), or (3, 1) table, both of these being
@@ -708,6 +850,7 @@ void read_sfnt_file(input *in) {
     fi->name = sfnt_psname(fi);
     sfnt_mapglyphs(fi);
     sfnt_getmetrics(fi);
+    sfnt_getkern(fi);
     sfnt_getmap(fi);
     fi->next = all_fonts;
     all_fonts = fi;
