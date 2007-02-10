@@ -209,7 +209,16 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		    "/Ordering(Identity)/Supplement 0>>\n");
 	    objtext(cidfont, "/FontDescriptor ");
 	    objref(cidfont, fontdesc);
-	    objtext(cidfont, ">>\n");
+	    objtext(cidfont, "\n/W[0[");
+	    for (i = 0; i < sfnt_nglyphs(fe->font->info->fontfile); i++) {
+		char buf[20];
+		double width;
+		width = find_width(fe->font,
+			       sfnt_indextoglyph(fe->font->info->fontfile, i));
+		sprintf(buf, "%g ", 1000.0 * width / FUNITS_PER_PT);
+		objtext(cidfont, buf);
+	    }
+	    objtext(cidfont, "]]>>\n");
 	} else {
 	    objtext(font, "/Subtype /Type1\n");
 	    objtext(font, "\n/Encoding <<\n/Type /Encoding\n/Differences [");

@@ -349,7 +349,6 @@ typedef struct {
     unsigned short index;
 } glyphmap;
 
-typedef struct sfnt_Tag sfnt;
 struct sfnt_Tag {
     void *data;
     size_t len;
@@ -497,11 +496,15 @@ static void sfnt_mapglyphs(font_info *fi) {
 	  glyphsbyname_cmp);
 }
 
-static glyph sfnt_indextoglyph(sfnt *sf, unsigned short idx) {
+glyph sfnt_indextoglyph(sfnt *sf, unsigned idx) {
     return sf->glyphsbyindex[idx];
 }
 
-static unsigned short sfnt_glyphtoindex(sfnt *sf, glyph g) {
+unsigned sfnt_nglyphs(sfnt *sf) {
+    return sf->nglyphs;
+}
+
+unsigned sfnt_glyphtoindex(sfnt *sf, glyph g) {
     cmp_glyphsbyindex = sf->glyphsbyindex;
     return *(unsigned short *)bsearch(&g, sf->glyphsbyname, sf->nglyphs,
 				      sizeof(*sf->glyphsbyname),
