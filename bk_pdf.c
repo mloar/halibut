@@ -196,6 +196,10 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	if (fe->font->info->filetype == TRUETYPE) {
 	    object *cidfont = new_object(&olist);
 	    object *cmap = new_object(&olist);
+	    unsigned short ranges[256];
+	    unsigned startidx, nranges, nchars;
+	    int start;
+
 	    objtext(font, "/Subtype/Type0\n/Encoding ");
 	    objtext(cmap, "<</Type/CMap\n/CMapName/");
 	    objtext(cmap, fe->name);
@@ -219,20 +223,74 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objstream(cmap, " def/CMapType 0 def/WMode 0 def\n");
 	    objstream(cmap, "1 begincodespacerange<00><FF>"
 		      "endcodespacerange\n");
+	    start = -1; nranges = nchars = 0;
 	    for (i = 0; i < 256; i++) {
-		char buf[20];
+		unsigned idx;
+
+		ranges[i] = 0;
 		if (fe->vector[i] == NOGLYPH)
 		    continue;
-		objstream(cmap, "1 begincidchar");
-		sprintf(buf, "<%02X>", i);
+		idx = sfnt_glyphtoindex(fe->font->info->fontfile,
+					fe->vector[i]);
+		if (start >= 0 && idx - startidx == i - start) {
+		    if (ranges[start] == 1) {
+			nranges++; nchars--;
+		    }
+		    ranges[start] = i - start + 1;
+		} else {
+		    ranges[i] = 1;
+		    start = i;
+		    startidx = idx;
+		    nchars++;
+		}
+	    }
+	    i = 0;
+	    while (nranges) {
+		unsigned blk = nranges > 100 ? 100 : nranges;
+		nranges -= blk;
+		sprintf(buf, "%u ", blk);
 		objstream(cmap, buf);
-		sprintf(buf, "%hu", sfnt_glyphtoindex(fe->font->info->fontfile,
-						      fe->vector[i]));
+		objstream(cmap, "begincidrange\n");
+		while (blk) {
+		    if (ranges[i] > 1) {
+			sprintf(buf, "<%02X>", i);
+			objstream(cmap, buf);
+			sprintf(buf, "<%02X>", i + ranges[i] - 1);
+			objstream(cmap, buf);
+			sprintf(buf, "%hu\n",
+				sfnt_glyphtoindex(fe->font->info->fontfile,
+						  fe->vector[i]));
+			objstream(cmap, buf);
+			blk--;
+		    }
+		    i++;
+		}
+		objstream(cmap, "endcidrange\n");
+	    }
+	    i = 0;
+	    while (nchars) {
+		unsigned blk = nchars > 100 ? 100 : nchars;
+		nchars -= blk;
+		sprintf(buf, "%u ", blk);
 		objstream(cmap, buf);
-		objstream(cmap, " endcidchar\n");
+		objstream(cmap, "begincidchar\n");
+		while (blk) {
+		    if (ranges[i] == 1) {
+			sprintf(buf, "<%02X>", i);
+			objstream(cmap, buf);
+			sprintf(buf, "%hu\n",
+				sfnt_glyphtoindex(fe->font->info->fontfile,
+						  fe->vector[i]));
+			objstream(cmap, buf);
+			blk--;
+		    }
+		    i++;
+		}
+		objstream(cmap, "endcidchar\n");
 	    }
 	    objstream(cmap, "endcmap CMapName currentdict /CMap "
 		      "defineresource pop end end\n%%EndResource\n%%EOF\n");
+
 	    objref(font, cmap);
 	    objtext(font, "\n/DescendantFonts[");
 	    objref(font, cidfont);
