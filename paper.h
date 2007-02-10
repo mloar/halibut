@@ -423,7 +423,6 @@ glyph sfnt_indextoglyph(sfnt *sf, unsigned idx);
 unsigned sfnt_glyphtoindex(sfnt *sf, glyph g);
 unsigned sfnt_nglyphs(sfnt *sf);
 void sfnt_writeps(font_info const *fi, FILE *ofp);
-void sfnt_cmap(font_encoding *fe, object *);
 void sfnt_data(font_info *fi, char **bufp, size_t *lenp);
 
 #endif

@@ -197,7 +197,42 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    object *cidfont = new_object(&olist);
 	    object *cmap = new_object(&olist);
 	    objtext(font, "/Subtype/Type0\n/Encoding ");
-	    sfnt_cmap(fe, cmap);
+	    objtext(cmap, "<</Type/CMap\n/CMapName/");
+	    objtext(cmap, fe->name);
+	    objtext(cmap, "\n/CIDSystemInfo<</Registry(Adobe)"
+		    "/Ordering(Identity)/Supplement 0>>\n");
+	    objstream(cmap, "%!PS-Adobe-3.0 Resource-CMap\n"
+		      "%%DocumentNeededResources: procset CIDInit\n"
+		      "%%IncludeResource: procset CIDInit\n"
+		      "%%BeginResource: CMap ");
+	    objstream(cmap, fe->name);
+	    objstream(cmap, "\n%%Title (");
+	    objstream(cmap, fe->name);
+	    objstream(cmap, " Adobe Identity 0)\n%%Version: 1\n%%EndComments\n");
+	    objstream(cmap, "/CIDInit/ProcSet findresource begin\n");
+	    objstream(cmap, "12 dict begin begincmap\n");
+	    objstream(cmap, "/CIDSystemInfo 3 dict dup begin\n"
+		      "/Registry(Adobe)def/Ordering(Identity)def"
+		      "/Supplement 0 def end def\n");
+	    objstream(cmap, "/CMapName/");
+	    objstream(cmap, fe->name);
+	    objstream(cmap, " def/CMapType 0 def/WMode 0 def\n");
+	    objstream(cmap, "1 begincodespacerange<00><FF>"
+		      "endcodespacerange\n");
+	    for (i = 0; i < 256; i++) {
+		char buf[20];
+		if (fe->vector[i] == NOGLYPH)
+		    continue;
+		objstream(cmap, "1 begincidchar");
+		sprintf(buf, "<%02X>", i);
+		objstream(cmap, buf);
+		sprintf(buf, "%hu", sfnt_glyphtoindex(fe->font->info->fontfile,
+						      fe->vector[i]));
+		objstream(cmap, buf);
+		objstream(cmap, " endcidchar\n");
+	    }
+	    objstream(cmap, "endcmap CMapName currentdict /CMap "
+		      "defineresource pop end end\n%%EndResource\n%%EOF\n");
 	    objref(font, cmap);
 	    objtext(font, "\n/DescendantFonts[");
 	    objref(font, cidfont);
@@ -537,7 +572,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    zbuf = snewn(zlen, char);
 	    memcpy(zbuf, o->stream.text, zlen);
 	    sprintf(text, "/Length %d\n>>\n", zlen);
-#else	    
+#else
 	    zcontext = deflate_compress_new(DEFLATE_TYPE_ZLIB);
 	    deflate_compress_data(zcontext, o->stream.text, o->stream.pos,
 				  DEFLATE_END_OF_DATA, &zbuf, &zlen);
