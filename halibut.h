@@ -254,6 +254,12 @@ enum {
     err_pfbad,			       /* otherwise invalide Type 1 font */
     err_pfnoafm,		       /* Type 1 font but no AFM */
     err_chmnames,		       /* need both or neither of hhp+chm */
+    err_sfntnotable,		       /* required sfnt table missing */
+    err_sfntnopsname,		       /* sfnt has no PostScript name */
+    err_sfntbadtable,		       /* sfnt table not valid */
+    err_sfntnounicmap,		       /* sfnt has no UCS-2 cmap */
+    err_sfnttablevers,		       /* sfnt table version unknown */
+    err_sfntbadhdr,		       /* sfnt has bad header */
     err_whatever                       /* random error of another type */
 };
 

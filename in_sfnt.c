@@ -429,6 +429,7 @@ struct sfnt_Tag {
     void *data;
     size_t len;
     void *end;
+    filepos pos;
     offsubdir osd;
     tabledir *td;
     t_head head;
@@ -460,8 +461,10 @@ static char *sfnt_psname(font_info *fi) {
     char *psname;
     namerecord *nr;
 
-    if (!sfnt_findtable(sf, TAG_name, &ptr, &end))
-	abort();
+    if (!sfnt_findtable(sf, TAG_name, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "name");
+	return NULL;
+    }
     ptr = decode(t_name_decode, ptr, end, &name);
     name.nameRecord = snewn(name.count, namerecord);
     ptr = decoden(namerecord_decode, ptr, sf->end, name.nameRecord,
@@ -480,6 +483,7 @@ static char *sfnt_psname(font_info *fi) {
 	    }
 	}
     }
+    error(err_sfntnopsname, &sf->pos);
     return NULL;
 }
 
@@ -515,14 +519,19 @@ static void sfnt_mapglyphs(font_info *fi) {
     unsigned nextras, i, g;
 
     sf->glyphsbyname = sf->glyphsbyindex = NULL;
-    if (!sfnt_findtable(sf, TAG_post, &ptr, &end))
-	abort();
+    if (!sfnt_findtable(sf, TAG_post, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "post");
+	return;
+    }
     ptr = decode(t_post_decode, ptr, end, &post);
+    if (ptr == NULL) {
+	error(err_sfntbadtable, &sf->pos, "post");
+	return;
+    }
     
     sf->minmem = post.minMemType42;
     sf->maxmem = post.maxMemType42;
     fi->italicangle = post.italicAngle / 65536.0;
-    if (ptr == NULL) abort();
     switch (post.format) {
       case 0x00010000:
 	sf->nglyphs = 258;
@@ -561,7 +570,8 @@ static void sfnt_mapglyphs(font_info *fi) {
 	sfree(extraglyphs);
 	break;
       default:
-	abort();
+	error(err_sfnttablevers, &sf->pos, "post");
+	return;
     }
     /* Construct glyphsbyname */
     sf->glyphsbyname = snewn(sf->nglyphs, unsigned short);
@@ -603,22 +613,34 @@ void sfnt_getmetrics(font_info *fi) {
     fi->fontbbox[1] = sf->head.yMin * FUNITS_PER_PT /  sf->head.unitsPerEm;
     fi->fontbbox[2] = sf->head.xMax * FUNITS_PER_PT /  sf->head.unitsPerEm;
     fi->fontbbox[3] = sf->head.yMax * FUNITS_PER_PT /  sf->head.unitsPerEm;
-    if (!sfnt_findtable(sf, TAG_hhea, &ptr, &end))
-	abort();
-    if (decode(t_hhea_decode, ptr, end, &hhea) == NULL)
-	abort();
-    if ((hhea.version & 0xffff0000) != 0x00010000)
-	abort();
+    if (!sfnt_findtable(sf, TAG_hhea, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "hhea");
+	return;
+    }
+    if (decode(t_hhea_decode, ptr, end, &hhea) == NULL) {
+	error(err_sfntbadtable, &sf->pos, "hhea");
+	return;
+    }
+    if ((hhea.version & 0xffff0000) != 0x00010000) {
+	error(err_sfnttablevers, &sf->pos, "hhea");
+	return;
+    }
     fi->ascent = hhea.ascent;
     fi->descent = hhea.descent;
-    if (hhea.metricDataFormat != 0)
-	abort();
-    if (!sfnt_findtable(sf, TAG_hmtx, &ptr, &end))
-	abort();
+    if (hhea.metricDataFormat != 0) {
+	error(err_sfnttablevers, &sf->pos, "hmtx");
+	return;
+    }
+    if (!sfnt_findtable(sf, TAG_hmtx, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "hmtx");
+	return;
+    }
     hmtx = snewn(hhea.numOfLongHorMetrics, unsigned);
     if (decoden(longhormetric_decode, ptr, end, hmtx, sizeof(*hmtx),
-		hhea.numOfLongHorMetrics) == NULL)
-	abort();
+		hhea.numOfLongHorMetrics) == NULL) {
+	error(err_sfntbadtable, &sf->pos, "hmtx");
+	return;
+    }
     for (i = 0; i < sf->nglyphs; i++) {
 	glyph_width *w = snew(glyph_width);
 	w->glyph = sfnt_indextoglyph(sf, i);
@@ -630,19 +652,22 @@ void sfnt_getmetrics(font_info *fi) {
     if (!sfnt_findtable(sf, TAG_OS_2, &ptr, &end))
 	return;
     if (decode(uint16_decode, ptr, end, &OS_2.version) == NULL)
-	return;
+	goto bados2;
     if (OS_2.version >= 2) {
 	if (decode(t_OS_2_v2_decode, ptr, end, &OS_2) == NULL)
-	    return;
+	    goto bados2;
 	fi->xheight = OS_2.sxHeight * FUNITS_PER_PT / sf->head.unitsPerEm;
 	fi->capheight = OS_2.sCapHeight * FUNITS_PER_PT / sf->head.unitsPerEm;
     } else if (OS_2.version == 1) {
 	if (decode(t_OS_2_v1_decode, ptr, end, &OS_2) == NULL)
-	    return;
+	    goto bados2;
     } else
 	return;
     fi->ascent = OS_2.sTypoAscender * FUNITS_PER_PT / sf->head.unitsPerEm;
     fi->descent = OS_2.sTypoDescender * FUNITS_PER_PT / sf->head.unitsPerEm;
+    return;
+  bados2:
+    error(err_sfntbadtable, &sf->pos, "OS/2");
 }
 
 /*
@@ -663,20 +688,20 @@ static void sfnt_getkern(font_info *fi) {
     if (!sfnt_findtable(sf, TAG_kern, &ptr, &end))
 	return;
     if (!decode(uint16_decode, ptr, end, &version))
-	return;
+	goto bad;
     if (version == 0)
 	ptr = decode(t_kern_v0_decode, ptr, end, &kern);
     else if (version == 1)
 	ptr = decode(t_kern_v1_decode, ptr, end, &kern);
     else return;
-    if (ptr == NULL) return;
+    if (ptr == NULL) goto bad;
     for (i = 0; i < kern.nTables; i++) {
 	kern_f0 f0;
 	kern_pair *kerns;
 	if (version == 0) {
 	    kern_v0_subhdr sub;
 	    ptr = decode(kern_v0_subhdr_decode, ptr, end, &sub);
-	    if (ptr == NULL) return;
+	    if (ptr == NULL) goto bad;
 	    if (sub.version != 0 ||
 		(sub.coverage & (KERN_V0_HORIZ | KERN_V0_MINIMUM |
 				 KERN_V0_CROSSSTREAM | KERN_V0_FORMAT)) !=
@@ -687,7 +712,7 @@ static void sfnt_getkern(font_info *fi) {
 	} else {
 	    kern_v1_subhdr sub;
 	    ptr = decode(kern_v1_subhdr_decode, ptr, end, &sub);
-	    if (ptr == NULL) return;
+	    if (ptr == NULL) goto bad;
 	    if ((sub.coverage & (KERN_V1_VERTICAL | KERN_V1_CROSSSTREAM |
 				KERN_V1_VARIATION | KERN_V1_FORMAT)) !=
 		KERN_V0_FORMAT_0) {
@@ -696,19 +721,24 @@ static void sfnt_getkern(font_info *fi) {
 	    }
 	}
 	ptr = decode(kern_f0_decode, ptr, end, &f0);
-	if (ptr == NULL) return;
+	if (ptr == NULL) goto bad;
 	kerns = snewn(f0.nPairs, kern_pair);
 	for (j = 0; j < f0.nPairs; j++) {
 	    kern_f0_pair p;
 	    kern_pair *kp = kerns + j;
 	    ptr = decode(kern_f0_pair_decode, ptr, end, &p);
-	    if (ptr == NULL) return;
+	    if (ptr == NULL) goto bad;
+	    if (p.left >= sf->nglyphs || p.right >= sf->nglyphs) goto bad;
 	    kp->left = sfnt_indextoglyph(sf, p.left);
 	    kp->right = sfnt_indextoglyph(sf, p.right);
 	    kp->kern = p.value * UNITS_PER_PT / (int)sf->head.unitsPerEm;
 	    add234(fi->kerns, kp);
 	}
     }
+    return;
+  bad:
+    error(err_sfntbadtable, &sf->pos, "kern");
+    return;
 }
 
 /*
@@ -729,24 +759,25 @@ void sfnt_getmap(font_info *fi) {
 
     for (i = 0; i < lenof(fi->bmp); i++)
 	    fi->bmp[i] = 0xFFFF;
-    if (!sfnt_findtable(sf, TAG_cmap, &ptr, &end))
-	abort();
+    if (!sfnt_findtable(sf, TAG_cmap, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "cmap");
+    }
     base = ptr;
     ptr = decode(t_cmap_decode, ptr, end, &cmap);
-    if (ptr == NULL) abort();
+    if (ptr == NULL) goto bad;
     esd = snewn(cmap.numTables, encodingrec);
     ptr = decoden(encodingrec_decode, ptr, end, esd, sizeof(*esd),
 		  cmap.numTables);
-    if (ptr == NULL) abort();
+    if (ptr == NULL) goto bad;
     for (i = 0; i < cmap.numTables; i++) {
 	if (!decode(uint16_decode, (char *)base + esd[i].offset, end, &format))
-	    abort();
+	    goto bad;
 	if ((esd[i].platformID == 0 && esd[i].encodingID == 3) ||
 	    (esd[i].platformID == 3 && esd[i].encodingID == 1)) {
 	    /* UCS-2 encoding */
 	    if (!decode(uint16_decode, (char *)base + esd[i].offset, end,
 			&format))
-		abort();
+		goto bad;
 	    if (format == 4) {
 		unsigned *data, *endCode, *startCode, *idDelta, *idRangeOffset;
 		unsigned *glyphIndexArray;
@@ -755,12 +786,12 @@ void sfnt_getmap(font_info *fi) {
 
 		ptr = decode(cmap4_decode, (char *)base + esd[i].offset, end,
 			     &cmap4);
-		if (!ptr) abort();
+		if (!ptr) goto bad;
 		segcount = cmap4.segCountX2 / 2;
 		nword = cmap4.length / 2 - 7;
 		data = snewn(nword, unsigned);
 		if (!decoden(uint16_decode, ptr, (char *)ptr + nword * 2,
-			     data, sizeof(*data), nword)) abort();
+			     data, sizeof(*data), nword)) goto bad;
 		endCode = data;
 		startCode = data + segcount + 1;
 		idDelta = startCode + segcount;
@@ -775,7 +806,7 @@ void sfnt_getmap(font_info *fi) {
 			for (k = startCode[j]; k <= endCode[j]; k++) {
 			    idx = (k + idDelta[j]) & 0xffff;
 			    if (idx != 0) {
-				if (idx > sf->nglyphs) abort();
+				if (idx > sf->nglyphs) goto bad;
 				fi->bmp[k] = sfnt_indextoglyph(sf, idx);
 			    }
 			}
@@ -785,17 +816,21 @@ void sfnt_getmap(font_info *fi) {
 			    idx = glyphIndexArray[startidx + k - startCode[j]];
 			    if (idx != 0) {
 				idx = (idx + idDelta[j]) & 0xffff;
-				if (idx > sf->nglyphs) abort();
+				if (idx > sf->nglyphs) goto bad;
 				fi->bmp[k] = sfnt_indextoglyph(sf, idx);
 			    }
 			}
 		    }
 		}
-
 		sfree(data);
+		return;
 	    }
 	}
     }
+    error(err_sfntnounicmap, &sf->pos);
+    return;
+  bad:
+    error(err_sfntbadtable, &sf->pos, "cmap");
 }
 
 void read_sfnt_file(input *in) {
@@ -803,7 +838,6 @@ void read_sfnt_file(input *in) {
     size_t off = 0, got;
     FILE *fp = in->currfp;
     font_info *fi = snew(font_info);
-/*    size_t i; */
     void *ptr, *end;
 
     fi->name = NULL;
@@ -825,36 +859,45 @@ void read_sfnt_file(input *in) {
 	sf->len *= 2;
 	sf->data = sresize(sf->data, sf->len, unsigned char);
     }
+    fclose(in->currfp);
     sf->len = off;
     sf->data = sresize(sf->data, sf->len, unsigned char);
     sf->end = (char *)sf->data + sf->len;
-    decode(offsubdir_decode, sf->data, sf->end, &sf->osd);
-/*
-    fprintf(stderr, "scaler type = 0x%x; numTables = %u\n",
-	    sf->osd.scaler_type, sf->osd.numTables);
-*/
+    sf->pos = in->pos;
+    sf->pos.line = 0;
+    sf->nglyphs = 0;
+    ptr = decode(offsubdir_decode, sf->data, sf->end, &sf->osd);
+    if (ptr == NULL) {
+	error(err_sfntbadhdr, &sf->pos);
+	return;
+    }
     sf->td = snewn(sf->osd.numTables, tabledir);
-    decoden(tabledir_decode, (char *)sf->data + 12, sf->end,
-	    sf->td, sizeof(*sf->td), sf->osd.numTables);
-/*
-    for (i = 0; i < sf->osd.numTables; i++)
-	fprintf(stderr, "table tag = '%c%c%c%c'; offset = %#10x; length = %#10x\n",
-		sf->td[i].tag >> 24, sf->td[i].tag >> 16, sf->td[i].tag >> 8, sf->td[i].tag, sf->td[i].offset, sf->td[i].length);
-*/
-    if (!sfnt_findtable(sf, TAG_head, &ptr, &end))
-	abort();
-    if (decode(t_head_decode, ptr, end, &sf->head) == NULL)
-	abort();
-    if ((sf->head.version & 0xffff0000) != 0x00010000)
-	abort();
+    ptr = decoden(tabledir_decode, ptr, sf->end, sf->td, sizeof(*sf->td),
+		  sf->osd.numTables);
+    if (ptr == NULL) {
+	error(err_sfntbadhdr, &sf->pos);
+	return;
+    }	
+    if (!sfnt_findtable(sf, TAG_head, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "head");
+	return;
+    }
+    if (decode(t_head_decode, ptr, end, &sf->head) == NULL) {
+	error(err_sfntbadtable, &sf->pos, "head");
+	return;
+    }
+    if ((sf->head.version & 0xffff0000) != 0x00010000) {
+	error(err_sfnttablevers, &sf->pos, "head");
+	return;
+    }
     fi->name = sfnt_psname(fi);
+    if (fi->name == NULL) return;
     sfnt_mapglyphs(fi);
     sfnt_getmetrics(fi);
     sfnt_getkern(fi);
     sfnt_getmap(fi);
     fi->next = all_fonts;
     all_fonts = fi;
-    fclose(in->currfp);
 }
 
 static int sizecmp(const void *a, const void *b) {
@@ -913,23 +956,27 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
     for (i = 0; i < sf->osd.numTables; i++) {
 	breaks[i] = sf->td[i].offset;
     }
-    if (!sfnt_findtable(sf, TAG_glyf, &glyfptr, &glyfend))
-	abort();
+    if (!sfnt_findtable(sf, TAG_glyf, &glyfptr, &glyfend)) {
+	error(err_sfnt_notable, &sf->pos, "glyf");
+	return;
+    }
     glyfoff = (char *)glyfptr - (char *)sf->data;
     glyflen = (char *)glyfend - (char *)glyfptr;
-    if (!sfnt_findtable(sf, TAG_loca, &locaptr, &locaend))
-	abort();
+    if (!sfnt_findtable(sf, TAG_loca, &locaptr, &locaend)) {
+	error(err_sfnt_notable, &sf->pos, "loca");
+	return;
+    }
     loca = snewn(sf->nglyphs, unsigned);
     if (sf->head.indexToLocFormat == 0) {
 	if (!decoden(uint16_decode, locaptr, locaend, loca, sizeof(*loca),
-		     sf->nglyphs)) abort();
+		     sf->nglyphs)) goto badloca;
 	for (i = 0; i < sf->nglyphs; i++) loca[i] *= 2;
     } else {
 	if (!decoden(uint32_decode, locaptr, locaend, loca, sizeof(*loca),
-		     sf->nglyphs)) abort();
+		     sf->nglyphs)) goto badloca;
     }
     for (i = 1; i < sf->nglyphs; i++) {
-	if (loca[i] > glyflen) abort();
+	if (loca[i] > glyflen) goto badloca;
 	breaks[sf->osd.numTables + i - 1] = loca[i] + glyfoff;
     }
     breaks[sf->osd.numTables + sf->nglyphs - 1] = sf->len;
@@ -947,6 +994,9 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
     fprintf(ofp, "00>] readonly def\n");
     sfree(breaks);
     fprintf(ofp, "end /%s exch definefont\n", fi->name);
+    return;
+  badloca:
+    error(err_sfntbadtable, &sf->pos, "loca");
 }
 
 void sfnt_data(font_info *fi, char **bufp, size_t *lenp) {

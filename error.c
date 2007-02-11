@@ -341,6 +341,39 @@ static void do_error(int code, va_list ap) {
 		"html-mshtmlhelp-hhp found");
 	flags = PREFIX;
 	break;
+      case err_sfntnotable:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	sprintf(error, "font has no '%.4s' table", sp);
+	flags = FILEPOS;
+	break;
+      case err_sfntnopsname:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "font has no PostScript name");
+	flags = FILEPOS;
+	break;
+      case err_sfntbadtable:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	sprintf(error, "font has an invalid '%.4s' table", sp);
+	flags = FILEPOS;
+	break;
+      case err_sfntnounicmap:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "font has no UCS-2 character map");
+	flags = FILEPOS;
+	break;	
+      case err_sfnttablevers:
+	fpos = *va_arg(ap, filepos *);
+	sp = va_arg(ap, char *);
+	sprintf(error, "font has an unsupported '%.4s' table version", sp);
+	flags = FILEPOS;
+	break;
+      case err_sfntbadhdr:
+	fpos = *va_arg(ap, filepos *);
+	sprintf(error, "font has an invalid header");
+	flags = FILEPOS;
+	break;	
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
