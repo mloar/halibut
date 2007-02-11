@@ -957,13 +957,13 @@ void sfnt_writeps(font_info const *fi, FILE *ofp) {
 	breaks[i] = sf->td[i].offset;
     }
     if (!sfnt_findtable(sf, TAG_glyf, &glyfptr, &glyfend)) {
-	error(err_sfnt_notable, &sf->pos, "glyf");
+	error(err_sfntnotable, &sf->pos, "glyf");
 	return;
     }
     glyfoff = (char *)glyfptr - (char *)sf->data;
     glyflen = (char *)glyfend - (char *)glyfptr;
     if (!sfnt_findtable(sf, TAG_loca, &locaptr, &locaend)) {
-	error(err_sfnt_notable, &sf->pos, "loca");
+	error(err_sfntnotable, &sf->pos, "loca");
 	return;
     }
     loca = snewn(sf->nglyphs, unsigned);
