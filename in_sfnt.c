@@ -132,6 +132,7 @@ sfnt_decode offsubdir_decode[] = {
 #define TAG_hmtx	0x686d7478
 #define TAG_kern	0x6b65726e
 #define TAG_loca	0x6c6f6361
+#define TAG_maxp	0x6d617870
 #define TAG_name	0x6e616d65
 #define TAG_post	0x706f7374
 #define sfnt_true	0x74727565
@@ -364,6 +365,18 @@ sfnt_decode kern_f0_pair_decode[] = {
     { d_end }
 };
 
+/* Maximum profile ('maxp') table */
+typedef struct t_maxp_Tag t_maxp;
+struct t_maxp_Tag {
+    unsigned version;
+    unsigned numGlyphs;
+};
+sfnt_decode t_maxp_decode[] = {
+    { d_uint32, offsetof(t_maxp, version) },
+    { d_uint16, offsetof(t_maxp, numGlyphs) },
+    { d_end }
+};
+
 /* Naming ('name') table  */
 typedef struct t_name_Tag t_name;
 typedef struct namerecord_Tag namerecord;
@@ -503,6 +516,14 @@ static int glyphsbyname_cmp_search(void const *a, void const *b) {
     return 0;
 }
 
+/* Generate an name for a glyph that doesn't have one. */
+static glyph genglyph(unsigned idx) {
+    char buf[11];
+    if (idx == 0) return glyph_intern(".notdef");
+    sprintf(buf, "glyph%u", idx);
+    return glyph_intern(buf);
+}
+
 /*
  * Extract data from the 'post' table (mostly glyph mappings)
  *
@@ -519,59 +540,75 @@ static void sfnt_mapglyphs(font_info *fi) {
     unsigned nextras, i, g;
 
     sf->glyphsbyname = sf->glyphsbyindex = NULL;
-    if (!sfnt_findtable(sf, TAG_post, &ptr, &end)) {
-	error(err_sfntnotable, &sf->pos, "post");
-	return;
-    }
-    ptr = decode(t_post_decode, ptr, end, &post);
-    if (ptr == NULL) {
-	error(err_sfntbadtable, &sf->pos, "post");
-	return;
-    }
+    if (sfnt_findtable(sf, TAG_post, &ptr, &end)) {
+	ptr = decode(t_post_decode, ptr, end, &post);
+	if (ptr == NULL) {
+	    error(err_sfntbadtable, &sf->pos, "post");
+	    goto noglyphs;
+	}
     
-    sf->minmem = post.minMemType42;
-    sf->maxmem = post.maxMemType42;
-    fi->italicangle = post.italicAngle / 65536.0;
-    switch (post.format) {
-      case 0x00010000:
-	sf->nglyphs = 258;
-	sf->glyphsbyindex = (glyph *)tt_std_glyphs;
-	break;
-      case 0x00020000:
-	if ((char *)ptr + 2 > (char *)end) return;
-	decode_uint16(ptr, &sf->nglyphs);
-	ptr = (char *)ptr + 2;
-	if ((char *)ptr + 2*sf->nglyphs > (char *)end) return;
-	nextras = 0;
-	for (sptr = (unsigned char *)ptr + 2*sf->nglyphs;
-	     sptr < (unsigned char *)end;
-	     sptr += *sptr+1)
-	    nextras++;
-	extraglyphs = snewn(nextras, glyph);
-	i = 0;
-	for (sptr = (unsigned char *)ptr + 2*sf->nglyphs;
-	     sptr < (unsigned char *)end;
-	     sptr += *sptr+1) {
-	    memcpy(tmp, sptr + 1, *sptr);
-	    tmp[*sptr] = 0;
-	    assert(i < nextras);
-	    extraglyphs[i++] = glyph_intern(tmp);
+	sf->minmem = post.minMemType42;
+	sf->maxmem = post.maxMemType42;
+	fi->italicangle = post.italicAngle / 65536.0;
+	switch (post.format) {
+	  case 0x00010000:
+	    if (sf->nglyphs != 258) {
+		error(err_sfntbadtable, &sf->pos, "post");
+		break;
+	    }
+	    sf->glyphsbyindex = (glyph *)tt_std_glyphs;
+	    break;
+	  case 0x00020000:
+	    if ((char *)ptr + 2 > (char *)end) {
+		error(err_sfntbadtable, &sf->pos, "post");
+		break;
+	    }
+	    ptr = (char *)ptr + 2;
+	    if ((char *)ptr + 2*sf->nglyphs > (char *)end) {
+		error(err_sfntbadtable, &sf->pos, "post");
+		break;
+	    }
+	    nextras = 0;
+	    for (sptr = (unsigned char *)ptr + 2*sf->nglyphs;
+		 sptr < (unsigned char *)end;
+		 sptr += *sptr+1)
+		nextras++;
+	    extraglyphs = snewn(nextras, glyph);
+	    i = 0;
+	    for (sptr = (unsigned char *)ptr + 2*sf->nglyphs;
+		 sptr < (unsigned char *)end;
+		 sptr += *sptr+1) {
+		memcpy(tmp, sptr + 1, *sptr);
+		tmp[*sptr] = 0;
+		assert(i < nextras);
+		extraglyphs[i++] = glyph_intern(tmp);
+	    }
+	    sf->glyphsbyindex = snewn(sf->nglyphs, glyph);
+	    for (i = 0; i < sf->nglyphs; i++) {
+		decode_uint16((char *)ptr + 2*i, &g);
+		if (g <= 257)
+		    sf->glyphsbyindex[i] = tt_std_glyphs[g];
+		else if (g < 258 + nextras)
+		    sf->glyphsbyindex[i] = extraglyphs[g - 258];
+		else {
+		    error(err_sfntbadtable, &sf->pos, "post");
+		    sf->glyphsbyindex[i] = genglyph(i);
+		}
+	    }
+	    sfree(extraglyphs);
+	    break;
+	  case 0x00030000:
+	    break;
+	  default:
+	    error(err_sfnttablevers, &sf->pos, "post");
+	    break;
 	}
+    }
+  noglyphs:
+    if (!sf->glyphsbyindex) {
 	sf->glyphsbyindex = snewn(sf->nglyphs, glyph);
-	for (i = 0; i < sf->nglyphs; i++) {
-	    decode_uint16((char *)ptr + 2*i, &g);
-	    if (g <= 257)
-		sf->glyphsbyindex[i] = tt_std_glyphs[g];
-	    else if (g < 258 + nextras)
-		sf->glyphsbyindex[i] = extraglyphs[g - 258];
-	    else
-		sf->glyphsbyindex[i] = NOGLYPH;
-	}
-	sfree(extraglyphs);
-	break;
-      default:
-	error(err_sfnttablevers, &sf->pos, "post");
-	return;
+	for (i = 0; i < sf->nglyphs; i++)
+	    sf->glyphsbyindex[i] = genglyph(i);
     }
     /* Construct glyphsbyname */
     sf->glyphsbyname = snewn(sf->nglyphs, unsigned short);
@@ -839,6 +876,7 @@ void read_sfnt_file(input *in) {
     FILE *fp = in->currfp;
     font_info *fi = snew(font_info);
     void *ptr, *end;
+    t_maxp maxp;
 
     fi->name = NULL;
     fi->widths = newtree234(width_cmp);
@@ -890,6 +928,19 @@ void read_sfnt_file(input *in) {
 	error(err_sfnttablevers, &sf->pos, "head");
 	return;
     }
+    if (!sfnt_findtable(sf, TAG_maxp, &ptr, &end)) {
+	error(err_sfntnotable, &sf->pos, "maxp");
+	return;
+    }
+    if (decode(t_maxp_decode, ptr, end, &maxp) == NULL) {
+	error(err_sfntbadtable, &sf->pos, "maxp");
+	return;
+    }
+    if (maxp.version < 0x00005000 || maxp.version > 0x0001ffff) {
+	error(err_sfnttablevers, &sf->pos, "maxp");
+	return;
+    }
+    sf->nglyphs = maxp.numGlyphs;
     fi->name = sfnt_psname(fi);
     if (fi->name == NULL) return;
     sfnt_mapglyphs(fi);
