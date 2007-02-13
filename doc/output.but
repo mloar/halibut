@@ -1675,15 +1675,22 @@ aren't specified are left unchanged.
 
 Halibut intrinsically knows about some fonts, and these fonts are also
 built into all PDF and most PostScript implementations.
-These fonts can be used without further formality.  To use any other
-font, Halibut needs at least to know its measurements, which are
-provided in an \i{Adobe Font Metrics} (\I{AFM files}AFM) file.
-Halibut can also \I{embedding fonts}embed \i{Type 1 fonts} in its PDF
-and PostScript output if provided with font file in either hexadecimal (\I{PFA
-files}PFA) or IBM PC (\I{PFB files}PFB) format.  To provide
-an AFM, PFA, or PFB file to Halibut, simply name it on Halibut's command
-line.  If a PFA or PFB file is specified, the corresponding AFM file
-must come first.
+These fonts can be used without further formality.  Halibut can also use
+other fonts, and can \I{embedding fonts}embed them it its PDF and
+PostScript output.  These other fonts are supplied to Halibut by
+simply adding them to the list of input files on its command line.
+
+To use a \i{Type 1 font} Halibut needs both the font file itself,
+in either hexadecimal (\I{PFA files}PFA) or IBM PC (\I{PFB files}PFB)
+format, and an \i{Adobe Font Metrics} (\I{AFM files}AFM) file.  The AFM
+file must be specified first on the command line.  If Halibut gets an
+AFM file without a corresponding Type 1 font file, the PostScript and
+PDF output files will still use that font, but they won't contain it.
+
+Using a \i{TrueType font} is rather simpler, and simply requires you to
+pass the font file to Halibut.  Halibut does place a few restrictions on
+TrueType fonts, notably that they must include a \i{Unicode} mapping
+table and a PostScript name.
 
 Fonts are specified using their PostScript names.  Running Halibut with
 the \i\cw{\-\-list-fonts} option causes it to display the PostScript

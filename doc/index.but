@@ -689,8 +689,11 @@ directive
 \IM{embedding fonts} embedding fonts
 \IM{embedding fonts} fonts, embedding
 
-\IM{Type 1 fonts} Type 1 fonts
-\IM{Type 1 fonts} fonts, Type 1
+\IM{Type 1 font} Type 1 fonts
+\IM{Type 1 font} fonts, Type 1
+
+\IM{TrueType font} TrueType fonts
+\IM{TrueType font} fonts, TrueType
 
 \IM{font sizes} font size
 
