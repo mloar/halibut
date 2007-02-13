@@ -251,6 +251,9 @@ weak code (\cw{fi}).  The latter two should not be ligated.
 \e                                          bb              ii
 \c There should be no ligation there.
 
+The following pair of characters map to different glyphs with the same name in
+some Microsoft TrueType fonts: \u0394{(missing)} \u2206{(missing)}
+
 \S{subhead} First subheading
 
 So here's a \I{subheading}\I{subsection}subsection. Just
