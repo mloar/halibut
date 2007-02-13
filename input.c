@@ -1586,7 +1586,6 @@ struct {
     { "StartFontMetrics", 16, &read_afm_file },
     { "\x00\x01\x00\x00",  4, &read_sfnt_file },
     { "true",		   4, &read_sfnt_file },
-    { "OTTO",		   4, &read_sfnt_file },
 };
 
 paragraph *read_input(input *in, indexdata *idx) {
