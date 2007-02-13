@@ -506,6 +506,9 @@ static int glyphsbyname_cmp(void const *a, void const *b) {
     glyph gb = cmp_glyphsbyindex[*(unsigned short *)b];
     if (ga < gb) return -1;
     if (ga > gb) return 1;
+    /* For de-duping, we'd prefer to have the first glyph stay first */
+    if (*(unsigned short *)a < *(unsigned short *)b) return -1;
+    if (*(unsigned short *)a > *(unsigned short *)b) return 1;
     return 0;
 }
 static int glyphsbyname_cmp_search(void const *a, void const *b) {
@@ -536,8 +539,8 @@ static void sfnt_mapglyphs(font_info *fi) {
     void *ptr, *end;
     unsigned char *sptr;
     char tmp[256];
-    glyph *extraglyphs;
-    unsigned nextras, i, g;
+    glyph *extraglyphs, prev, this;
+    unsigned nextras, i, g, suflen;
 
     sf->glyphsbyname = sf->glyphsbyindex = NULL;
     if (sfnt_findtable(sf, TAG_post, &ptr, &end)) {
@@ -615,6 +618,42 @@ static void sfnt_mapglyphs(font_info *fi) {
     for (i = 0; i < sf->nglyphs; i++)
 	sf->glyphsbyname[i] = i;
     cmp_glyphsbyindex = sf->glyphsbyindex;
+    qsort(sf->glyphsbyname, sf->nglyphs, sizeof(*sf->glyphsbyname),
+	  glyphsbyname_cmp);
+    /*
+     * It's possible for fonts to specify the same name for multiple
+     * glyphs, which would make one of them inaccessible.  Check for
+     * that, and rename all but one of each set.
+     *
+     * To ensure that we don't clash with any existing glyph names,
+     * our renaming involves appending the glyph number formatted with
+     * enough leading zeroes to make it longer than any all-digit
+     * suffix that already exists in the font.
+     */
+    suflen = 4;
+    for (i = 0; i < sf->nglyphs; i++) {
+	char const *p;
+	p = strrchr(glyph_extern(sfnt_indextoglyph(sf, i)), '.');
+	if (p && !(p+1)[strspn(p+1, "0123456789")] && strlen(p+1) > suflen)
+	    suflen = strlen(p+1);
+    }
+    suflen++;
+    prev = sfnt_indextoglyph(sf, sf->glyphsbyname[0]);
+    for (i = 1; i < sf->nglyphs; i++) {
+	if (prev == (this = sfnt_indextoglyph(sf, sf->glyphsbyname[i]))) {
+	    char const *basename;
+	    char *buf;
+	    basename = glyph_extern(this);
+	    buf = snewn(strlen(basename) + 2 + suflen, char);
+	    strcpy(buf, basename);
+	    sprintf(buf + strlen(basename), ".%0*hu", suflen,
+		    sf->glyphsbyname[i]);
+	    sf->glyphsbyindex[sf->glyphsbyname[i]] = glyph_intern(buf);
+	    sfree(buf);
+	}
+	prev = this;
+    }
+    /* We may have renamed some glyphs, so re-sort the array. */
     qsort(sf->glyphsbyname, sf->nglyphs, sizeof(*sf->glyphsbyname),
 	  glyphsbyname_cmp);
 }
