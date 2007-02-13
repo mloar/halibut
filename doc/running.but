@@ -39,8 +39,8 @@ the topmost one that users should be directed to initially. If you
 have configured Halibut to generate a single file, it will be called
 \c{Manual.html}.
 
-\b \c{output.info}, and some additional files \c{output.info-1},
-\c{output.info-2} etc., will be files suitable for use with GNU
+\b \c{output.info}, and some additional files \c{output.info\-1},
+\c{output.info\-2} etc., will be files suitable for use with GNU
 \c{info}.
 
 \b \c{output.pdf} will be a printable PDF manual.
@@ -61,13 +61,13 @@ formats you want Halibut to generate:
 \dt \i\cw{--text}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate plain text output. You can
-optionally specify a file name (e.g. \c{--text=myfile.txt}), in
+optionally specify a file name (e.g. \c{\-\-text=myfile.txt}), in
 which case Halibut will change the name of the output file as well.
 
 \dt \i\cw{--html}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate HTML output. You can
-optionally specify a file name (e.g. \c{--html=myfile.html}), in
+optionally specify a file name (e.g. \c{\-\-html=myfile.html}), in
 which case Halibut will change the name of the output file as well.
 Specifying a file name here will also cause the HTML to be output in
 \e{only} one file, instead of the usual behaviour of producing
@@ -85,7 +85,7 @@ line, using the \c{-C} option).
 
 \dd Specifies that you want to generate old-style Windows Help
 output. You can optionally specify a file name (e.g.
-\c{--winhelp=myfile.hlp}), in which case Halibut will change the
+\c{\-\-winhelp=myfile.hlp}), in which case Halibut will change the
 name of the output file as well.
 
 \lcont{
@@ -98,22 +98,22 @@ Halibut will append it. Halibut will also generate a contents file
 
 \dt \i\cw{--whlp}[\cw{=}\e{filename}]
 
-\dd Synonym for \c{--winhelp}.
+\dd Synonym for \c{\-\-winhelp}.
 
 \dt \i\cw{--hlp}[\cw{=}\e{filename}]
 
-\dd Synonym for \c{--winhelp}.
+\dd Synonym for \c{\-\-winhelp}.
 
 \dt \i\cw{--man}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate \cw{man} page output. You
-can optionally specify a file name (e.g. \c{--man=myfile.5}), in
+can optionally specify a file name (e.g. \c{\-\-man=myfile.5}), in
 which case Halibut will change the name of the output file as well.
 
 \dt \i\cw{--info}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate GNU \c{info} output. You can
-optionally specify a file name (e.g. \c{--info=myfile.info}), in
+optionally specify a file name (e.g. \c{\-\-info=myfile.info}), in
 which case Halibut will change the name of the output file as well.
 
 \lcont{
@@ -122,20 +122,20 @@ Unless the \c{info} output format is configured not to (see
 \k{output-info}), Halibut will divide the \c{info} output into many
 small files. The extra files will have numeric suffixes on their
 names; so, for example, \c{output.info} might be accompanied by
-additional files \c{output.info-1}, \c{output.info-2} and so on.
+additional files \c{output.info\-1}, \c{output.info\-2} and so on.
 
 }
 
 \dt \i\cw{--pdf}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate PDF output. You
-can optionally specify a file name (e.g. \c{--pdf=myfile.pdf}), in
+can optionally specify a file name (e.g. \c{\-\-pdf=myfile.pdf}), in
 which case Halibut will change the name of the output file as well.
 
 \dt \i\cw{--ps}[\cw{=}\e{filename}]
 
 \dd Specifies that you want to generate PostScript output. You
-can optionally specify a file name (e.g. \c{--ps=myfile.ps}), in
+can optionally specify a file name (e.g. \c{\-\-ps=myfile.ps}), in
 which case Halibut will change the name of the output file as well.
 
 If you do not specify any of the above options, Halibut will simply
@@ -146,7 +146,7 @@ Also, there is an option which allows you to specify an arbitrary
 
 \dt \i\cw{-C}\e{config-directive}\cw{:}\e{value}[\cw{:}\e{value}...]
 
-\dd The text following \c{-C} is expected to be a colon-separated
+\dd The text following \c{\-C} is expected to be a colon-separated
 list of strings. (If you need a literal colon, you can escape it
 with a backslash: \c{\\:}. If you need a literal \e{backslash}, you
 can do the same: \c{\\\\}.) These strings are used as the parts of a
@@ -176,12 +176,12 @@ overriding any other instances of the directive in the input.)
 
 The options which set the output file names actually work by
 implicitly generating these configuration directives. When you
-specify \c{--text=myfile.txt}, for example, Halibut treats it
-identically to \c{--text -Ctext-filename:myfile.txt}. The Windows
+specify \c{\-\-text=myfile.txt}, for example, Halibut treats it
+identically to \c{\-\-text \-Ctext-filename:myfile.txt}. The Windows
 Help and man page formats work similarly. HTML is slightly
 different, since it also arranges for single-file output if you pass
-a filename to \c{--html}; so \c{--html=myfile.html} is equivalent to
-\c{--html -Chtml-single-filename:myfile.html -Chtml-leaf-level:0}.
+a filename to \c{\-\-html}; so \c{\-\-html=myfile.html} is equivalent to
+\c{\-\-html \-Chtml-single-filename:myfile.html \-Chtml-leaf-level:0}.
 (See \k{output} for explanations of all these configuration
 directives.)
 
@@ -190,8 +190,8 @@ In addition to these, there are also a few other options:
 \dt \i\cw{--input-charset}\cw{=}\e{charset}
 
 \dd Changes the default assumed \i{character set} for all input files from
-ASCII to something else. (\cw{-Cinput-charset} cannot be used for
-this, as \cw{-C} directives are processed after all other input, so
+ASCII to something else. (\cw{\-Cinput-charset} cannot be used for
+this, as \cw{\-C} directives are processed after all other input, so
 wouldn't affect any files.)
 
 \lcont{
@@ -215,7 +215,7 @@ and those found in its input files.
 \dt \i\cw{--help}
 
 \dd Print a brief help message and exit immediately. (Don't confuse
-this with \c{--winhelp}!)
+this with \c{\-\-winhelp}!)
 
 \dt \i\cw{--version}
 
@@ -229,7 +229,7 @@ immediately.
 
 \dt \cw{--license}
 
-\dd US English alternative spelling of \c{--licence}.
+\dd US English alternative spelling of \c{\-\-licence}.
 
 \dt \i\cw{--precise}
 
