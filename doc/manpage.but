@@ -117,6 +117,11 @@ default of ASCII.
 
 \dd Makes Halibut list character sets known to it.
 
+\dt \cw{--list-fonts}
+
+\dd Makes Halibut list fonts known to it, either intrinsically or
+by being passed as input files.
+
 \dt \cw{--precise}
 
 \dd Makes Halibut report the column number as well as the line

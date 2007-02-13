@@ -207,6 +207,11 @@ See \k{input-config} for more information about the input character set.
 
 \dd List character sets known to Halibut.
 
+\dt \i\cw{--list-fonts}
+
+\dd List fonts known to Halibut, both those it intrinsically knows about
+and those found in its input files.
+
 \dt \i\cw{--help}
 
 \dd Print a brief help message and exit immediately. (Don't confuse

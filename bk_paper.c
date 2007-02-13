@@ -1456,6 +1456,14 @@ static int utoglyph(font_info const *fi, wchar_t u) {
     return (u < 0 || u > 0xFFFF ? NOGLYPH : fi->bmp[u]);
 }
 
+void listfonts(void) {
+    font_info const *fi;
+
+    init_std_fonts();
+    for (fi = all_fonts; fi; fi = fi->next)
+	printf("%s\n", fi->name);
+}
+
 static font_data *make_std_font(font_list *fontlist, char const *name)
 {
     font_info const *fi;

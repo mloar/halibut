@@ -656,6 +656,7 @@ directive
 \IM{-C} \c{-C} command-line option
 \IM{--input-charset} \c{--input-charset} command-line option
 \IM{--list-charsets} \c{--list-charsets} command-line option
+\IM{--list-fonts} \c{--list-fonts} command-line option
 \IM{--help} \c{--help} command-line option
 \IM{--version} \c{--version} command-line option
 \IM{--licence} \c{--licence} command-line option

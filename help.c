@@ -17,6 +17,7 @@ static const char *const helptext[] = {
     "         -Cfoo:bar:baz         append \\cfg{foo}{bar}{baz} to input",
     "         --input-charset=cs    change default input file charset",
     "         --list-charsets       display supported character set names",
+    "         --list-fonts          display supported font names",
     "         --precise             report column numbers in error messages",
     "         --help                display this text",
     "         --version             display version number",

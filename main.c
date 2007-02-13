@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
     int nogo;
     int errs;
     int reportcols;
+    int list_fonts;
     int input_charset;
     int debug;
     int backendbits, prebackbits;
@@ -68,6 +69,7 @@ int main(int argc, char **argv) {
     nfiles = 0;
     nogo = errs = FALSE;
     reportcols = 0;
+    list_fonts = 0;
     input_charset = CS_ASCII;
     debug = 0;
     backendbits = 0;
@@ -148,6 +150,8 @@ int main(int argc, char **argv) {
 			} else if (!strcmp(opt, "-list-charsets")) {
 			    listcharsets();
 			    nogo = TRUE;
+			} else if (!strcmp(opt, "-list-fonts")) {
+			    list_fonts = TRUE;
 			} else if (!strcmp(opt, "-precise")) {
 			    reportcols = 1;
 			} else {
@@ -272,7 +276,7 @@ int main(int argc, char **argv) {
     /*
      * Do the work.
      */
-    if (nfiles == 0) {
+    if (nfiles == 0 && !list_fonts) {
 	error(err_noinput);
 	usage();
 	exit(EXIT_FAILURE);
@@ -297,6 +301,10 @@ int main(int argc, char **argv) {
 	idx = make_index();
 
 	sourceform = read_input(&in, idx);
+	if (list_fonts) {
+	    listfonts();
+	    exit(EXIT_SUCCESS);
+	}
 	if (!sourceform)
 	    exit(EXIT_FAILURE);
 

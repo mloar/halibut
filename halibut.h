@@ -527,6 +527,7 @@ paragraph *info_config_filename(char *filename);
  * bk_paper.c
  */
 void *paper_pre_backend(paragraph *, keywordlist *, indexdata *);
+void listfonts(void);
 
 /*
  * bk_ps.c
