@@ -651,8 +651,8 @@ struct deflate_compress_ctx {
     unsigned long datasize;
     int lastblock;
     int finished;
-    unsigned char static_len1[286], static_len2[30];
-    int static_code1[286], static_code2[30];
+    unsigned char static_len1[288], static_len2[30];
+    int static_code1[288], static_code2[30];
     struct huftrees sht;
 #ifdef STATISTICS
     unsigned long bitcount;
