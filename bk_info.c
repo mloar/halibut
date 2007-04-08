@@ -35,6 +35,8 @@
  *      * toner cartridge, replacing:              Toner.
  *    It does a horrid job on multiply-referenced entries, though,
  *    perhaps because the name before the colon is meant to be unique.
+ *    Info's 'i' command requires the use of a menu -- it fails to
+ *    find any index entries at all with Halibut's current index format.
  *
  *  - The string "*note" is matched case-insensitively, so we could
  *    make things slightly less ugly by using the lower-case version
