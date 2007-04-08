@@ -1,5 +1,12 @@
 /*
- * info backend for Halibut
+ * Info backend for Halibut
+ *
+ * The Info file format isn't well-specified, and what specification
+ * there is is scattered all over the place.  Sources include:
+ *   (info), from GNU Texinfo.
+ *   (texinfo), also from GNU Texinfo.
+ *   (Emacs)Misc Help, and (emacs)Info Lookup, from GNU Emacs.
+ *   info.el, from GNU Emacs.
  * 
  * Possible future work:
  * 
@@ -35,6 +42,12 @@
  *    make things slightly less ugly by using the lower-case version
  *    when the user asks for \k.  Unfortunately, standalone Info seems
  *    to match node names case-sensitively, so we can't downcase that.
+ *
+ *  - The character encoding used in an Info file can be configured using
+ *    an Emacs local variables block at the end, like this:
+ *      Local Variables:
+ *      coding: iso-8859-1
+ *      End:
  */
 
 #include <stdio.h>
