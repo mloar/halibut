@@ -1262,10 +1262,10 @@ The \i{default settings} for the \cw{man} page output format are:
 \c \cfg{man-rule}{\u2500}{-}
 \c \cfg{man-quotes}{\u2018}{\u2019}{"}{"}
 
-\H{output-info} GNU \c{info}
+\H{output-info} GNU Info
 
 This output format generates files which can be used with the \i{GNU
-\c{info}} program.
+Info} program.
 
 There are typically multiple output files: a primary file whose name
 usually ends in \c{.info}, and one or more subsidiary files whose
@@ -1274,14 +1274,14 @@ names have numbers on the end, so that they end in \c{.info-1},
 configured to output a single large file containing the whole
 document.
 
-The \c{info} output format supports the following configuration
+The Info output format supports the following configuration
 directives:
 
 \S{output-info-file} Controlling the output filenames
 
 \dt \I{\cw{\\cfg\{info-filename\}}}\cw{\\cfg\{info-filename\}\{}\e{filename}\cw{\}}
 
-\dd Sets the output file name in which to store the \c{info} file.
+\dd Sets the output file name in which to store the Info file.
 This directive is implicitly generated if you provide a file name
 parameter after the command-line option \i\c{--info} (see
 \k{running-options}).
@@ -1291,8 +1291,8 @@ parameter after the command-line option \i\c{--info} (see
 The suffixes \c{-1}, \c{-2}, \c{-3} and so on will be appended to
 your output file name to produce any subsidiary files required.
 
-Note that \c{info} files refer to their own names internally, so
-these files cannot be \I{renaming \c{info} files}renamed after
+Note that Info files refer to their own names internally, so
+these files cannot be \I{renaming Info files}renamed after
 creation and remain useful.
 
 }
@@ -1309,7 +1309,7 @@ not be renamed usefully.)
 
 The preferred maximum file size is only a guideline. Halibut may be
 forced to exceed it if a single section of the document is larger
-than the maximum size (since individual \c{info} nodes may not be
+than the maximum size (since individual Info nodes may not be
 split between files).
 
 }
@@ -1419,7 +1419,7 @@ name}\cw{\}\{}\e{long name}\cw{\}}[\cw{\{}\e{keyword}\cw{\}}]
 \dd Constructs an \i\cw{INFO-DIR-ENTRY} section and places it in the
 header of the Info file. This mechanism is used to automatically
 generate the \i{\c{dir} file} at the root of a Unix system's
-\c{info} collection.
+Info collection.
 
 \lcont{
 
@@ -1467,7 +1467,7 @@ if the output file were called \c{mygames.info} and the keyword
 
 \S{output-info-defaults} Default settings
 
-The \i{default settings} for the \c{info} output format are:
+The \i{default settings} for the Info output format are:
 
 \c \cfg{info-filename}{output.info}
 \c \cfg{info-max-file-size}{65536}

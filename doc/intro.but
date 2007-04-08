@@ -21,7 +21,7 @@ Currently Halibut supports the following output formats:
 
 \b Unix \cw{man} page format.
 
-\b GNU \c{info} format.
+\b GNU Info format.
 
 \b PDF.
 

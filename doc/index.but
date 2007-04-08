@@ -674,8 +674,8 @@ directive
 \IM{keyword syntax} heading keywords, syntax of
 \IM{keyword syntax} syntax of keywords
 
-\IM{GNU info} GNU \c{info}
-\IM{GNU info} \c{info}
+\IM{GNU info} GNU Info
+\IM{GNU info} Info
 
 \IM{INFO-DIR-ENTRY} \cw{INFO-DIR-ENTRY}
 \IM{INFO-DIR-ENTRY} \cw{START-INFO-DIR-ENTRY}
