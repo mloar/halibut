@@ -12,6 +12,7 @@ backend has to treat it specially in order to pass it to pdfmark.
 \cfg{info-dir-entry}{Sillinesses}{test.but}{Halibut test document}
 \cfg{info-dir-entry}{Florbles}{test.but}{Subsection of Halibut test
 document}{sub-sub}
+\cfg{info-section-underline}{2}{~}
 \cfg{man-headnumbers}{true}
 
 \cfg{contents}{Contents(edited)}

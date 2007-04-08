@@ -1357,13 +1357,26 @@ before displaying the section title. For example, if you set this to
 \cq{:\_}, then a typical section title might look something like
 \q{Section 3.1: Something Like This}.
 
-\dt \I{\cw{\\cfg\{info-underline\}}}\cw{\\cfg\{info-underline\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+\dt \I{\cw{\\cfg\{info-title-underline\}}}\cw{\\cfg\{info-title-underline\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
 
-\dd Specifies the text to be used to underline section titles. Works
-very much like the \cw{\\cfg\{text-chapter-underline\}} directive
+\dd Specifies the text to be used to \I{underlining}underline 
+the overall document title. Works
+very much like the \cw{\\cfg\{text-title-underline\}} directive
 (see \k{output-text-headings}). You can specify more than one
 option, and Halibut will choose the first one supported by the
 character set.
+
+\dt \I{\cw{\\cfg\{info-chapter-underline\}}}\cw{\\cfg\{info-chapter-underline\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies how chapter and appendix headings should be underlined.
+
+\dt \I{\cw{\\cfg\{info-section-underline\}}}\cw{\\cfg\{info-section-underline\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}[\cw{\{}\e{text}\cw{\}}...]
+
+\dd Specifies how to underline section headings at a particular level.
+The \e{level} parameter specifies which level of section
+headings you want to affect: 0 means first-level headings (\c{\\H}),
+1 means second-level headings (\c{\\S}), 2 means the level below
+that (\c{\\S2}), and so on.
 
 \S{output-info-characters} Controlling the characters used
 
@@ -1479,7 +1492,13 @@ The \i{default settings} for the Info output format are:
 \c \cfg{info-listitem-indent}{3}
 \c
 \c \cfg{info-section-suffix}{: }
-\c \cfg{info-underline}{\u203e}{-}
+\c \cfg{info-title-underline}{*}
+\c \cfg{info-chapter-underline}{=}
+\c \cfg{info-section-underline}{0}{-}
+\c \cfg{info-section-underline}{1}{.}
+\c \cfg{info-section-underline}{2}{.}
+\c ... and so on for all section levels below this ...
+\e iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
 \c
 \c \cfg{info-charset}{ASCII}
 \c \cfg{info-bullet}{\u2022}{-}

@@ -50,15 +50,21 @@
 #include "halibut.h"
 
 typedef struct {
+    wchar_t *underline;
+} alignstruct;
+
+typedef struct {
     char *filename;
     int maxfilesize;
     int charset;
     int listindentbefore, listindentafter;
     int indent_code, width, index_width;
+    alignstruct atitle, achapter, *asect;
+    int nasect;
     wchar_t *bullet, *listsuffix;
     wchar_t *startemph, *endemph;
     wchar_t *lquote, *rquote;
-    wchar_t *sectsuffix, *underline;
+    wchar_t *sectsuffix;
     wchar_t *rule;
     wchar_t *index_text;
 } infoconfig;
@@ -93,7 +99,8 @@ static int info_rdadds(info_data *, wchar_t const *);
 static int info_rdaddc(info_data *, char);
 static int info_rdaddsc(info_data *, char const *);
 
-static void info_heading(info_data *, word *, word *, int, infoconfig *);
+static void info_heading(info_data *, word *, word *, alignstruct, int,
+			 infoconfig *);
 static void info_rule(info_data *, int, int, infoconfig *);
 static void info_para(info_data *, word *, wchar_t *, word *, keywordlist *,
 		      int, int, int, infoconfig *);
@@ -112,6 +119,7 @@ static char *info_node_name_for_text(wchar_t *text, infoconfig *);
 static infoconfig info_configure(paragraph *source) {
     infoconfig ret;
     paragraph *p;
+    int n;
 
     /*
      * Defaults.
@@ -132,7 +140,16 @@ static infoconfig info_configure(paragraph *source) {
     ret.lquote = L"\x2018\0\x2019\0`\0'\0\0";
     ret.rquote = uadv(ret.lquote);
     ret.sectsuffix = L": ";
-    ret.underline = L"\x203E\0-\0\0";
+    /*
+     * Default underline characters are chosen to match those recognised by
+     * Info-fontify-node.
+     */
+    ret.atitle.underline = L"*\0\0";
+    ret.achapter.underline = L"=\0\0";
+    ret.nasect = 2;
+    ret.asect = snewn(ret.nasect, alignstruct);
+    ret.asect[0].underline = L"-\0\0";
+    ret.asect[1].underline = L".\0\0";
     ret.index_text = L"Index";
 
     /*
@@ -176,7 +193,29 @@ static infoconfig info_configure(paragraph *source) {
 	    } else if (!ustricmp(p->keyword, L"info-section-suffix")) {
 		ret.sectsuffix = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"info-underline")) {
-		ret.underline = uadv(p->keyword);
+		ret.atitle.underline = ret.achapter.underline =
+		    uadv(p->keyword);
+		for (n = 0; n < ret.nasect; n++)
+		    ret.asect[n].underline = ret.atitle.underline;
+	    } else if (!ustricmp(p->keyword, L"info-chapter-underline")) {
+		ret.achapter.underline = uadv(p->keyword);
+	    } else if (!ustricmp(p->keyword, L"info-section-underline")) {
+		wchar_t *q = uadv(p->keyword);
+		int n = 0;
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
+		}
+		if (n >= ret.nasect) {
+		    int i;
+		    ret.asect = sresize(ret.asect, n+1, alignstruct);
+		    for (i = ret.nasect; i <= n; i++)
+			ret.asect[i] = ret.asect[ret.nasect-1];
+		    ret.nasect = n+1;
+		}
+		ret.asect[n].underline = q;
+	    } else if (!ustricmp(p->keyword, L"text-title-underline")) {
+		ret.atitle.underline = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"info-bullet")) {
 		ret.bullet = uadv(p->keyword);
 	    } else if (!ustricmp(p->keyword, L"info-rule")) {
@@ -215,10 +254,20 @@ static infoconfig info_configure(paragraph *source) {
 	ret.endemph = uadv(ret.startemph);
     }
 
-    while (*ret.underline && *uadv(ret.underline) &&
-	   !cvt_ok(ret.charset, ret.underline))
-	ret.underline = uadv(ret.underline);
+    while (*ret.atitle.underline && *uadv(ret.atitle.underline) &&
+	   !cvt_ok(ret.charset, ret.atitle.underline))
+	ret.atitle.underline = uadv(ret.atitle.underline);
+    
+    while (*ret.achapter.underline && *uadv(ret.achapter.underline) &&
+	   !cvt_ok(ret.charset, ret.achapter.underline))
+	ret.achapter.underline = uadv(ret.achapter.underline);
 
+    for (n = 0; n < ret.nasect; n++) {
+	while (*ret.asect[n].underline && *uadv(ret.asect[n].underline) &&
+	       !cvt_ok(ret.charset, ret.asect[n].underline))
+	    ret.asect[n].underline = uadv(ret.asect[n].underline);
+    }
+    
     while (*ret.bullet && *uadv(ret.bullet) &&
 	   !cvt_ok(ret.charset, ret.bullet))
 	ret.bullet = uadv(ret.bullet);
@@ -389,7 +438,8 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     /* Do the title */
     for (p = sourceform; p; p = p->next)
 	if (p->type == para_Title)
-	    info_heading(&topnode->text, NULL, p->words, conf.width, &conf);
+	    info_heading(&topnode->text, NULL, p->words,
+			 conf.atitle, conf.width, &conf);
 
     nestindent = conf.listindentbefore + conf.listindentafter;
     nesting = 0;
@@ -446,7 +496,14 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	info_menu_item(&currnode->up->text, currnode, p, &conf);
 
 	has_index |= info_check_index(p->words, currnode, idx);
-	info_heading(&currnode->text, p->kwtext, p->words, conf.width, &conf);
+	if (p->type == para_Chapter || p->type == para_Appendix ||
+	    p->type == para_UnnumberedChapter)
+	    info_heading(&currnode->text, p->kwtext, p->words,
+			 conf.achapter, conf.width, &conf);
+	else
+	    info_heading(&currnode->text, p->kwtext, p->words,
+			 conf.asect[p->aux>=conf.nasect?conf.nasect-1:p->aux],
+			 conf.width, &conf);
 	nesting = 0;
 	break;
 
@@ -536,8 +593,8 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	k = info_rdadds(&newnode->text, conf.index_text);
 	info_rdaddsc(&newnode->text, "\n");
 	while (k > 0) {
-	    info_rdadds(&newnode->text, conf.underline);
-	    k -= ustrwid(conf.underline, conf.charset);
+	    info_rdadds(&newnode->text, conf.achapter.underline);
+	    k -= ustrwid(conf.achapter.underline, conf.charset);
 	}
 	info_rdaddsc(&newnode->text, "\n\n");
 
@@ -948,7 +1005,8 @@ static int info_width_xrefs(void *ctx, word *words)
 }
 
 static void info_heading(info_data *text, word *tprefix,
-			 word *words, int width, infoconfig *cfg) {
+			 word *words, alignstruct align,
+			 int width, infoconfig *cfg) {
     int length;
     int firstlinewidth, wrapwidth;
     wrappedline *wrapping, *p;
@@ -967,11 +1025,13 @@ static void info_heading(info_data *text, word *tprefix,
     for (p = wrapping; p; p = p->next) {
 	length += info_rdaddwc(text, p->begin, p->end, FALSE, cfg);
 	info_rdadd(text, L'\n');
-	while (length > 0) {
-	    info_rdadds(text, cfg->underline);
-	    length -= ustrwid(cfg->underline, cfg->charset);
+	if (*align.underline) {
+	    while (length > 0) {
+		info_rdadds(text, align.underline);
+		length -= ustrwid(align.underline, cfg->charset);
+	    }
+	    info_rdadd(text, L'\n');
 	}
-	info_rdadd(text, L'\n');
 	length = 0;
     }
     wrap_free(wrapping);

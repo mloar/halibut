@@ -60,9 +60,17 @@ configuration directive
 configuration directive
 \IM{\\cfg\{info-section-suffix\}} \cw{\\cfg\{info-section-suffix\}}
 
-\IM{\\cfg\{info-underline\}} \c{info-underline} configuration
+\IM{\\cfg\{info-title-underline\}} \c{info-title-underline} configuration
 directive
-\IM{\\cfg\{info-underline\}} \cw{\\cfg\{info-underline\}}
+\IM{\\cfg\{info-title-underline\}} \cw{\\cfg\{info-title-underline\}}
+
+\IM{\\cfg\{info-chapter-underline\}} \c{info-chapter-underline} configuration
+directive
+\IM{\\cfg\{info-chapter-underline\}} \cw{\\cfg\{info-chapter-underline\}}
+
+\IM{\\cfg\{info-section-underline\}} \c{info-section-underline} configuration
+directive
+\IM{\\cfg\{info-section-underline\}} \cw{\\cfg\{info-section-underline\}}
 
 \IM{\\cfg\{info-charset\}} \c{info-charset} configuration directive
 \IM{\\cfg\{info-charset\}} \cw{\\cfg\{info-charset\}}
