@@ -172,17 +172,18 @@ char *utoa_locale_dup(wchar_t const *s)
      * This variant uses the C library locale.
      */
     char *ret;
-    int len;
+    int len, outlen;
     size_t siz;
 
     len = ustrlen(s);
 
-    ret = snewn(1 + MB_CUR_MAX * len, char);
+    outlen = 1 + MB_CUR_MAX * len;
+    ret = snewn(outlen+1, char);
 
-    siz = wcstombs(ret, s, len);
+    siz = wcstombs(ret, s, outlen);
 
     if (siz) {
-	assert(siz <= (size_t)(MB_CUR_MAX * len));
+	assert(siz <= (size_t)(outlen));
 	ret[siz] = '\0';
 	ret = sresize(ret, siz+1, char);
 	return ret;
@@ -203,17 +204,18 @@ wchar_t *ufroma_locale_dup(char const *s)
      * This variant uses the C library locale.
      */
     wchar_t *ret;
-    int len;
+    int len, outlen;
     size_t siz;
 
     len = strlen(s);
 
-    ret = snewn(1 + 2*len, wchar_t);  /* be conservative */
+    outlen = 1 + 2*len;
+    ret = snewn(outlen+1, wchar_t);  /* be conservative */
 
-    siz = mbstowcs(ret, s, len);
+    siz = mbstowcs(ret, s, outlen);
 
     if (siz) {
-	assert(siz <= (size_t)(2 * len));
+	assert(siz <= (size_t)(outlen));
 	ret[siz] = L'\0';
 	ret = sresize(ret, siz+1, wchar_t);
 	return ret;
