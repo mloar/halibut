@@ -1754,7 +1754,7 @@ specified.
 
 \dt \I{\cw{\\cfg\{paper-code-fonts\}}}\cw{\\cfg\{paper-code-fonts\}\{}\e{bold-font}\cw{\}}[\cw{\{}\e{italic-font}\cw{\}}[\cw{\{}\e{normal-font}\cw{\}}]]
 
-\dd Specifies the fonts to use for text in code paragraps.  The
+\dd Specifies the fonts to use for text in code paragraphs.  The
 \e{bold-font} is used for bold text, the \e{italic-font} for
 emphasised text, and the \e{normal-font} for normal code.
 
