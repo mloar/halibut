@@ -820,9 +820,10 @@ static void sfnt_getkern(font_info *fi) {
 /*
  * Get mapping data from 'cmap' table
  *
- * We look for either a (0, 3), or (3, 1) table, both of these being
- * versions of UCS-2.  We only handle format 4 of this table, since
- * that seems to be the only one in use.
+ * We look for either a (0, 0), (0, 2), (0, 3), or (3, 1) table, all
+ * of these being versions of UCS-2.  We ignore (0, 1), since it's
+ * Unicode 1.1 with precomposed Hangul syllables.  We only handle
+ * format 4 of this table, since that seems to be the only one in use.
  */
 void sfnt_getmap(font_info *fi) {
     sfnt *sf = fi->fontfile;
@@ -848,7 +849,9 @@ void sfnt_getmap(font_info *fi) {
     for (i = 0; i < cmap.numTables; i++) {
 	if (!decode(uint16_decode, (char *)base + esd[i].offset, end, &format))
 	    goto bad;
-	if ((esd[i].platformID == 0 && esd[i].encodingID == 3) ||
+	if ((esd[i].platformID == 0 && esd[i].encodingID == 0) ||
+	    (esd[i].platformID == 0 && esd[i].encodingID == 2) ||
+	    (esd[i].platformID == 0 && esd[i].encodingID == 3) ||
 	    (esd[i].platformID == 3 && esd[i].encodingID == 1)) {
 	    /* UCS-2 encoding */
 	    if (!decode(uint16_decode, (char *)base + esd[i].offset, end,
@@ -889,6 +892,8 @@ void sfnt_getmap(font_info *fi) {
 		    } else {
 			unsigned startidx = idRangeOffset[j]/2 - segcount + j;
 			for (k = startCode[j]; k <= endCode[j]; k++) {
+			    if (startidx + k - startCode[j] >= nglyphindex)
+				goto bad;
 			    idx = glyphIndexArray[startidx + k - startCode[j]];
 			    if (idx != 0) {
 				idx = (idx + idDelta[j]) & 0xffff;
