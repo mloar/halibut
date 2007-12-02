@@ -260,6 +260,7 @@ enum {
     err_sfntnounicmap,		       /* sfnt has no UCS-2 cmap */
     err_sfnttablevers,		       /* sfnt table version unknown */
     err_sfntbadhdr,		       /* sfnt has bad header */
+    err_sfntbadglyph,		       /* sfnt cmap references bad glyph */
     err_whatever                       /* random error of another type */
 };
 

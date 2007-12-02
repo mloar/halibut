@@ -18,7 +18,7 @@ static void do_error(int code, va_list ap) {
     char c;
     int i, j;
     char *sp, *sp2;
-    wchar_t *wsp, *wsp2;
+    wchar_t *wsp, *wsp2, wc;
     filepos fpos, fpos2, *fposp;
     int flags = 0;
 
@@ -374,6 +374,14 @@ static void do_error(int code, va_list ap) {
 	sprintf(error, "font has an invalid header");
 	flags = FILEPOS;
 	break;	
+      case err_sfntbadglyph:
+	fpos = *va_arg(ap, filepos *);
+	wc = va_arg(ap, wchar_t);
+	sprintf(error,
+		"warning: character U+%04X references an non-existent glyph",
+		wc);
+	flags = FILEPOS;
+	break;
       case err_whatever:
 	sp = va_arg(ap, char *);
         vsprintf(error, sp, ap);
