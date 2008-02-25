@@ -142,6 +142,14 @@ they will just contain the chapter \e{number}, followed by the
 chapter title. If you set this to \c{false}, chapter headings will
 be prefixed by \q{Chapter} or equivalent.
 
+\dt \I{\cw{\\cfg\{text-chapter-shownumber\}}}\cw{\\cfg\{text-chapter-shownumber\}\{}\e{boolean}\cw{\}}
+
+\dd If this is set to \c{false}, then chapter headings will \e{only}
+contain the chapter title: they will not contain the word
+\q{Chapter} (or whatever other word you have defined in its place),
+and neither will they contain the chapter number. If set to
+\c{false}, this overrides \cw{\\cfg\{text-chapter-numeric\}}.
+
 \dt \I{\cw{\\cfg\{text-chapter-suffix\}}}\cw{\\cfg\{text-chapter-suffix\}\{}\e{text}\cw{\}}
 
 \dd This specifies the suffix text to be appended to the chapter
@@ -167,6 +175,15 @@ just like the other alignment directives listed above.
 \dd Specifies whether section headings at a particular level should
 contain the word \q{Section} or equivalent (if \c{false}), or should
 be numeric only (if \c{true}).
+
+\dt \I{\cw{\\cfg\{text-section-shownumber\}}}\cw{\\cfg\{text-section-shownumber\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
+
+\dd If this is set to \c{false}, then section headings at the
+specified level will \e{only} contain the section title: they will
+not contain the word \q{Section} (or whatever other word you have
+defined in its place), and neither will they contain the section
+number. If set to \c{false}, this overrides
+\cw{\\cfg\{text-section-numeric\}}.
 
 \dt \I{\cw{\\cfg\{text-section-suffix\}}}\cw{\\cfg\{text-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
 
@@ -296,16 +313,19 @@ The \i{default settings} for Halibut's plain text output format are:
 \c \cfg{text-chapter-align}{left}
 \c \cfg{text-chapter-underline}{\u203e}{-}
 \c \cfg{text-chapter-numeric}{false}
+\c \cfg{text-chapter-shownumber}{true}
 \c \cfg{text-chapter-suffix}{: }
 \c
 \c \cfg{text-section-align}{0}{leftplus}
 \c \cfg{text-section-underline}{0}{}
 \c \cfg{text-section-numeric}{0}{true}
+\c \cfg{text-section-shownumber}{0}{true}
 \c \cfg{text-section-suffix}{0}{ }
 \c
 \c \cfg{text-section-align}{1}{leftplus}
 \c \cfg{text-section-underline}{1}{}
 \c \cfg{text-section-numeric}{1}{true}
+\c \cfg{text-section-shownumber}{1}{true}
 \c \cfg{text-section-suffix}{1}{ }
 \c
 \c ... and so on for all section levels below this ...
@@ -586,6 +606,14 @@ they will just contain the chapter \e{number}, followed by the
 chapter title. If you set this to \c{false}, chapter headings will
 be prefixed by \q{Chapter} or equivalent.
 
+\dt \I{\cw{\\cfg\{html-chapter-shownumber\}}}\cw{\\cfg\{html-chapter-shownumber\}\{}\e{boolean}\cw{\}}
+
+\dd If this is set to \c{false}, then chapter headings will \e{only}
+contain the chapter title: they will not contain the word
+\q{Chapter} (or whatever other word you have defined in its place),
+and neither will they contain the chapter number. If set to
+\c{false}, this overrides \cw{\\cfg\{html-chapter-numeric\}}.
+
 \dt \I{\cw{\\cfg\{html-chapter-suffix\}}}\cw{\\cfg\{html-chapter-suffix\}\{}\e{text}\cw{\}}
 
 \dd This specifies the suffix text to be appended to the chapter
@@ -603,6 +631,15 @@ be numeric only (if \c{true}). The \e{level} parameter specifies
 which level of section headings you want to affect: 0 means
 first-level headings (\c{\\H}), 1 means second-level headings
 (\c{\\S}), 2 means the level below that (\c{\\S2}), and so on.
+
+\dt \I{\cw{\\cfg\{html-section-shownumber\}}}\cw{\\cfg\{html-section-shownumber\}\{}\e{level}\cw{\}\{}\e{boolean}\cw{\}}
+
+\dd If this is set to \c{false}, then section headings at the
+specified level will \e{only} contain the section title: they will
+not contain the word \q{Section} (or whatever other word you have
+defined in its place), and neither will they contain the section
+number. If set to \c{false}, this overrides
+\cw{\\cfg\{html-section-numeric\}}.
 
 \dt \I{\cw{\\cfg\{html-section-suffix\}}}\cw{\\cfg\{html-section-suffix\}\{}\e{level}\cw{\}\{}\e{text}\cw{\}}
 
@@ -946,12 +983,15 @@ The \i{default settings} for Halibut's HTML output format are:
 \c \cfg{html-navigation-attributes}{}
 \c
 \c \cfg{html-chapter-numeric}{false}
+\c \cfg{html-chapter-shownumber}{true}
 \c \cfg{html-chapter-suffix}{: }
 \c
 \c \cfg{html-section-numeric}{0}{true}
+\c \cfg{html-section-shownumber}{0}{true}
 \c \cfg{html-section-suffix}{0}{ }
 \c
 \c \cfg{html-section-numeric}{1}{true}
+\c \cfg{html-section-shownumber}{1}{true}
 \c \cfg{html-section-suffix}{1}{ }
 \c
 \c ... and so on for all section levels below this ...

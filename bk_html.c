@@ -37,7 +37,7 @@
 			   (p)->type == para_Title ? -1 : 0 )
 
 typedef struct {
-    int just_numbers;
+    int number_at_all, just_numbers;
     wchar_t *number_suffix;
 } sectlevel;
 
@@ -248,10 +248,12 @@ static htmlconfig html_configure(paragraph *source) {
      */
     ret.leaf_level = 2;
     ret.achapter.just_numbers = FALSE;
+    ret.achapter.number_at_all = TRUE;
     ret.achapter.number_suffix = L": ";
     ret.nasect = 1;
     ret.asect = snewn(ret.nasect, sectlevel);
     ret.asect[0].just_numbers = TRUE;
+    ret.achapter.number_at_all = TRUE;
     ret.asect[0].number_suffix = L" ";
     ret.ncdepths = 0;
     ret.contents_depths = 0;
@@ -382,6 +384,8 @@ static htmlconfig html_configure(paragraph *source) {
 		    error(err_cfginsufarg, &p->fpos, p->origkeyword, 1);
 	    } else if (!ustricmp(k, L"html-chapter-numeric")) {
 		ret.achapter.just_numbers = utob(uadv(k));
+	    } else if (!ustricmp(k, L"html-chapter-shownumber")) {
+		ret.achapter.number_at_all = utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-suppress-navlinks")) {
 		ret.navlinks = !utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-rellinks")) {
@@ -411,6 +415,21 @@ static htmlconfig html_configure(paragraph *source) {
 		    ret.nasect = n+1;
 		}
 		ret.asect[n].just_numbers = utob(q);
+	    } else if (!ustricmp(k, L"html-section-shownumber")) {
+		wchar_t *q = uadv(k);
+		int n = 0;
+		if (uisdigit(*q)) {
+		    n = utoi(q);
+		    q = uadv(q);
+		}
+		if (n >= ret.nasect) {
+		    int i;
+		    ret.asect = sresize(ret.asect, n+1, sectlevel);
+		    for (i = ret.nasect; i <= n; i++)
+			ret.asect[i] = ret.asect[ret.nasect-1];
+		    ret.nasect = n+1;
+		}
+		ret.asect[n].number_at_all = utob(q);
 	    } else if (!ustricmp(k, L"html-section-suffix")) {
 		wchar_t *q = uadv(k);
 		int n = 0;
@@ -2766,7 +2785,7 @@ static void html_section_title(htmloutput *ho, htmlsect *s, htmlfile *thisfile,
 	else
 	    sl = &cfg->asect[cfg->nasect-1];
 
-	if (!sl)
+	if (!sl || !sl->number_at_all)
 	    number = NULL;
 	else if (sl->just_numbers)
 	    number = s->title->kwtext2;
