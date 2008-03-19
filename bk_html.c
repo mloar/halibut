@@ -253,7 +253,7 @@ static htmlconfig html_configure(paragraph *source) {
     ret.nasect = 1;
     ret.asect = snewn(ret.nasect, sectlevel);
     ret.asect[0].just_numbers = TRUE;
-    ret.achapter.number_at_all = TRUE;
+    ret.asect[0].number_at_all = TRUE;
     ret.asect[0].number_suffix = L" ";
     ret.ncdepths = 0;
     ret.contents_depths = 0;
