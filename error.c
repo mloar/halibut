@@ -18,7 +18,8 @@ static void do_error(int code, va_list ap) {
     char c;
     int i, j;
     char *sp, *sp2;
-    wchar_t *wsp, *wsp2, wc;
+    wchar_t *wsp, *wsp2;
+    unsigned wc;
     filepos fpos, fpos2, *fposp;
     int flags = 0;
 
@@ -376,7 +377,7 @@ static void do_error(int code, va_list ap) {
 	break;	
       case err_sfntbadglyph:
 	fpos = *va_arg(ap, filepos *);
-	wc = va_arg(ap, wchar_t);
+	wc = va_arg(ap, unsigned);
 	sprintf(error,
 		"warning: character U+%04X references an non-existent glyph",
 		wc);

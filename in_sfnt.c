@@ -886,8 +886,7 @@ void sfnt_getmap(font_info *fi) {
 			    idx = (k + idDelta[j]) & 0xffff;
 			    if (idx != 0) {
 				if (idx > sf->nglyphs)  {
-				    error(err_sfntbadglyph, &sf->pos,
-					  (wchar_t)k);
+				    error(err_sfntbadglyph, &sf->pos, k);
 				    continue;
 				}
 				fi->bmp[k] = sfnt_indextoglyph(sf, idx);
@@ -898,16 +897,14 @@ void sfnt_getmap(font_info *fi) {
 			for (k = startCode[j]; k <= endCode[j]; k++) {
 			    if (startidx + k - startCode[j] >=
 				nglyphindex) {
-				error(err_sfntbadglyph, &sf->pos,
-				      (wchar_t)k);
+				error(err_sfntbadglyph, &sf->pos, k);
 				continue;
 			    }
 			    idx = glyphIndexArray[startidx + k - startCode[j]];
 			    if (idx != 0) {
 				idx = (idx + idDelta[j]) & 0xffff;
 				if (idx > sf->nglyphs) {
-				    error(err_sfntbadglyph, &sf->pos,
-					  (wchar_t)k);
+				    error(err_sfntbadglyph, &sf->pos, k);
 				    continue;
 				}
 				fi->bmp[k] = sfnt_indextoglyph(sf, idx);
