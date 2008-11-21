@@ -95,7 +95,7 @@
 #define debug_int(x...) ( fprintf(stderr, x) )
 #define debug(x) ( debug_int x )
 #else
-#define debug(x)
+#define debug(x) ((void)0)
 #endif
 
 #ifdef STANDALONE
@@ -1576,11 +1576,11 @@ deflate_compress_ctx *deflate_compress_new(int type)
     {
 	int i;
 
-	for (i = 0; i < lenof(out->static_len1); i++)
+	for (i = 0; i < (int)lenof(out->static_len1); i++)
 	    out->static_len1[i] = (i < 144 ? 8 :
 				   i < 256 ? 9 :
 				   i < 280 ? 7 : 8);
-	for (i = 0; i < lenof(out->static_len2); i++)
+	for (i = 0; i < (int)lenof(out->static_len2); i++)
 	    out->static_len2[i] = 5;
     }
     hufcodes(out->static_len1, out->static_code1, lenof(out->static_code1));
@@ -2041,7 +2041,8 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 {
     const coderecord *rec;
     const unsigned char *block = (const unsigned char *)vblock;
-    int code, bfinal, btype, rep, dist, nlen, header, cksum;
+    int code, bfinal, btype, rep, dist, nlen, header;
+    unsigned long cksum;
     int error = 0;
 
     if (len == 0) {

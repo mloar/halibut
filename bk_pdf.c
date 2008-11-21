@@ -232,7 +232,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 		    continue;
 		idx = sfnt_glyphtoindex(fe->font->info->fontfile,
 					fe->vector[i]);
-		if (start >= 0 && idx - startidx == i - start) {
+		if (start >= 0 && idx - startidx == (unsigned)(i - start)) {
 		    if (ranges[start] == 1) {
 			nranges++; nchars--;
 		    }
@@ -303,7 +303,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    objtext(cidfont, "/FontDescriptor ");
 	    objref(cidfont, fontdesc);
 	    objtext(cidfont, "\n/W[0[");
-	    for (i = 0; i < sfnt_nglyphs(fe->font->info->fontfile); i++) {
+	    for (i = 0; i < (int)sfnt_nglyphs(fe->font->info->fontfile); i++) {
 		char buf[20];
 		double width;
 		width = find_width(fe->font,
