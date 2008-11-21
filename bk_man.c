@@ -215,8 +215,9 @@ paragraph *man_config_filename(char *filename)
     return cmdline_cfg_simple("man-filename", filename, NULL);
 }
 
-#define QUOTE_INITCTRL 1 /* quote initial . and ' on a line */
-#define QUOTE_QUOTES   2 /* quote double quotes by doubling them */
+#define QUOTE_INITCTRL    1 /* quote initial . and ' on a line */
+#define QUOTE_QUOTES      2 /* quote double quotes by doubling them */
+#define QUOTE_LITHYPHENS  4 /* don't convert hyphens into \(hy */
 
 void man_backend(paragraph *sourceform, keywordlist *keywords,
 		 indexdata *idx, void *unused) {
@@ -482,7 +483,7 @@ static int man_convert(wchar_t const *s, int maxlen,
 		/* Turn backslashes into \e. */
 		rdaddsc(&out, "\\e");
 		continue;
-	    } else if (*q == '-') {
+	    } else if (*q == '-' && !(quote_props & QUOTE_LITHYPHENS)) {
 		/* Turn nonbreakable hyphens into \(hy. */
 		rdaddsc(&out, "\\(hy");
 		continue;
@@ -584,6 +585,10 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 	    quote_props = man_rdaddctrl(rs, "\\fB", quote_props, conf, state);
 	}
 
+	if (towordstyle(text->type) == word_Code ||
+	    towordstyle(text->type) == word_WeakCode)
+	    quote_props |= QUOTE_LITHYPHENS;
+
 	if (removeattr(text->type) == word_Normal) {
 	    charset_state s2 = *state;
 	    int len = ustrlen(text->text), hyphen = FALSE;
@@ -654,7 +659,7 @@ static void man_codepara(FILE *fp, word *text, int charset) {
     for (; text; text = text->next) if (text->type == word_WeakCode) {
 	char *c;
 	wchar_t *t, *e;
-	int quote_props = QUOTE_INITCTRL;
+	int quote_props = QUOTE_INITCTRL | QUOTE_LITHYPHENS;
 
 	t = text->text;
 	if (text->next && text->next->type == word_Emph) {
