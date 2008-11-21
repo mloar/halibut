@@ -835,8 +835,10 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		needkw = 4;
 		break;
 	      case c__comment:
-		if (isbrace(in))
+		if (isbrace(in)) {
+		    needkw = -1;
 		    break;	       /* `\#{': isn't a comment para */
+		}
 		do {
 		    dtor(t), t = get_token(in);
 		} while (t.type != tok_eop && t.type != tok_eof);
