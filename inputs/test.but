@@ -16,8 +16,8 @@ document}{sub-sub}
 \cfg{info-charset}{utf-8}
 \cfg{man-headnumbers}{true}
 
-\cfg{contents}{Contents(edited)}
-\cfg{index}{Index(alsoedited)}
+\cfg{contents}{Contents - edited title}
+\cfg{index}{Index - also edited title}
 
 This paragraph is not labelled \q{preamble}, but should still appear
 as it.
