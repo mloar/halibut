@@ -87,6 +87,8 @@ Here's a code paragraph:
 \c We can use discretionary bold and italic in code paragraphs!
 \e                          bbbb     iiiiii
 \c Isn't that ludicrous?
+\c 
+\c man page tricky characters: command -o 'quoted' -o `backticks`
 
 This is a list:
 
