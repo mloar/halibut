@@ -217,7 +217,7 @@ paragraph *man_config_filename(char *filename)
 
 #define QUOTE_INITCTRL    1 /* quote initial . and ' on a line */
 #define QUOTE_QUOTES      2 /* quote double quotes by doubling them */
-#define QUOTE_LITHYPHENS  4 /* don't convert hyphens into \(hy */
+#define QUOTE_LITERAL     4 /* defeat special meaning of `, ', - in troff */
 
 void man_backend(paragraph *sourceform, keywordlist *keywords,
 		 indexdata *idx, void *unused) {
@@ -476,16 +476,21 @@ static int man_convert(wchar_t const *s, int maxlen,
 		 */
 		rdaddc(&out, '\\');
 		rdaddc(&out, '&');
-	    } else if (*q == '`' || *q == ' ') {
+	    }
+	    if (*q == '`' || *q == ' ') {
 		/* Quote backticks and nonbreakable spaces always. */
 		rdaddc(&out, '\\');
 	    } else if (*q == '\\') {
 		/* Turn backslashes into \e. */
 		rdaddsc(&out, "\\e");
 		continue;
-	    } else if (*q == '-' && !(quote_props & QUOTE_LITHYPHENS)) {
+	    } else if (*q == '-' && !(quote_props & QUOTE_LITERAL)) {
 		/* Turn nonbreakable hyphens into \(hy. */
 		rdaddsc(&out, "\\(hy");
+		continue;
+	    } else if (*q == '\'' && (quote_props & QUOTE_LITERAL)) {
+		/* Try to preserve literal U+0027 */
+		rdaddsc(&out, "\\(aq"); /* "apostrophe quote" */
 		continue;
 	    } else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
 		/*
@@ -587,7 +592,7 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 
 	if (towordstyle(text->type) == word_Code ||
 	    towordstyle(text->type) == word_WeakCode)
-	    quote_props |= QUOTE_LITHYPHENS;
+	    quote_props |= QUOTE_LITERAL;
 
 	if (removeattr(text->type) == word_Normal) {
 	    charset_state s2 = *state;
@@ -659,7 +664,7 @@ static void man_codepara(FILE *fp, word *text, int charset) {
     for (; text; text = text->next) if (text->type == word_WeakCode) {
 	char *c;
 	wchar_t *t, *e;
-	int quote_props = QUOTE_INITCTRL | QUOTE_LITHYPHENS;
+	int quote_props = QUOTE_INITCTRL | QUOTE_LITERAL;
 
 	t = text->text;
 	if (text->next && text->next->type == word_Emph) {
