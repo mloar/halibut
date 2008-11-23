@@ -1047,7 +1047,7 @@ directives:
 
 \dt \I{\cw{\\cfg\{winhelp-filename\}}}\cw{\\cfg\{winhelp-filename\}\{}\e{filename}\cw{\}}
 
-\dd Sets the \i{output file name} in which to store the man page.
+\dd Sets the \i{output file name} in which to store the help file.
 This directive is implicitly generated if you provide a file name
 parameter after the command-line option \i\c{--winhelp} (see
 \k{running-options}).
