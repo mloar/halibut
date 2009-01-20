@@ -311,7 +311,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     word spaceword;
     textfile tf;
     wchar_t *prefixextra;
-    int nesting, nestindent;
+    int nesting, nestbase, nestindent;
     int indentb, indenta;
 
     IGNORE(unused);
@@ -338,7 +338,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 			 conf.atitle, conf.indent, conf.width, &conf);
 
     nestindent = conf.listindentbefore + conf.listindentafter;
-    nesting = (conf.indent_preambles ? 0 : -conf.indent);
+    nestbase = (conf.indent_preambles ? 0 : -conf.indent);
+    nesting = nestbase;
 
     /* Do the main document */
     for (p = sourceform; p; p = p->next) switch (p->type) {
@@ -356,7 +357,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
 	break;
       case para_LcontPop:
 	nesting -= nestindent;
-	assert(nesting >= 0);
+	assert(nesting >= nestbase);
 	break;
 
 	/*
