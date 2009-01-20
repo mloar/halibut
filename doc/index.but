@@ -453,8 +453,8 @@ directive
 \IM{\\cfg\{paper-rule-thickness\}} \c{paper-rule-thickness} configuration directive
 \IM{\\cfg\{paper-rule-thickness\}} \cw{\\cfg\{paper-rule-thickness\}}
 
-\IM{\\cfg\{paper-contents-index-step\}} \c{paper-contents-index-step} configuration directive
-\IM{\\cfg\{paper-contents-index-step\}} \cw{\\cfg\{paper-contents-index-step\}}
+\IM{\\cfg\{paper-contents-indent-step\}} \c{paper-contents-indent-step} configuration directive
+\IM{\\cfg\{paper-contents-indent-step\}} \cw{\\cfg\{paper-contents-indent-step\}}
 
 \IM{\\cfg\{paper-contents-margin\}} \c{paper-contents-margin} configuration directive
 \IM{\\cfg\{paper-contents-margin\}} \cw{\\cfg\{paper-contents-margin\}}

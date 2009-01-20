@@ -1687,13 +1687,19 @@ of section numbers (which are in the left margin).
 
 \S2{output-paper-index} Contents and index
 
-\dt \I{\cw{\\cfg\{paper-contents-index-step\}}}\cw{\\cfg\{paper-contents-index-step\}\{}\e{points}\cw{\}}
+\dt \I{\cw{\\cfg\{paper-contents-indent-step\}}}\cw{\\cfg\{paper-contents-indent-step\}\{}\e{points}\cw{\}}
+
+\dd Specifies by how much to indent each entry in the table of
+contents per level of subdivision in the document. (In other words,
+chapter titles appear at the left of the table of contents, headings
+within the chapter are indented by the amount configured here,
+subheadings by twice that, and so on.)
 
 \dt \I{\cw{\\cfg\{paper-contents-margin\}}}\cw{\\cfg\{paper-contents-margin\}\{}\e{points}\cw{\}}
 
-\# FIXME: I do not know what dees one does. (I couldn't get either of
-them to do anything obvious, although the source indicates they should
-do something.)
+\dd Specifies the amount of space on the right of the table of
+contents which should be reserved for page numbers only. Headings in
+the table of contents which extend into this space will be wrapped.
 
 \dt \I{\cw{\\cfg\{paper-leader-separation\}}}\cw{\\cfg\{paper-leader-separation\}\{}\e{points}\cw{\}}
 
@@ -1855,7 +1861,7 @@ The default page size corresponds to 210\_\u00D7{x}\_297\_mm, i.e.,
 \c \cfg{paper-chapter-underline-depth}{14} 
 \c \cfg{paper-sect-num-left-space}{12} 
 \c
-\c \cfg{paper-contents-index-step}{24} 
+\c \cfg{paper-contents-indent-step}{24} 
 \c \cfg{paper-contents-margin}{84} 
 \c \cfg{paper-leader-separation}{12} 
 \c \cfg{paper-footer-distance}{32} 
