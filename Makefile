@@ -86,7 +86,7 @@ endif
 ifdef VER
 VDEF = -DVERSION=\"$(VER)\"
 else
-VDEF = `(cd $(SRC); md5sum -c manifest >& /dev/null && cat version)`
+VDEF = `(cd $(SRC); md5sum -c manifest >/dev/null 2>&1 && cat version)`
 endif
 
 all: halibut
