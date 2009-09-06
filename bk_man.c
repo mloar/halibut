@@ -248,6 +248,12 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
 	    man_text(fp, p->words, TRUE, 0, &conf);
 	}
 
+    /* Standard preamble */
+    /* Dodge to try to get literal U+0027 in output when required,
+     * bypassing groff's Unicode transform; pinched from pod2man */
+    fprintf(fp, ".ie \\n(.g .ds Aq \\(aq\n"
+	        ".el       .ds Aq '\n");
+
     /* .TH name-of-program manual-section */
     fprintf(fp, ".TH");
     if (conf.th && *conf.th) {
@@ -489,8 +495,9 @@ static int man_convert(wchar_t const *s, int maxlen,
 		rdaddsc(&out, "\\(hy");
 		continue;
 	    } else if (*q == '\'' && (quote_props & QUOTE_LITERAL)) {
-		/* Try to preserve literal U+0027 */
-		rdaddsc(&out, "\\(aq"); /* "apostrophe quote" */
+		/* Try to preserve literal U+0027 (using string defined
+		 * in preamble) */
+		rdaddsc(&out, "\\*(Aq"); /* "apostrophe quote" */
 		continue;
 	    } else if (*q == '"' && (quote_props & QUOTE_QUOTES)) {
 		/*
