@@ -490,10 +490,23 @@ static int man_convert(wchar_t const *s, int maxlen,
 		/* Turn backslashes into \e. */
 		rdaddsc(&out, "\\e");
 		continue;
-	    } else if (*q == '-' && !(quote_props & QUOTE_LITERAL)) {
-		/* Turn nonbreakable hyphens into \(hy. */
-		rdaddsc(&out, "\\(hy");
-		continue;
+	    } else if (*q == '-') {
+		if (quote_props & QUOTE_LITERAL) {
+		    /*
+		     * Try to preserve literal U+002D.
+		     * This is quite awkward. Debian hacks groff so that
+		     * \- and - both produce it; elsewhere it's not necessarily
+		     * possible to get it.
+		     * Apparently \- is the preferred compromise despite
+		     * having minus-sign semantics, as it is non-breaking.
+		     * (pod2man uses it, anyway.)
+		     */
+		    rdaddc(&out, '\\');
+		} else {
+		    /* Turn nonbreakable hyphens into \(hy. */
+		    rdaddsc(&out, "\\(hy");
+		    continue;
+		}
 	    } else if (*q == '\'' && (quote_props & QUOTE_LITERAL)) {
 		/* Try to preserve literal U+0027 (using string defined
 		 * in preamble) */
