@@ -235,7 +235,10 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Open the output file.
      */
-    fp = fopen(conf.filename, "w");
+    if (!strcmp(conf.filename, "-"))
+	fp = stdout;
+    else
+	fp = fopen(conf.filename, "w");
     if (!fp) {
 	error(err_cantopenw, conf.filename);
 	return;
@@ -425,7 +428,8 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Tidy up.
      */
-    fclose(fp);
+    if (fp != stdout)
+	fclose(fp);
     man_conf_cleanup(conf);
 }
 

@@ -48,7 +48,10 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 	}
     }
 
-    fp = fopen(filename, "w");
+    if (!strcmp(filename, "-"))
+	fp = stdout;
+    else
+	fp = fopen(filename, "w");
     if (!fp) {
 	error(err_cantopenw, filename);
 	return;
@@ -304,7 +307,8 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
 
     fprintf(fp, "%%%%EOF\n");
 
-    fclose(fp);
+    if (fp != stdout)
+	fclose(fp);
 
     sfree(filename);
 }

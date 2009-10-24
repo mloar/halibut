@@ -323,7 +323,10 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Open the output file.
      */
-    tf.fp = fopen(conf.filename, "w");
+    if (!strcmp(conf.filename, "-"))
+	tf.fp = stdout;
+    else
+	tf.fp = fopen(conf.filename, "w");
     if (!tf.fp) {
 	error(err_cantopenw, conf.filename);
 	return;
@@ -460,7 +463,8 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
      * Tidy up
      */
     text_output(&tf, NULL);	       /* end charset conversion */
-    fclose(tf.fp);
+    if (tf.fp != stdout)
+	fclose(tf.fp);
     sfree(conf.asect);
     sfree(conf.filename);
 }

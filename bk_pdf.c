@@ -665,7 +665,10 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
      * Write out the PDF file.
      */
 
-    fp = fopen(filename, "wb");
+    if (!strcmp(filename, "-"))
+	fp = stdout;
+    else
+	fp = fopen(filename, "wb");
     if (!fp) {
 	error(err_cantopenw, filename);
 	return;
@@ -712,7 +715,8 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 	    olist.tail->number + 1, cat->number, info->number);
     fprintf(fp, "startxref\n%d\n%%%%EOF\n", fileoff);
 
-    fclose(fp);
+    if (fp != stdout)
+	fclose(fp);
 
     sfree(filename);
 }

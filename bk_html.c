@@ -884,7 +884,10 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 #define listname(lt) ( (lt)==UL ? "ul" : (lt)==OL ? "ol" : "dl" )
 #define itemname(lt) ( (lt)==LI ? "li" : (lt)==DT ? "dt" : "dd" )
 
-	    ho.fp = fopen(f->filename, "w");
+	    if (!strcmp(f->filename, "-"))
+		ho.fp = stdout;
+	    else
+		ho.fp = fopen(f->filename, "w");
 	    if (!ho.fp)
 		error(err_cantopenw, f->filename);
 
@@ -2507,7 +2510,7 @@ static void html_text_limit_internal(htmloutput *ho, wchar_t const *text,
 static void cleanup(htmloutput *ho)
 {
     return_to_neutral(ho);
-    if (ho->fp)
+    if (ho->fp && ho->fp != stdout)
 	fclose(ho->fp);
 }
 
