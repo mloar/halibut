@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
      */
     while (--argc) {
 	char *p = *++argv;
-	if (*p == '-') {
+	if (*p == '-' && p[1]) {
 	    /*
 	     * An option.
 	     */
@@ -264,7 +264,10 @@ int main(int argc, char **argv) {
 	    /*
 	     * A non-option argument.
 	     */
-	    infiles[nfiles++] = p;
+	    if (!strcmp(p, "-"))
+		infiles[nfiles++] = NULL;   /* special case: read stdin */
+	    else
+		infiles[nfiles++] = p;
 	}
     }
 

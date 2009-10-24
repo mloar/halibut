@@ -119,7 +119,8 @@ static int get(input *in, filepos *pos, rdstringc *rsc) {
 	    int c = getc(in->currfp);
 
 	    if (c == EOF) {
-		fclose(in->currfp);
+		if (in->wantclose)
+		    fclose(in->currfp);
 		in->currfp = NULL;
 		return EOF;
 	    }
@@ -1601,23 +1602,38 @@ paragraph *read_input(input *in, indexdata *idx) {
     macros = newtree234(macrocmp);
 
     while (in->currindex < in->nfiles) {
-	in->currfp = fopen(in->filenames[in->currindex], "r");
-	if (in->currfp) {
-	    setpos(in, in->filenames[in->currindex]);
-	    in->charset = in->defcharset;
-	    in->csstate = charset_init_state;
-	    in->wcpos = in->nwc = 0;
-	    in->pushback_chars = NULL;
+	setpos(in, in->filenames[in->currindex]);
+	in->charset = in->defcharset;
+	in->csstate = charset_init_state;
+	in->wcpos = in->nwc = 0;
+	in->pushback_chars = NULL;
+
+	if (!in->filenames[in->currindex]) {
+	    in->currfp = stdin;
+	    in->wantclose = FALSE;     /* don't fclose stdin */
+	    /*
+	     * When reading standard input, we always expect to see
+	     * an actual Halibut file and not any of the unusual
+	     * input types like fonts.
+	     */
 	    reader = NULL;
-	    len = fread(mag, 1, sizeof(mag), in->currfp);
-	    for (i = 0; i < lenof(magics); i++) {
-		if (len >= magics[i].nmagic &&
-		    memcmp(mag, magics[i].magic, magics[i].nmagic) == 0) {
-		    reader = magics[i].reader;
-		    break;
+	} else {
+	    in->currfp = fopen(in->filenames[in->currindex], "r");
+	    if (in->currfp) {
+		in->wantclose = TRUE;
+		reader = NULL;
+		len = fread(mag, 1, sizeof(mag), in->currfp);
+		for (i = 0; i < lenof(magics); i++) {
+		    if (len >= magics[i].nmagic &&
+			memcmp(mag, magics[i].magic, magics[i].nmagic) == 0) {
+			reader = magics[i].reader;
+			break;
+		    }
 		}
+		rewind(in->currfp);
 	    }
-	    rewind(in->currfp);
+	}
+	if (in->currfp) {
 	    if (reader == NULL)
 		read_file(&hptr, in, idx, macros);
 	    else

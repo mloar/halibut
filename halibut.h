@@ -62,6 +62,7 @@ struct input_Tag {
     int nfiles;			       /* how many in the list */
     FILE *currfp;		       /* the currently open one */
     int currindex;		       /* which one is that in the list */
+    int wantclose;		       /* does the current file want closing */
     pushback *pushback;		       /* pushed-back input characters */
     int npushback, pushbacksize;
     filepos pos;
