@@ -278,6 +278,11 @@ Similarly, we should support things like hyperlinks
 and \e{in the \W{http://www.tartarus.org/}{middle} of them}, and also
 \e{at the \W{http://home.att.net/~cecw/lastpage.htm}{end}}.
 
+Here's a hyperlink containing some special characters:
+\W{http://a<b&c>d/}{here}. (Not that it'll \e{work}, but you can at
+least determine that it's been correctly escaped by inspection of
+the output HTML.)
+
 \#{FIXME: Unfortunately, we still don't quite do the right thing with
 references:
 How about a \e{reference to \k{subhead} here}? And at

@@ -2176,7 +2176,7 @@ static void html_words(htmloutput *ho, word *words, int flags,
 		       htmlfile *file, keywordlist *keywords, htmlconfig *cfg)
 {
     word *w;
-    char *c;
+    char *c, *c2, *p, *q;
     int style, type;
 
     for (w = words; w; w = w->next) switch (w->type) {
@@ -2184,7 +2184,20 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	if (flags & LINKS) {
 	    element_open(ho, "a");
 	    c = utoa_dup(w->text, CS_ASCII);
-	    element_attr(ho, "href", c);
+	    c2 = snewn(1 + 10*strlen(c), char);
+	    for (p = c, q = c2; *p; p++) {
+		if (*p == '&')
+		    q += sprintf(q, "&amp;");
+		else if (*p == '<')
+		    q += sprintf(q, "&lt;");
+		else if (*p == '>')
+		    q += sprintf(q, "&gt;");
+		else
+		    *q++ = *p;
+	    }
+	    *q = '\0';
+	    element_attr(ho, "href", c2);
+	    sfree(c2);
 	    sfree(c);
 	}
 	break;
