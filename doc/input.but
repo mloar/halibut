@@ -1295,8 +1295,15 @@ contains a keyword indicating what aspect of Halibut you want to
 configure, and the meaning of the one(s) after that depends on the
 first keyword.
 
-The current list of configuration keywords in the main Halibut code
-is quite small. Here it is in full:
+Each output format supports a range of configuration options of its
+own (and some configuration is shared between similar output formats
+- the PDF and PostScript formats share most of their configuration,
+as described in \k{output-paper}). The configuration keywords for
+each output format are listed in the manual section for that format;
+see \k{output}.
+
+There are also a small number of configuration options which apply
+across all output formats:
 
 \dt \I\cw{\\cfg\{chapter\}}\cw{\\cfg\{chapter\}\{}\e{new chapter name}\cw{\}}
 
