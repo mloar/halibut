@@ -1581,14 +1581,15 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 struct {
     char const *magic;
     size_t nmagic;
+    int binary;
     void (*reader)(input *);
 } magics[] = {
-    { "%!FontType1-",     12, &read_pfa_file },
-    { "%!PS-AdobeFont-",  15, &read_pfa_file },
-    { "\x80\x01",          2, &read_pfb_file },
-    { "StartFontMetrics", 16, &read_afm_file },
-    { "\x00\x01\x00\x00",  4, &read_sfnt_file },
-    { "true",		   4, &read_sfnt_file },
+    { "%!FontType1-",     12, FALSE, &read_pfa_file },
+    { "%!PS-AdobeFont-",  15, FALSE, &read_pfa_file },
+    { "\x80\x01",          2, TRUE,  &read_pfb_file },
+    { "StartFontMetrics", 16, FALSE, &read_afm_file },
+    { "\x00\x01\x00\x00",  4, TRUE,  &read_sfnt_file },
+    { "true",		   4, TRUE,  &read_sfnt_file },
 };
 
 paragraph *read_input(input *in, indexdata *idx) {
@@ -1597,6 +1598,7 @@ paragraph *read_input(input *in, indexdata *idx) {
     tree234 *macros;
     char mag[16];
     size_t len, i;
+    int binary;
     void (*reader)(input *);
 
     macros = newtree234(macrocmp);
@@ -1618,7 +1620,13 @@ paragraph *read_input(input *in, indexdata *idx) {
 	     */
 	    reader = NULL;
 	} else {
-	    in->currfp = fopen(in->filenames[in->currindex], "r");
+	    /*
+	     * Open the file in binary mode to look for magic
+	     * numbers. We'll switch to text mode if we find we're
+	     * looking at a text file type.
+	     */
+	    in->currfp = fopen(in->filenames[in->currindex], "rb");
+	    binary = FALSE; /* default to Halibut source, which is text */
 	    if (in->currfp) {
 		in->wantclose = TRUE;
 		reader = NULL;
@@ -1627,17 +1635,23 @@ paragraph *read_input(input *in, indexdata *idx) {
 		    if (len >= magics[i].nmagic &&
 			memcmp(mag, magics[i].magic, magics[i].nmagic) == 0) {
 			reader = magics[i].reader;
+			binary = magics[i].binary;
 			break;
 		    }
 		}
 		rewind(in->currfp);
 	    }
+	    if (!binary) {
+		fclose(in->currfp);
+		in->currfp = fopen(in->filenames[in->currindex], "r");
+	    }
 	}
 	if (in->currfp) {
-	    if (reader == NULL)
+	    if (reader == NULL) {
 		read_file(&hptr, in, idx, macros);
-	    else
+	    } else {
 		(*reader)(in);
+	    }
 	}
 	in->currindex++;
     }
