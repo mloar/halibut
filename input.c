@@ -978,7 +978,8 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			    rdadd(&macrotext, L'\n');
 			rdadds(&macrotext, t.text);
 			dtor(t), t = get_token(in);
-			if (t.type == tok_eop) break;
+			if (t.type == tok_eop || t.type == tok_eof)
+                            break;
 		    }
 		    macrodef(macros, rs.text, macrotext.text, fp);
 		    continue;	       /* next paragraph */
