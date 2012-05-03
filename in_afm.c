@@ -229,14 +229,12 @@ void read_afm_file(input *in) {
 	} else if (strcmp(key, "StartKernPairs") == 0 ||
 		   strcmp(key, "StartKernPairs0") == 0) {
 	    int nkerns, i;
-	    kern_pair *kerns;
 	    if (!(val = strtok(NULL, " \t"))) {
 		error(err_afmval, &in->pos, key, 1);
 		goto giveup;
 	    }
 	    nkerns = atoi(val);
 	    sfree(line);
-	    kerns = snewn(nkerns, kern_pair);
 	    for (i = 0; i < nkerns; i++) {
 		line = afm_read_line(in);
 		if (line == NULL)

@@ -50,7 +50,6 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     int font_index;
     font_encoding *fe;
     page_data *page;
-    int pageno;
     FILE *fp;
     char *filename;
     paragraph *p;
@@ -427,7 +426,6 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     /*
      * Create and render the individual pages.
      */
-    pageno = 0;
     for (page = doc->pages; page; page = page->next) {
 	object *opage, *cstr;
 	rect *r;

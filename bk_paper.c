@@ -1715,7 +1715,6 @@ static void wrap_paragraph(para_data *pdata, word *words,
 
     for (p = wrapping; p; p = p->next) {
 	line_data *ldata;
-	word *wd;
 	int len, wid, spaces;
 
 	ldata = snew(line_data);
@@ -1740,7 +1739,6 @@ static void wrap_paragraph(para_data *pdata, word *words,
 	spaces = 0;
 	len = paper_width_list(&ctx, ldata->first, ldata->end, &spaces);
 	wid = (p == wrapping ? w - i1 : w - i2);
-	wd = ldata->first;
 
 	ldata->hshortfall = wid - len;
 	ldata->nspaces = spaces;
