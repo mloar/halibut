@@ -340,7 +340,7 @@ int utoi(wchar_t const *s) {
 	s++;
     }
 
-    return n;
+    return n * sign;
 }
 
 double utof(wchar_t const *s)
