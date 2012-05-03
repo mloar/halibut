@@ -2441,7 +2441,7 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	     */
 	    if (dctx->nbits < 16)
 		goto finished;
-	    nlen = 0xFFFF & ~dctx->bits;
+	    nlen = dctx->bits & 0xFFFF;
 	    EATBITS(16);
 	    if (dctx->uncomplen != (nlen ^ 0xFFFF)) {
                 error = DEFLATE_ERR_UNCOMP_HDR;
