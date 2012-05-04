@@ -497,7 +497,7 @@ static void text_output_many(textfile *tf, int n, wchar_t c)
     wchar_t s[2];
     s[0] = c;
     s[1] = L'\0';
-    while (n--)
+    while (n-- > 0)
 	text_output(tf, s);
 }
 
