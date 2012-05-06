@@ -257,6 +257,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 			sprintf(buf, "<%02X>", i + ranges[i] - 1);
 			objstream(cmap, buf);
 			sprintf(buf, "%hu\n",
+				(unsigned short)
 				sfnt_glyphtoindex(fe->font->info->fontfile,
 						  fe->vector[i]));
 			objstream(cmap, buf);
@@ -278,6 +279,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
 			sprintf(buf, "<%02X>", i);
 			objstream(cmap, buf);
 			sprintf(buf, "%hu\n",
+				(unsigned short)
 				sfnt_glyphtoindex(fe->font->info->fontfile,
 						  fe->vector[i]));
 			objstream(cmap, buf);
