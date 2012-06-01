@@ -2297,14 +2297,25 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 					     &error);
 		if (!dctx->currlentable)
 		    goto finished;     /* error code set up by mktable */
-		dctx->currdisttable = mktable(dctx->lengths + dctx->hlit,
-					      dctx->hdist,
+                if (dctx->hdist == 1 && dctx->lengths[dctx->hlit] == 0) {
+                    /*
+                     * Special case: if the code length list for the
+                     * backward-distance table contains a single zero
+                     * entry, it means this block will never encode a
+                     * backward distance at all (i.e. it's all
+                     * literals).
+                     */
+                    dctx->currdisttable = NULL;
+                } else {
+                    dctx->currdisttable = mktable(dctx->lengths + dctx->hlit,
+                                                  dctx->hdist,
 #ifdef ANALYSIS
-					      "distance",
+                                                  "distance",
 #endif
-					      &error);
-		if (!dctx->currdisttable)
-		    goto finished;     /* error code set up by mktable */
+                                                  &error);
+                    if (!dctx->currdisttable)
+                        goto finished;     /* error code set up by mktable */
+                }
 		freetable(&dctx->lenlentable);
 		dctx->lenlentable = NULL;
 		dctx->state = INBLK;
@@ -2374,7 +2385,8 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 		    freetable(&dctx->currlentable);
 		    dctx->currlentable = NULL;
 		}
-		if (dctx->currdisttable != dctx->staticdisttable) {
+		if (dctx->currdisttable &&
+                    dctx->currdisttable != dctx->staticdisttable) {
 		    freetable(&dctx->currdisttable);
 		    dctx->currdisttable = NULL;
 		}
@@ -2396,6 +2408,10 @@ int deflate_decompress_data(deflate_decompress_ctx *dctx,
 	    dctx->state = GOTLEN;
 	    break;
 	  case GOTLEN:
+            if (!dctx->currdisttable) {
+		error = DEFLATE_ERR_NODISTTABLE;
+                goto finished;
+            }
 	    code = huflookup(&dctx->bits, &dctx->nbits, dctx->currdisttable);
 	    debug(("recv: dist %d\n", code));
 	    if (code == -1)
