@@ -99,7 +99,7 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 	     * warn (and drop it, since it won't be referenced).
 	     */
 	    if (is_explicit) {
-		error(err_nosuchidxtag, fpos, tags);
+		err_nosuchidxtag(fpos, tags);
 		continue;
 	    }
 
@@ -123,7 +123,7 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 		 * see if the cases match.
 		 */
 		if (ustrcmp(t->name, existing->name)) {
-		    error(err_indexcase, fpos, t->name,
+		    err_indexcase(fpos, t->name,
 			  &existing->implicit_fpos, existing->name);
 		}
 

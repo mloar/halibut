@@ -13,7 +13,7 @@ char *afm_read_line(input *in) {
 	in->pos.line++;
 	c = getc(in->currfp);
 	if (c == EOF) {
-	    error(err_afmeof, &in->pos);
+	    err_afmeof(&in->pos);
 	    return NULL;
 	}
 	line = snewn(len, char);
@@ -44,7 +44,7 @@ static int afm_require_key(char *line, char const *expected, input *in) {
 
     if (strcmp(key, expected) == 0)
 	return TRUE;
-    error(err_afmkey, &in->pos, expected);
+    err_afmkey(&in->pos, expected);
     return FALSE;
 }
 
@@ -69,11 +69,11 @@ void read_afm_file(input *in) {
     if (!line || !afm_require_key(line, "StartFontMetrics", in))
 	goto giveup;
     if (!(val = strtok(NULL, " \t"))) {
-	error(err_afmval, in->pos, "StartFontMetrics", 1);
+	err_afmval(&in->pos, "StartFontMetrics", 1);
 	goto giveup;
     }
     if (atof(val) >= 5.0) {
-	error(err_afmvers, &in->pos);
+	err_afmvers(&in->pos);
 	goto giveup;
     }
     sfree(line);
@@ -89,7 +89,7 @@ void read_afm_file(input *in) {
 	    return;
 	} else if (strcmp(key, "FontName") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->name = dupstr(val);
@@ -97,63 +97,63 @@ void read_afm_file(input *in) {
 	    int i;
 	    for (i = 0; i < 3; i++) {
 		if (!(val = strtok(NULL, " \t"))) {
-		    error(err_afmval, &in->pos, key, 4);
+		    err_afmval(&in->pos, key, 4);
 		    goto giveup;
 		}
 		fi->fontbbox[i] = atof(val);
 	    }
 	} else if (strcmp(key, "CapHeight") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->capheight = atof(val);
 	} else if (strcmp(key, "XHeight") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->xheight = atof(val);
 	} else if (strcmp(key, "Ascender") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->ascent = atof(val);
 	} else if (strcmp(key, "Descender") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->descent = atof(val);
 	} else if (strcmp(key, "CapHeight") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->capheight = atof(val);
 	} else if (strcmp(key, "StdHW") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->stemh = atof(val);
 	} else if (strcmp(key, "StdVW") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->stemv = atof(val);
 	} else if (strcmp(key, "ItalicAngle") == 0) {
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    fi->italicangle = atof(val);
 	} else if (strcmp(key, "StartCharMetrics") == 0) {
 	    int nglyphs, i;
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    nglyphs = atoi(val);
@@ -170,14 +170,14 @@ void read_afm_file(input *in) {
 		    if (strcmp(key, "WX") == 0 || strcmp(key, "W0X") == 0) {
 			if (!(val = strtok(NULL, " \t")) ||
 			    !strcmp(val, ";")) {
-			    error(err_afmval, &in->pos, key, 1);
+			    err_afmval(&in->pos, key, 1);
 			    goto giveup;
 			}
 			width = atoi(val);
 		    } else if (strcmp(key, "N") == 0) {
 			if (!(val = strtok(NULL, " \t")) ||
 			    !strcmp(val, ";")) {
-			    error(err_afmval, &in->pos, key, 1);
+			    err_afmval(&in->pos, key, 1);
 			    goto giveup;
 			}
 			g = glyph_intern(val);
@@ -185,13 +185,13 @@ void read_afm_file(input *in) {
 			glyph succ, lig;
 			if (!(val = strtok(NULL, " \t")) ||
 			    !strcmp(val, ";")) {
-			    error(err_afmval, &in->pos, key, 1);
+			    err_afmval(&in->pos, key, 1);
 			    goto giveup;
 			}
 			succ = glyph_intern(val);
 			if (!(val = strtok(NULL, " \t")) ||
 			    !strcmp(val, ";")) {
-			    error(err_afmval, &in->pos, key, 1);
+			    err_afmval(&in->pos, key, 1);
 			    goto giveup;
 			}
 			lig = glyph_intern(val);
@@ -230,7 +230,7 @@ void read_afm_file(input *in) {
 		   strcmp(key, "StartKernPairs0") == 0) {
 	    int nkerns, i;
 	    if (!(val = strtok(NULL, " \t"))) {
-		error(err_afmval, &in->pos, key, 1);
+		err_afmval(&in->pos, key, 1);
 		goto giveup;
 	    }
 	    nkerns = atoi(val);
@@ -248,7 +248,7 @@ void read_afm_file(input *in) {
 		    nr = strtok(NULL, " \t");
 		    val = strtok(NULL, " \t");
 		    if (!val) {
-			error(err_afmval, &in->pos, key, 3);
+			err_afmval(&in->pos, key, 3);
 			goto giveup;
 		    }
 		    l = glyph_intern(nl);

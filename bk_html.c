@@ -348,7 +348,7 @@ static htmlconfig html_configure(paragraph *source) {
 			break;
 
 		if (i == lenof(versions))
-		    error(err_htmlver, &p->fpos, vername);
+		    err_htmlver(&p->fpos, vername);
 		else
 		    ret.htmlver = versions[i].ver;
 	    } else if (!ustricmp(k, L"html-single-filename")) {
@@ -381,7 +381,7 @@ static htmlconfig html_configure(paragraph *source) {
 			frag = adv(frag);
 		    }
 		} else
-		    error(err_cfginsufarg, &p->fpos, p->origkeyword, 1);
+		    err_cfginsufarg(&p->fpos, p->origkeyword, 1);
 	    } else if (!ustricmp(k, L"html-chapter-numeric")) {
 		ret.achapter.just_numbers = utob(uadv(k));
 	    } else if (!ustricmp(k, L"html-chapter-shownumber")) {
@@ -548,7 +548,7 @@ static htmlconfig html_configure(paragraph *source) {
      * turn both off.
      */
     if (!ret.chm_filename ^ !ret.hhp_filename) {
-	error(err_chmnames);
+	err_chmnames();
 	sfree(ret.chm_filename); ret.chm_filename = NULL;
 	sfree(ret.hhp_filename); ret.hhp_filename = NULL;
     }
@@ -889,7 +889,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 	    else
 		ho.fp = fopen(f->filename, "w");
 	    if (!ho.fp)
-		error(err_cantopenw, f->filename);
+		err_cantopenw(f->filename);
 
 	    ho.charset = conf.output_charset;
 	    ho.restrict_charset = conf.restrict_charset;
@@ -1685,7 +1685,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 	ho.fp = fopen(conf.hhp_filename, "w");
 	if (!ho.fp)
-	    error(err_cantopenw, conf.hhp_filename);
+	    err_cantopenw(conf.hhp_filename);
 
 	fprintf(ho.fp,
 		"[OPTIONS]\n"
@@ -1760,7 +1760,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 	ho.fp = fopen(conf.hhc_filename, "w");
 	if (!ho.fp)
-	    error(err_cantopenw, conf.hhc_filename);
+	    err_cantopenw(conf.hhc_filename);
 
 	ho.charset = CS_CP1252;	       /* as far as I know, HHC files are */
 	ho.restrict_charset = CS_CP1252;   /* hardwired to this charset */
@@ -1874,7 +1874,7 @@ void html_backend(paragraph *sourceform, keywordlist *keywords,
 
 	ho.fp = fopen(hhk_filename, "w");
 	if (!ho.fp)
-	    error(err_cantopenw, hhk_filename);
+	    err_cantopenw(hhk_filename);
 
 	ho.charset = CS_CP1252;	       /* as far as I know, HHK files are */
 	ho.restrict_charset = CS_CP1252;   /* hardwired to this charset */

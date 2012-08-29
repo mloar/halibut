@@ -49,7 +49,7 @@ static void macrodef(tree234 *macros, wchar_t *name, wchar_t *text,
     m->name = name;
     m->text = text;
     if (add234(macros, m) != m) {
-	error(err_macroexists, &fpos, name);
+	err_macroexists(&fpos, name);
 	sfree(name);
 	sfree(text);
     }
@@ -693,7 +693,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			   wtype == word_WeakCode) {
 		    wtype = word_Emph;
 		} else {
-		    error(err_brokencodepara, &t.pos);
+		    err_brokencodepara(&t.pos);
 		    prev_para_type = par.type;
 		    addpara(par, ret);
 		    while (t.type != tok_eop)   /* error recovery: */
@@ -722,7 +722,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 	     */
 	    dtor(t), t = get_token(in);
 	    if (t.type != tok_lbrace) {
-		error(err_explbr, &t.pos);
+		err_explbr(&t.pos);
 		continue;
 	    }
 
@@ -765,7 +765,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		     * don't give a cascade error.
 		     */
 		    sitem->type = -1;
-		    error(err_misplacedlcont, &t.pos);
+		    err_misplacedlcont(&t.pos);
 		}
 	    } else {
 		/*
@@ -790,7 +790,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 	} else if (t.type == tok_rbrace) {
 	    struct crossparaitem *sitem = stk_pop(crossparastk);
 	    if (!sitem)
-		error(err_unexbrace, &t.pos);
+		err_unexbrace(&t.pos);
 	    else {
 		switch (sitem->type) {
 		  case c_lcont:
@@ -832,7 +832,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		needkw = -1;
 		break;
 	      case c__invalid:
-		error(err_badparatype, t.text, &t.pos);
+		err_badparatype(t.text, &t.pos);
 		needkw = 4;
 		break;
 	      case c__comment:
@@ -891,8 +891,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		par.type == para_UnnumberedChapter) {
 		struct crossparaitem *sitem = stk_top(crossparastk);
 		if (sitem && (sitem->seen_lcont || sitem->seen_quote)) {
-		    error(err_sectmarkerinblock,
-			  &t.pos,
+		    err_sectmarkerinblock(			  &t.pos,
 			  (sitem->seen_lcont ? "lcont" : "quote"));
 		}
 	    }
@@ -945,7 +944,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			}
 		    }
 		    if (t.type != tok_rbrace) {
-			error(err_kwunclosed, &t.pos);
+			err_kwunclosed(&t.pos);
 			continue;
 		    }
 		    rdadd(&rs, 0);     /* add string terminator */
@@ -958,11 +957,11 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 
 		/* See whether we have the right number of keywords. */
 		if ((needkw & 48) && nkeys > 0)
-		    error(err_kwillegal, &fp);
+		    err_kwillegal(&fp);
 		if ((needkw & 11) && nkeys == 0)
-		    error(err_kwexpected, &fp);
+		    err_kwexpected(&fp);
 		if ((needkw & 5) && nkeys > 1)
-		    error(err_kwtoomany, &fp);
+		    err_kwtoomany(&fp);
 
 		if (is_macro) {
 		    /*
@@ -996,7 +995,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    if (t.type != tok_eop && t.type != tok_eof &&
 			(start_cmd == c__invalid ||
 			 t.type != tok_cmd || t.cmd != start_cmd)) {
-			error(err_bodyillegal, &t.pos);
+			err_bodyillegal(&t.pos);
 			/* Error recovery: eat the rest of the paragraph */
 			while (t.type != tok_eop && t.type != tok_eof &&
 			       (start_cmd == c__invalid ||
@@ -1113,7 +1112,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		}
 		break;
 	      case tok_lbrace:
-		error(err_unexbrace, &t.pos);
+		err_unexbrace(&t.pos);
 		/* Error recovery: push nop */
 		sitem = snew(struct stack_item);
 		sitem->type = stack_nop;
@@ -1199,7 +1198,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		     */
 		    dtor(t), t = get_token(in);
 		    if (t.type != tok_lbrace) {
-			error(err_explbr, &t.pos);
+			err_explbr(&t.pos);
 		    } else {
 			int braces = 1;
 			while (braces > 0) {
@@ -1209,7 +1208,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			    else if (t.type == tok_rbrace)
 				braces--;
 			    else if (t.type == tok_eof) {
-				error(err_commenteof, &t.pos);
+				err_commenteof(&t.pos);
 				break;
 			    }
 			}
@@ -1228,7 +1227,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
                     type = t.cmd;
 		    dtor(t), t = get_token(in);
 		    if (t.type != tok_lbrace) {
-			error(err_explbr, &t.pos);
+			err_explbr(&t.pos);
 		    } else {
 			/*
 			 * Enforce that \q may not be used anywhere
@@ -1257,7 +1256,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			    }
 			    stype = stack_quote;
 			} else {
-			    error(err_codequote, &t.pos);
+			    err_codequote(&t.pos);
 			    stype = stack_nop;
 			}
 			sitem = snew(struct stack_item);
@@ -1265,7 +1264,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			sitem->type = stype;
                         if (type == c_cq) {
                             if (style != word_Normal) {
-                                error(err_nestedstyles, &t.pos);
+                                err_nestedstyles(&t.pos);
                             } else {
                                 style = word_WeakCode;
                                 spcstyle = tospacestyle(style);
@@ -1303,7 +1302,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			    wdtext = ustrftime(NULL, broken);
 			    wd.type = style;
 			} else {
-			    error(err_explbr, &t.pos);
+			    err_explbr(&t.pos);
 			    wdtext = NULL;
 			}
 		    } else {
@@ -1325,7 +1324,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			}
 			sfree(rs.text);
 			if (t.type != tok_rbrace) {
-			    error(err_kwexprbr, &t.pos);
+			    err_kwexprbr(&t.pos);
 			}
 		    }
 		    wd.alt = NULL;
@@ -1355,7 +1354,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			if (t.type == tok_cmd &&
 			    (t.cmd == c_i || t.cmd == c_ii)) {
 			    if (indexing) {
-				error(err_nestedindex, &t.pos);
+				err_nestedindex(&t.pos);
 			    } else {
 				/* Add an index-reference word with no
 				 * text as yet */
@@ -1386,7 +1385,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			if (t.type == tok_cmd &&
 			    (t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
 			    if (style != word_Normal)
-				error(err_nestedstyles, &t.pos);
+				err_nestedstyles(&t.pos);
 			    else {
 				style = (t.cmd == c_c ? word_Code :
 					 t.cmd == c_cw ? word_WeakCode :
@@ -1397,7 +1396,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			    dtor(t), t = get_token(in);
 			}
 			if (t.type != tok_lbrace) {
-			    error(err_explbr, &t.pos);
+			    err_explbr(&t.pos);
 			    sfree(sitem);
 			} else {
 			    stk_push(parsestk, sitem);
@@ -1409,7 +1408,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		  case c_e:
 		    type = t.cmd;
 		    if (style != word_Normal) {
-			error(err_nestedstyles, &t.pos);
+			err_nestedstyles(&t.pos);
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
 			sitem = snew(struct stack_item);
@@ -1419,7 +1418,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    }
 		    dtor(t), t = get_token(in);
 		    if (t.type != tok_lbrace) {
-			error(err_explbr, &t.pos);
+			err_explbr(&t.pos);
 		    } else {
 			style = (type == c_c ? word_Code :
 				 type == c_cw ? word_WeakCode :
@@ -1436,7 +1435,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		  case c_I:
 		    type = t.cmd;
 		    if (indexing) {
-			error(err_nestedindex, &t.pos);
+			err_nestedindex(&t.pos);
 			/* Error recovery: eat lbrace, push nop. */
 			dtor(t), t = get_token(in);
 			sitem = snew(struct stack_item);
@@ -1455,7 +1454,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    if (t.type == tok_cmd &&
 			(t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
 			if (style != word_Normal)
-			    error(err_nestedstyles, &t.pos);
+			    err_nestedstyles(&t.pos);
 			else {
 			    style = (t.cmd == c_c ? word_Code :
 				     t.cmd == c_cw ? word_WeakCode :
@@ -1467,7 +1466,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    }
 		    if (t.type != tok_lbrace) {
 			sfree(sitem);
-			error(err_explbr, &t.pos);
+			err_explbr(&t.pos);
 		    } else {
 			/* Add an index-reference word with no text as yet */
 			wd.type = word_IndexRef;
@@ -1530,7 +1529,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    break;
 		  default:
 		    if (!macrolookup(macros, in, t.text, &t.pos))
-			error(err_badmidcmd, t.text, &t.pos);
+			err_badmidcmd(t.text, &t.pos);
 		    break;
 		}
 	    }
@@ -1543,7 +1542,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 	if (stk_top(parsestk)) {
 	    while ((sitem = stk_pop(parsestk)))
 		sfree(sitem);
-	    error(err_missingrbrace, &t.pos);
+	    err_missingrbrace(&t.pos);
 	}
 	stk_free(parsestk);
 	prev_para_type = par.type;
@@ -1565,7 +1564,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
     if (stk_top(crossparastk)) {
 	void *p;
 
-	error(err_missingrbrace2, &t.pos);
+	err_missingrbrace2(&t.pos);
 	while ((p = stk_pop(crossparastk)))
 	    sfree(p);
     }

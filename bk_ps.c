@@ -53,7 +53,7 @@ void ps_backend(paragraph *sourceform, keywordlist *keywords,
     else
 	fp = fopen(filename, "w");
     if (!fp) {
-	error(err_cantopenw, filename);
+	err_cantopenw(filename);
 	return;
     }
 

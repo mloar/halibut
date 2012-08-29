@@ -207,7 +207,7 @@ static void paper_cfg_fonts(font_data **fonts, font_list *fontlist,
 	    fonts[i] = f;
 	else
 	    /* FIXME: proper error */
-	    error(err_nofont, fpos, wp);
+	    err_nofont(fpos, wp);
     }
 }
 

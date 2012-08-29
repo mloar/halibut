@@ -74,7 +74,7 @@ keywordlist *get_keywords(paragraph *source) {
 		kw->para = source;
 		ret = add234(kl->keys, kw);
 		if (ret != kw) {
-		    error(err_multikw, &source->fpos, &ret->para->fpos, p);
+		    err_multikw(&source->fpos, &ret->para->fpos, p);
 		    sfree(kw);
 		    /* FIXME: what happens to kw->text? Does it leak? */
 		}
@@ -124,7 +124,7 @@ void subst_keywords(paragraph *source, keywordlist *kl) {
 
 		kw = kw_lookup(kl, ptr->text);
 		if (!kw) {
-		    error(err_nosuchkw, &ptr->fpos, ptr->text);
+		    err_nosuchkw(&ptr->fpos, ptr->text);
 		    subst = NULL;
 		} else
 		    subst = dup_word_list(kw->text);

@@ -217,7 +217,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 
     state.cntfp = fopen(cntname, "wb");
     if (!state.cntfp) {
-	error(err_cantopenw, cntname);
+	err_cantopenw(cntname);
 	return;
     }
     state.cnt_last_level = -1; state.cnt_workaround = 0;
@@ -244,7 +244,7 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 	    p->private_data = whlp_register_topic(h, rs.text, &errstr);
 	    if (!p->private_data) {
 		p->private_data = whlp_register_topic(h, NULL, NULL);
-		error(err_winhelp_ctxclash, &p->fpos, rs.text, errstr);
+		err_winhelp_ctxclash(&p->fpos, rs.text, errstr);
 	    }
 	    sfree(rs.text);
 	}

@@ -201,69 +201,123 @@ enum {
 /*
  * error.c
  */
-void fatal(int code, ...) NORETURN;
-void error(int code, ...);
-enum {
-    err_nomemory,		       /* out of memory */
-    err_optnoarg,		       /* option `-%s' requires an argument */
-    err_nosuchopt,		       /* unrecognised option `-%s' */
-    err_cmdcharset,		       /* unrecognised charset %s (cmdline) */
-    err_futileopt,		       /* futile option `-%s'%s */
-    err_noinput,		       /* no input files */
-    err_cantopen,		       /* unable to open input file `%s' */
-    err_nodata,			       /* no data in input files */
-    err_brokencodepara,		       /* line in codepara didn't begin `\c' */
-    err_kwunclosed,		       /* expected `}' after keyword */
-    err_kwillegal,		       /* paragraph type expects no keyword */
-    err_kwexpected,		       /* paragraph type expects a keyword */
-    err_kwtoomany,		       /* paragraph type expects only 1 */
-    err_bodyillegal,		       /* paragraph type expects only kws! */
-    err_badparatype,		       /* invalid command at start of para */
-    err_badmidcmd,		       /* invalid command in mid-para */
-    err_unexbrace,		       /* unexpected brace */
-    err_explbr,			       /* expected `{' after command */
-    err_commenteof,		       /* EOF inside braced comment */
-    err_kwexprbr,		       /* expected `}' after cross-ref */
-    err_codequote,                     /* \q within \c is not supported */
-    err_missingrbrace,		       /* unclosed braces at end of para */
-    err_missingrbrace2,		       /* unclosed braces at end of file */
-    err_nestedstyles,		       /* unable to nest text styles */
-    err_nestedindex,		       /* unable to nest `\i' thingys */
-    err_indexcase,		       /* two \i differing only in case */
-    err_nosuchkw,		       /* unresolved cross-reference */
-    err_multiBR,		       /* multiple \BRs on same keyword */
-    err_nosuchidxtag,		       /* \IM on unknown index tag (warning) */
-    err_cantopenw,		       /* can't open output file for write */
-    err_macroexists,		       /* this macro already exists */
-    err_sectjump,		       /* jump a heading level, eg \C -> \S */
-    err_winhelp_ctxclash,	       /* WinHelp context ID hash clash */
-    err_multikw,		       /* keyword clash in sections */
-    err_misplacedlcont,		       /* \lcont not after a list item */
-    err_sectmarkerinblock,	       /* section marker appeared in block */
-    err_cfginsufarg,		       /* \cfg{%s} insufficient args (<%d) */
-    err_infonodechar,		       /* colon/comma in node name in info */
-    err_text_codeline,		       /* \c line too long in text backend */
-    err_htmlver,		       /* unrecognised HTML version keyword */
-    err_charset,		       /* unrecognised character set name */
-    err_nofont, 		       /* unrecognised font name */
-    err_afmeof, 		       /* eof in AFM file */
-    err_afmkey, 		       /* missing expected keyword in AFM */
-    err_afmvers,		       /* unsupported AFM version */
-    err_afmval, 		       /* missing value(s) for AFM key */
-    err_pfeof,			       /* eof in Type 1 font file */
-    err_pfhead,			       /* bad Type 1 header line */
-    err_pfbad,			       /* otherwise invalide Type 1 font */
-    err_pfnoafm,		       /* Type 1 font but no AFM */
-    err_chmnames,		       /* need both or neither of hhp+chm */
-    err_sfntnotable,		       /* required sfnt table missing */
-    err_sfntnopsname,		       /* sfnt has no PostScript name */
-    err_sfntbadtable,		       /* sfnt table not valid */
-    err_sfntnounicmap,		       /* sfnt has no UCS-2 cmap */
-    err_sfnttablevers,		       /* sfnt table version unknown */
-    err_sfntbadhdr,		       /* sfnt has bad header */
-    err_sfntbadglyph,		       /* sfnt cmap references bad glyph */
-    err_whatever                       /* random error of another type */
-};
+/* out of memory */
+void fatalerr_nomemory(void) NORETURN;
+/* option `-%s' requires an argument */
+void err_optnoarg(const char *sp);
+/* unrecognised option `-%s' */
+void err_nosuchopt(const char *sp);
+/* unrecognised charset %s (cmdline) */
+void err_cmdcharset(const char *sp);
+/* futile option `-%s'%s */
+void err_futileopt(const char *sp, const char *sp2);
+/* no input files */
+void err_noinput(void);
+/* unable to open input file `%s' */
+void err_cantopen(const char *sp);
+/* no data in input files */
+void err_nodata(void);
+/* line in codepara didn't begin `\c' */
+void err_brokencodepara(const filepos *fpos);
+/* expected `}' after keyword */
+void err_kwunclosed(const filepos *fpos);
+/* paragraph type expects no keyword */
+void err_kwexpected(const filepos *fpos);
+/* paragraph type expects a keyword */
+void err_kwillegal(const filepos *fpos);
+/* paragraph type expects only 1 */
+void err_kwtoomany(const filepos *fpos);
+/* paragraph type expects only kws! */
+void err_bodyillegal(const filepos *fpos);
+/* invalid command at start of para */
+void err_badparatype(const wchar_t *wsp, const filepos *fpos);
+/* invalid command in mid-para */
+void err_badmidcmd(const wchar_t *wsp, const filepos *fpos);
+/* unexpected brace */
+void err_unexbrace(const filepos *fpos);
+/* expected `{' after command */
+void err_explbr(const filepos *fpos);
+/* EOF inside braced comment */
+void err_commenteof(const filepos *fpos);
+/* expected `}' after cross-ref */
+void err_kwexprbr(const filepos *fpos);
+/* \q within \c is not supported */
+void err_codequote(const filepos *fpos);
+/* unclosed braces at end of para */
+void err_missingrbrace(const filepos *fpos);
+/* unclosed braces at end of file */
+void err_missingrbrace2(const filepos *fpos);
+/* unable to nest text styles */
+void err_nestedstyles(const filepos *fpos);
+/* unable to nest `\i' thingys */
+void err_nestedindex(const filepos *fpos);
+/* two \i differing only in case */
+void err_indexcase(const filepos *fpos, const wchar_t *wsp,
+                   const filepos *fpos2, const wchar_t *wsp2);
+/* unresolved cross-reference */
+void err_nosuchkw(const filepos *fpos, const wchar_t *wsp);
+/* multiple \BRs on same keyword */
+void err_multiBR(const filepos *fpos, const wchar_t *wsp);
+/* \IM on unknown index tag (warning) */
+void err_nosuchidxtag(const filepos *fpos, const wchar_t *wsp);
+/* can't open output file for write */
+void err_cantopenw(const char *sp);
+/* this macro already exists */
+void err_macroexists(const filepos *fpos, const wchar_t *wsp);
+/* jump a heading level, eg \C -> \S */
+void err_sectjump(const filepos *fpos);
+/* WinHelp context ID hash clash */
+void err_winhelp_ctxclash(const filepos *fpos, const char *sp, const char *sp2);
+/* keyword clash in sections */
+void err_multikw(const filepos *fpos, const filepos *fpos2, const wchar_t *wsp);
+/* \lcont not after a list item */
+void err_misplacedlcont(const filepos *fpos);
+/* section marker appeared in block */
+void err_sectmarkerinblock(const filepos *fpos, const char *sp);
+/* \cfg{%s} insufficient args (<%d) */
+void err_cfginsufarg(const filepos *fpos, const char *sp, int i);
+/* colon/comma in node name in info */
+void err_infonodechar(const filepos *fpos, char c) /* fpos might be NULL */;
+/* \c line too long in text backend */
+void err_text_codeline(const filepos *fpos, int i, int j);
+/* unrecognised HTML version keyword */
+void err_htmlver(const filepos *fpos, const wchar_t *wsp);
+/* unrecognised character set name */
+void err_charset(const filepos *fpos, const wchar_t *wsp);
+/* unrecognised font name */
+void err_nofont(const filepos *fpos, const wchar_t *wsp);
+/* eof in AFM file */
+void err_afmeof(const filepos *fpos);
+/* missing expected keyword in AFM */
+void err_afmkey(const filepos *fpos, const char *sp);
+/* unsupported AFM version */
+void err_afmvers(const filepos *fpos);
+/* missing value(s) for AFM key */
+void err_afmval(const filepos *fpos, const char *sp, int i);
+/* eof in Type 1 font file */
+void err_pfeof(const filepos *fpos);
+/* bad Type 1 header line */
+void err_pfhead(const filepos *fpos);
+/* otherwise invalide Type 1 font */
+void err_pfbad(const filepos *fpos);
+/* Type 1 font but no AFM */
+void err_pfnoafm(const filepos *fpos, const char *sp);
+/* need both or neither of hhp+chm */
+void err_chmnames(void);
+/* required sfnt table missing */
+void err_sfntnotable(const filepos *fpos, const char *sp);
+/* sfnt has no PostScript name */
+void err_sfntnopsname(const filepos *fpos);
+/* sfnt table not valid */
+void err_sfntbadtable(const filepos *fpos, const char *sp);
+/* sfnt has no UCS-2 cmap */
+void err_sfntnounicmap(const filepos *fpos);
+/* sfnt table version unknown */
+void err_sfnttablevers(const filepos *fpos, const char *sp);
+/* sfnt has bad header */
+void err_sfntbadhdr(const filepos *fpos);
+/* sfnt cmap references bad glyph */
+void err_sfntbadglyph(const filepos *fpos, unsigned wc);
 
 /*
  * malloc.c

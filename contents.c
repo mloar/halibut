@@ -154,7 +154,7 @@ word *number_mktext(numberstate *state, paragraph *p, wchar_t *category,
       case para_Subsect:
 	level = (p->type == para_Heading ? 0 : p->aux);
 	if (level > state->oklevel) {
-	    error(err_sectjump, &p->fpos);
+	    err_sectjump(&p->fpos);
 	    *errflag = TRUE;
 	    ret = NULL;
 	    break;

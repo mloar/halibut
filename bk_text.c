@@ -328,7 +328,7 @@ void text_backend(paragraph *sourceform, keywordlist *keywords,
     else
 	tf.fp = fopen(conf.filename, "w");
     if (!tf.fp) {
-	error(err_cantopenw, conf.filename);
+	err_cantopenw(conf.filename);
 	return;
     }
     tf.charset = conf.charset;
@@ -752,7 +752,7 @@ static void text_codepara(textfile *tf, word *text, int indent, int width) {
     for (; text; text = text->next) if (text->type == word_WeakCode) {
 	int wid = ustrwid(text->text, tf->charset);
 	if (wid > width)
-	    error(err_text_codeline, &text->fpos, wid, width);
+	    err_text_codeline(&text->fpos, wid, width);
 	text_output_many(tf, indent, L' ');
 	text_output(tf, text->text);
 	text_output(tf, L"\n");

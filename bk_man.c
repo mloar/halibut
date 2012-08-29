@@ -240,7 +240,7 @@ void man_backend(paragraph *sourceform, keywordlist *keywords,
     else
 	fp = fopen(conf.filename, "w");
     if (!fp) {
-	error(err_cantopenw, conf.filename);
+	err_cantopenw(conf.filename);
 	return;
     }
 

@@ -128,11 +128,11 @@ int main(int argc, char **argv) {
 			    /* do nothing */;
 			} else if (!strcmp(opt, "-input-charset")) {
 			    if (!val) {
-				errs = TRUE, error(err_optnoarg, opt);
+				errs = TRUE, err_optnoarg(opt);
 			    } else {
 				int charset = charset_from_localenc(val);
 				if (charset == CS_NONE) {
-				    errs = TRUE, error(err_cmdcharset, val);
+				    errs = TRUE, err_cmdcharset(val);
 				} else {
 				    input_charset = charset;
 				}
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 			} else if (!strcmp(opt, "-precise")) {
 			    reportcols = 1;
 			} else {
-			    errs = TRUE, error(err_nosuchopt, opt);
+			    errs = TRUE, err_nosuchopt(opt);
 			}
 		    }
 		    p = NULL;
@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
 			char opt[2];
 			opt[0] = c;
 			opt[1] = '\0';
-			errs = TRUE, error(err_optnoarg, opt);
+			errs = TRUE, err_optnoarg(opt);
 		    }
 		    /*
 		     * Now c is the option and p is the parameter.
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
 				    *r = '\0';
 				    /* XXX ad-hoc diagnostic */
 				    if (!strcmp(s, "input-charset"))
-					error(err_futileopt, "Cinput-charset",
+					err_futileopt("Cinput-charset",
 					      "; use --input-charset");
 				    cmdline_cfg_add(para, s);
 				    r = s;
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
 			char opt[2];
 			opt[0] = c;
 			opt[1] = '\0';
-			errs = TRUE, error(err_nosuchopt, opt);
+			errs = TRUE, err_nosuchopt(opt);
 		    }
 		}
 	    }
@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
      * Do the work.
      */
     if (nfiles == 0 && !list_fonts) {
-	error(err_noinput);
+	err_noinput();
 	usage();
 	exit(EXIT_FAILURE);
     }

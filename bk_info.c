@@ -402,7 +402,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 	    kw = *longname ? uadv(longname) : L"";
 
 	    if (!*longname) {
-		error(err_cfginsufarg, &p->fpos, p->origkeyword, 3);
+		err_cfginsufarg(&p->fpos, p->origkeyword, 3);
 		continue;
 	    }
 
@@ -691,7 +691,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
      */
     fp = fopen(conf.filename, "w");
     if (!fp) {
-	error(err_cantopenw, conf.filename);
+	err_cantopenw(conf.filename);
 	return;
     }
     fputs(intro_text.output.text, fp);
@@ -735,7 +735,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
 		sprintf(fname, "%s-%d", conf.filename, filenum);
 		fp = fopen(fname, "w");
 		if (!fp) {
-		    error(err_cantopenw, fname);
+		    err_cantopenw(fname);
 		    return;
 		}
 		sfree(fname);
@@ -1148,7 +1148,7 @@ static char *info_node_name_core(info_data *id, filepos *fpos)
     p = q = id->output.text;
     while (*p) {
 	if (*p == ':' || *p == ',' || *p == '(' || *p == ')') {
-	    error(err_infonodechar, fpos, *p);
+	    err_infonodechar(fpos, *p);
 	} else {
 	    *q++ = *p;
 	}

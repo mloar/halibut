@@ -480,7 +480,7 @@ int charset_from_ustr(filepos *fpos, const wchar_t *name)
 
     if (charset == CS_NONE) {
 	charset = CS_ASCII;
-	error(err_charset, fpos, name);
+	err_charset(fpos, name);
     }
 
     sfree(csname);

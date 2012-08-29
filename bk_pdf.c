@@ -670,7 +670,7 @@ void pdf_backend(paragraph *sourceform, keywordlist *keywords,
     else
 	fp = fopen(filename, "wb");
     if (!fp) {
-	error(err_cantopenw, filename);
+	err_cantopenw(filename);
 	return;
     }
 

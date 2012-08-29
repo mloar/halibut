@@ -23,7 +23,7 @@ static wchar_t *gentext(int num) {
 static void cite_biblio(keywordlist *kl, wchar_t *key, filepos fpos) {
     keyword *kw = kw_lookup(kl, key);
     if (!kw)
-	error(err_nosuchkw, &fpos, key);
+	err_nosuchkw(&fpos, key);
     else {
 	/*
 	 * We've found a \k reference. If it's a
@@ -57,9 +57,9 @@ void gen_citations(paragraph *source, keywordlist *kl) {
 	if (para->type == para_BR) {
 	    keyword *kw = kw_lookup(kl, para->keyword);
 	    if (!kw) {
-		error(err_nosuchkw, &para->fpos, para->keyword);
+		err_nosuchkw(&para->fpos, para->keyword);
 	    } else if (kw->text) {
-		error(err_multiBR, &para->fpos, para->keyword);
+		err_multiBR(&para->fpos, para->keyword);
 	    } else {
 		kw->text = dup_word_list(para->words);
 	    }

@@ -177,7 +177,7 @@ static void pf_identify(t1_font *tf) {
 	c = pf_getc(pf);
 	if (c == EOF) {
 	    sfree(rsc.text);
-	    error(err_pfeof, &tf->pos);
+	    err_pfeof(&tf->pos);
 	    return;
 	}
 	rdaddc(&rsc, c);
@@ -185,7 +185,7 @@ static void pf_identify(t1_font *tf) {
     p = rsc.text;
     if ((p = strchr(p, ':')) == NULL) {
 	sfree(rsc.text);
-	error(err_pfhead, &tf->pos);
+	err_pfhead(&tf->pos);
 	return;
     }
     p++;
@@ -204,7 +204,7 @@ static void pf_identify(t1_font *tf) {
 	    return;
 	}
     }
-    error(err_pfnoafm, &tf->pos, fontname);
+    err_pfnoafm(&tf->pos, fontname);
     sfree(fontname);
 }
 
@@ -252,7 +252,7 @@ static size_t pf_length1(t1_font *tf) {
 
     ret = pf_findtoken(tf, 0, "eexec");
     if (ret == (size_t)-1) {
-	error(err_pfeof, &tf->pos);
+	err_pfeof(&tf->pos);
 	return 0;
     }
     return ret;
@@ -265,7 +265,7 @@ static size_t pf_length2(t1_font *tf) {
 	tf->length1 = pf_length1(tf);
     ret = pf_findtoken(tf, tf->length1, "cleartomark");
     if (ret == (size_t)-1) {
-	error(err_pfeof, &tf->pos);
+	err_pfeof(&tf->pos);
 	return 0;
     }
     return ret - 12 - tf->length1; /* backspace over "cleartomark\n" */

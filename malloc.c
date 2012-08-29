@@ -47,7 +47,7 @@ void *(smalloc)(LOGPARAMS int size) {
 	      file, line, (long)size));
     p = malloc(size);
     if (!p)
-	fatal(err_nomemory);
+	fatalerr_nomemory();
     LOGPRINT((" returns %p\n", p));
     return p;
 }
@@ -83,7 +83,7 @@ void *(srealloc)(LOGPARAMS void *p, int size) {
 	LOGPRINT((" returns %p\n", q));
     }
     if (!q)
-	fatal(err_nomemory);
+	fatalerr_nomemory();
     return q;
 }
 
