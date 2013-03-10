@@ -590,14 +590,17 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	assert(text->type != word_CodeQuote &&
@@ -607,6 +610,10 @@ static int man_rdaddwc(rdstringc *rs, word *text, word *end,
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only)) {
 	    quote_props = man_rdaddctrl(rs, "\\fI", quote_props, conf, state);
+	} else if (towordstyle(text->type) == word_Strong &&
+	    (attraux(text->aux) == attr_First ||
+	     attraux(text->aux) == attr_Only)) {
+	    quote_props = man_rdaddctrl(rs, "\\fB", quote_props, conf, state);
 	} else if ((towordstyle(text->type) == word_Code ||
 		    towordstyle(text->type) == word_WeakCode) &&
 		   (attraux(text->aux) == attr_First ||

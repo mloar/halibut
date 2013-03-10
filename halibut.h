@@ -146,16 +146,19 @@ enum {
     /* ORDERING CONSTRAINT: these normal-word types ... */
     word_Normal,
     word_Emph,
+    word_Strong,
     word_Code,			       /* monospaced; `quoted' in text */
     word_WeakCode,		       /* monospaced, normal in text */
     /* ... must be in the same order as these space types ... */
     word_WhiteSpace,		       /* text is NULL or ignorable */
     word_EmphSpace,		       /* WhiteSpace when emphasised */
+    word_StrongSpace,		       /* WhiteSpace when strong */
     word_CodeSpace,		       /* WhiteSpace when code */
     word_WkCodeSpace,		       /* WhiteSpace when weak code */
     /* ... and must be in the same order as these quote types ... */
     word_Quote,			       /* text is NULL or ignorable */
     word_EmphQuote,		       /* Quote when emphasised */
+    word_StrongQuote,		       /* Quote when strong */
     word_CodeQuote,		       /* (can't happen) */
     word_WkCodeQuote,		       /* (can't happen) */
     /* END ORDERING CONSTRAINT */
@@ -189,11 +192,12 @@ enum {
 #define isvis(x) ( ( (x) >= word_Normal && (x) <= word_LowerXref ) )
 #define isattr(x) ( ( (x) > word_Normal && (x) < word_WhiteSpace ) || \
                     ( (x) > word_WhiteSpace && (x) < word_internal_endattrs ) )
-#define sameattr(x,y) ( (((x)-(y)) & 3) == 0 )
-#define towordstyle(x) ( word_Normal + ((x) & 3) )
-#define tospacestyle(x) ( word_WhiteSpace + ((x) & 3) )
-#define toquotestyle(x) ( word_Quote + ((x) & 3) )
-#define removeattr(x) ( word_Normal + ((x) &~ 3) )
+#define NATTRS (word_WhiteSpace - word_Normal)
+#define sameattr(x,y) ( (((x)-(y)) % NATTRS) == 0 )
+#define towordstyle(x) ( word_Normal + ((x) % NATTRS) )
+#define tospacestyle(x) ( word_WhiteSpace + ((x) % NATTRS) )
+#define toquotestyle(x) ( word_Quote + ((x) % NATTRS) )
+#define removeattr(x) ( word_Normal + ((x)/NATTRS * NATTRS) )
 
 #define attraux(x) ( (x) & attr_mask )
 #define quoteaux(x) ( (x) & quote_mask )

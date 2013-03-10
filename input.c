@@ -239,6 +239,7 @@ enum {
     c_q,			       /* quote marks */
     c_quote,			       /* block-quoted paragraphs */
     c_rule,			       /* horizontal rule */
+    c_s,			       /* strong */
     c_title,			       /* document title */
     c_u,			       /* aux field is char code */
     c_versionid			       /* document RCS id */
@@ -310,6 +311,7 @@ static void match_kw(token *tok) {
 	{"q", c_q},		       /* quote marks */
 	{"quote", c_quote},	       /* block-quoted paragraphs */
 	{"rule", c_rule},	       /* horizontal rule */
+	{"s", c_s},		       /* strong */
 	{"title", c_title},	       /* document title */
 	{"versionid", c_versionid},    /* document RCS id */
 	{"{", c__escaped},	       /* escaped lbrace (\{) */
@@ -692,6 +694,9 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		} else if (t.type == tok_cmd && t.cmd == c_e &&
 			   wtype == word_WeakCode) {
 		    wtype = word_Emph;
+		} else if (t.type == tok_cmd && t.cmd == c_s &&
+			   wtype == word_WeakCode) {
+		    wtype = word_Strong;
 		} else {
 		    err_brokencodepara(&t.pos);
 		    prev_para_type = par.type;
@@ -1380,15 +1385,17 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 			    dtor(t), t = get_token(in);
 			}
 			/*
-			 * Special cases: \W{}\c, \W{}\e, \W{}\cw
+			 * Special cases: \W{}\c, \W{}\e, \W{}\s, \W{}\cw
 			 */
 			if (t.type == tok_cmd &&
-			    (t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
+			    (t.cmd == c_e || t.cmd == c_s ||
+                             t.cmd == c_c || t.cmd == c_cw)) {
 			    if (style != word_Normal)
 				err_nestedstyles(&t.pos);
 			    else {
 				style = (t.cmd == c_c ? word_Code :
 					 t.cmd == c_cw ? word_WeakCode :
+					 t.cmd == c_s ? word_Strong :
 					 word_Emph);
 				spcstyle = tospacestyle(style);
 				sitem->type |= stack_style;
@@ -1406,6 +1413,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		  case c_c:
 		  case c_cw:
 		  case c_e:
+		  case c_s:
 		    type = t.cmd;
 		    if (style != word_Normal) {
 			err_nestedstyles(&t.pos);
@@ -1422,6 +1430,7 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    } else {
 			style = (type == c_c ? word_Code :
 				 type == c_cw ? word_WeakCode :
+				 type == c_s ? word_Strong :
 				 word_Emph);
 			spcstyle = tospacestyle(style);
 			sitem = snew(struct stack_item);
@@ -1448,16 +1457,18 @@ static void read_file(paragraph ***ret, input *in, indexdata *idx,
 		    sitem->type = stack_idx;
 		    dtor(t), t = get_token(in);
 		    /*
-		     * Special cases: \i\c, \i\e, \i\cw
+		     * Special cases: \i\c, \i\e, \i\s, \i\cw
 		     */
 		    wd.fpos = t.pos;
 		    if (t.type == tok_cmd &&
-			(t.cmd == c_e || t.cmd == c_c || t.cmd == c_cw)) {
+			(t.cmd == c_e || t.cmd == c_s ||
+                         t.cmd == c_c || t.cmd == c_cw)) {
 			if (style != word_Normal)
 			    err_nestedstyles(&t.pos);
 			else {
 			    style = (t.cmd == c_c ? word_Code :
 				     t.cmd == c_cw ? word_WeakCode :
+				     t.cmd == c_s ? word_Strong :
 				     word_Emph);
 			    spcstyle = tospacestyle(style);
 			    sitem->type |= stack_style;

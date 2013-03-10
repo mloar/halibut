@@ -2231,14 +2231,17 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	break;
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	style = towordstyle(w->type);
@@ -2248,6 +2251,11 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	     attraux(w->aux) == attr_Only) &&
 	    (flags & MARKUP))
 	    element_open(ho, "em");
+	else if (style == word_Strong &&
+	    (attraux(w->aux) == attr_First ||
+	     attraux(w->aux) == attr_Only) &&
+	    (flags & MARKUP))
+	    element_open(ho, "strong");
 	else if ((style == word_Code || style == word_WeakCode) &&
 		 (attraux(w->aux) == attr_First ||
 		  attraux(w->aux) == attr_Only) &&
@@ -2273,6 +2281,11 @@ static void html_words(htmloutput *ho, word *words, int flags,
 	     attraux(w->aux) == attr_Only) &&
 	    (flags & MARKUP))
 	    element_close(ho, "em");
+	else if (style == word_Strong &&
+	    (attraux(w->aux) == attr_Last ||
+	     attraux(w->aux) == attr_Only) &&
+	    (flags & MARKUP))
+	    element_close(ho, "strong");
 	else if ((style == word_Code || style == word_WeakCode) &&
 		 (attraux(w->aux) == attr_Last ||
 		  attraux(w->aux) == attr_Only) &&

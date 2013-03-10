@@ -71,11 +71,11 @@ void index_merge(indexdata *idx, int is_explicit, wchar_t *tags, word *text,
 	word *w;
 
 	for (w = text; w; w = w->next) {
-	    if (w->type == word_Emph)
+	    if (w->type == word_Emph || w->type == word_Strong)
 		w->type = word_Normal;
-	    else if (w->type == word_EmphSpace)
+	    else if (w->type == word_EmphSpace || w->type == word_StrongSpace)
 		w->type = word_WhiteSpace;
-	    else if (w->type == word_EmphQuote)
+	    else if (w->type == word_EmphQuote || w->type == word_StrongQuote)
 		w->type = word_Quote;
 	}
     }

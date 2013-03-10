@@ -113,7 +113,7 @@ static int compare_wordlists_literally(word *a, word *b) {
 	    return (a->type < b->type ? -1 : +1);   /* FIXME? */
 	t = a->type;
 	if ((t != word_Normal && t != word_Code &&
-	     t != word_WeakCode && t != word_Emph) ||
+	     t != word_WeakCode && t != word_Emph && t != word_Strong) ||
 	    a->alt || b->alt) {
 	    int c;
 	    if (a->text && b->text) {
@@ -326,12 +326,14 @@ wrappedline *wrap_para(word *text, int width, int subsequentwidth,
 	    wrapwords[nwords].end = text->next;
 	    if (text->next && (text->next->type == word_WhiteSpace ||
 			       text->next->type == word_EmphSpace ||
+			       text->next->type == word_StrongSpace ||
 			       text->breaks))
 		break;
 	    text = text->next;
 	}
 	if (text && text->next && (text->next->type == word_WhiteSpace ||
-			   text->next->type == word_EmphSpace)) {
+                                   text->next->type == word_EmphSpace ||
+                                   text->next->type == word_StrongSpace)) {
 	    wrapwords[nwords].spacewidth = widthfn(ctx, text->next);
 	    text = text->next;
 	} else {

@@ -34,11 +34,13 @@ typedef struct {
 enum {
     FONT_NORMAL,
     FONT_EMPH,
+    FONT_STRONG,
     FONT_CODE,
     FONT_ITAL_CODE,
     FONT_BOLD_CODE,
     FONT_TITLE,
     FONT_TITLE_EMPH,
+    FONT_TITLE_STRONG,
     FONT_TITLE_CODE,
     FONT_RULE
 };
@@ -174,6 +176,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		     0, 0, 0, 0);
     whlp_create_font(h, "Times New Roman", WHLP_FONTFAM_SERIF, 24,
 		     WHLP_FONT_ITALIC, 0, 0, 0);
+    whlp_create_font(h, "Times New Roman", WHLP_FONTFAM_SERIF, 24,
+		     WHLP_FONT_BOLD, 0, 0, 0);
     whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
 		     0, 0, 0, 0);
     whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 24,
@@ -184,6 +188,8 @@ void whlp_backend(paragraph *sourceform, keywordlist *keywords,
 		     WHLP_FONT_BOLD, 0, 0, 0);
     whlp_create_font(h, "Arial", WHLP_FONTFAM_SERIF, 30,
 		     WHLP_FONT_BOLD|WHLP_FONT_ITALIC, 0, 0, 0);
+    whlp_create_font(h, "Arial", WHLP_FONTFAM_SERIF, 30,
+		     WHLP_FONT_BOLD, 0, 0, 0);
     whlp_create_font(h, "Courier New", WHLP_FONTFAM_FIXED, 30,
 		     WHLP_FONT_BOLD, 0, 0, 0);
     whlp_create_font(h, "Courier New", WHLP_FONTFAM_SANS, 18,
@@ -753,18 +759,23 @@ static void whlp_mkparagraph(struct bk_whlp_state *state,
 	
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	if (towordstyle(text->type) == word_Emph)
 	    newfont = deffont + FONT_EMPH;
+	else if (towordstyle(text->type) == word_Strong)
+	    newfont = deffont + FONT_STRONG;
 	else if (towordstyle(text->type) == word_Code ||
 		 towordstyle(text->type) == word_WeakCode)
 	    newfont = deffont + FONT_CODE;
@@ -808,14 +819,17 @@ static void whlp_rdaddwc(rdstringc *rs, word *text, whlpconf *conf,
 
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	assert(text->type != word_CodeQuote &&

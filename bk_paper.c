@@ -237,20 +237,26 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     ret.fbase.font_size = 12;
     ret.fbase.fonts[FONT_NORMAL] = make_std_font(fontlist, "Times-Roman");
     ret.fbase.fonts[FONT_EMPH] = make_std_font(fontlist, "Times-Italic");
+    ret.fbase.fonts[FONT_STRONG] = make_std_font(fontlist, "Times-Bold");
     ret.fbase.fonts[FONT_CODE] = make_std_font(fontlist, "Courier");
     ret.fcode.font_size = 12;
     ret.fcode.fonts[FONT_NORMAL] = make_std_font(fontlist, "Courier-Bold");
     ret.fcode.fonts[FONT_EMPH] = make_std_font(fontlist, "Courier-Oblique");
+    ret.fcode.fonts[FONT_STRONG] = make_std_font(fontlist, "Courier-Bold");
     ret.fcode.fonts[FONT_CODE] = make_std_font(fontlist, "Courier");
     ret.ftitle.font_size = 24;
     ret.ftitle.fonts[FONT_NORMAL] = make_std_font(fontlist, "Helvetica-Bold");
     ret.ftitle.fonts[FONT_EMPH] =
 	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.ftitle.fonts[FONT_STRONG] =
+	make_std_font(fontlist, "Helvetica-Bold");
     ret.ftitle.fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
     ret.fchapter.font_size = 20;
     ret.fchapter.fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
     ret.fchapter.fonts[FONT_EMPH] =
 	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fchapter.fonts[FONT_STRONG] =
+	make_std_font(fontlist, "Helvetica-Bold");
     ret.fchapter.fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
     ret.nfsect = 3;
     ret.fsect = snewn(ret.nfsect, font_cfg);
@@ -258,16 +264,22 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
     ret.fsect[0].fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
     ret.fsect[0].fonts[FONT_EMPH] =
 	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fsect[0].fonts[FONT_STRONG] =
+	make_std_font(fontlist, "Helvetica-Bold");
     ret.fsect[0].fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
     ret.fsect[1].font_size = 14;
     ret.fsect[1].fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
     ret.fsect[1].fonts[FONT_EMPH] =
 	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fsect[1].fonts[FONT_STRONG] =
+	make_std_font(fontlist, "Helvetica-Bold");
     ret.fsect[1].fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
     ret.fsect[2].font_size = 13;
     ret.fsect[2].fonts[FONT_NORMAL]= make_std_font(fontlist, "Helvetica-Bold");
     ret.fsect[2].fonts[FONT_EMPH] =
 	make_std_font(fontlist, "Helvetica-BoldOblique");
+    ret.fsect[2].fonts[FONT_STRONG] =
+	make_std_font(fontlist, "Helvetica-Bold");
     ret.fsect[2].fonts[FONT_CODE] = make_std_font(fontlist, "Courier-Bold");
     ret.contents_indent_step = 24 * UNITS_PER_PT;
     ret.contents_margin = 84 * UNITS_PER_PT;
@@ -465,24 +477,32 @@ static paper_conf paper_configure(paragraph *source, font_list *fontlist) {
 	if (fonts_ok(ret.lquote,
 		     ret.fbase.fonts[FONT_NORMAL],
 		     ret.fbase.fonts[FONT_EMPH],
+		     ret.fbase.fonts[FONT_STRONG],
 		     ret.ftitle.fonts[FONT_NORMAL],
 		     ret.ftitle.fonts[FONT_EMPH],
+		     ret.ftitle.fonts[FONT_STRONG],
 		     ret.fchapter.fonts[FONT_NORMAL],
-		     ret.fchapter.fonts[FONT_EMPH], NULL) &&
+		     ret.fchapter.fonts[FONT_EMPH],
+		     ret.fchapter.fonts[FONT_STRONG], NULL) &&
 	    fonts_ok(ret.rquote,
 		     ret.fbase.fonts[FONT_NORMAL],
 		     ret.fbase.fonts[FONT_EMPH],
+		     ret.fbase.fonts[FONT_STRONG],
 		     ret.ftitle.fonts[FONT_NORMAL],
 		     ret.ftitle.fonts[FONT_EMPH],
+		     ret.ftitle.fonts[FONT_STRONG],
 		     ret.fchapter.fonts[FONT_NORMAL],
-		     ret.fchapter.fonts[FONT_EMPH], NULL)) {
+		     ret.fchapter.fonts[FONT_EMPH],
+		     ret.fchapter.fonts[FONT_STRONG], NULL)) {
 	    for (n = 0; n < ret.nfsect; n++)
 		if (!fonts_ok(ret.lquote,
 			      ret.fsect[n].fonts[FONT_NORMAL],
-			      ret.fsect[n].fonts[FONT_EMPH], NULL) ||
+			      ret.fsect[n].fonts[FONT_EMPH],
+			      ret.fsect[n].fonts[FONT_STRONG], NULL) ||
 		    !fonts_ok(ret.rquote,
 			      ret.fsect[n].fonts[FONT_NORMAL],
-			      ret.fsect[n].fonts[FONT_EMPH], NULL))
+			      ret.fsect[n].fonts[FONT_EMPH],
+			      ret.fsect[n].fonts[FONT_STRONG], NULL))
 		    break;
 	    if (n == ret.nfsect)
 		break;
@@ -1619,6 +1639,7 @@ static int paper_width_internal(void *vctx, word *word, int *nspaces)
 
     findex = (style == word_Normal ? FONT_NORMAL :
 	      style == word_Emph ? FONT_EMPH :
+	      style == word_Strong ? FONT_STRONG :
 	      FONT_CODE);
 
     if (style == word_Code || style == word_WeakCode) flags |= RS_NOLIG;
@@ -2210,6 +2231,7 @@ static int render_text(page_data *page, para_data *pdata, line_data *ldata,
 
 	findex = (style == word_Normal ? FONT_NORMAL :
 		  style == word_Emph ? FONT_EMPH :
+		  style == word_Strong ? FONT_STRONG :
 		  FONT_CODE);
 
 	if (style == word_Code || style == word_WeakCode) flags |= RS_NOLIG;
@@ -2640,14 +2662,17 @@ static void paper_rdaddw(rdstring *rs, word *text) {
 
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	assert(text->type != word_CodeQuote &&
@@ -2656,6 +2681,10 @@ static void paper_rdaddw(rdstring *rs, word *text) {
 	    (attraux(text->aux) == attr_First ||
 	     attraux(text->aux) == attr_Only))
 	    rdadd(rs, L'_');	       /* FIXME: configurability */
+	else if (towordstyle(text->type) == word_Strong &&
+                 (attraux(text->aux) == attr_First ||
+                  attraux(text->aux) == attr_Only))
+	    rdadd(rs, L'*');	       /* FIXME: configurability */
 	else if (towordstyle(text->type) == word_Code &&
 		 (attraux(text->aux) == attr_First ||
 		  attraux(text->aux) == attr_Only))
@@ -2671,6 +2700,10 @@ static void paper_rdaddw(rdstring *rs, word *text) {
 	    (attraux(text->aux) == attr_Last ||
 	     attraux(text->aux) == attr_Only))
 	    rdadd(rs, L'_');	       /* FIXME: configurability */
+	else if (towordstyle(text->type) == word_Strong &&
+                 (attraux(text->aux) == attr_Last ||
+                  attraux(text->aux) == attr_Only))
+	    rdadd(rs, L'*');	       /* FIXME: configurability */
 	else if (towordstyle(text->type) == word_Code &&
 		 (attraux(text->aux) == attr_Last ||
 		  attraux(text->aux) == attr_Only))

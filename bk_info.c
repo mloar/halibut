@@ -69,6 +69,7 @@ typedef struct {
     int nasect;
     wchar_t *bullet, *listsuffix;
     wchar_t *startemph, *endemph;
+    wchar_t *startstrong, *endstrong;
     wchar_t *lquote, *rquote;
     wchar_t *sectsuffix;
     wchar_t *rule;
@@ -143,6 +144,8 @@ static infoconfig info_configure(paragraph *source) {
     ret.rule = L"\x2500\0-\0\0";
     ret.startemph = L"_\0_\0\0";
     ret.endemph = uadv(ret.startemph);
+    ret.startstrong = L"*\0*\0\0";
+    ret.endstrong = uadv(ret.startstrong);
     ret.lquote = L"\x2018\0\x2019\0`\0'\0\0";
     ret.rquote = uadv(ret.lquote);
     ret.sectsuffix = L": ";
@@ -233,6 +236,11 @@ static infoconfig info_configure(paragraph *source) {
 		    ret.startemph = uadv(p->keyword);
 		    ret.endemph = uadv(ret.startemph);
 		}
+	    } else if (!ustricmp(p->keyword, L"info-strong")) {
+		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
+		    ret.startstrong = uadv(p->keyword);
+		    ret.endstrong = uadv(ret.startstrong);
+		}
 	    } else if (!ustricmp(p->keyword, L"info-quotes")) {
 		if (*uadv(p->keyword) && *uadv(uadv(p->keyword))) {
 		    ret.lquote = uadv(p->keyword);
@@ -258,6 +266,13 @@ static infoconfig info_configure(paragraph *source) {
 	    !cvt_ok(ret.charset, ret.endemph))) {
 	ret.startemph = uadv(ret.endemph);
 	ret.endemph = uadv(ret.startemph);
+    }
+
+    while (*uadv(ret.endstrong) && *uadv(uadv(ret.endstrong)) &&
+	   (!cvt_ok(ret.charset, ret.startstrong) ||
+	    !cvt_ok(ret.charset, ret.endstrong))) {
+	ret.startstrong = uadv(ret.endstrong);
+	ret.endstrong = uadv(ret.startstrong);
     }
 
     while (*ret.atitle.underline && *uadv(ret.atitle.underline) &&
@@ -861,14 +876,17 @@ static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs,
 
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	assert(words->type != word_CodeQuote &&
@@ -877,6 +895,10 @@ static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs,
 	    (attraux(words->aux) == attr_First ||
 	     attraux(words->aux) == attr_Only))
 	    ret += info_rdadds(id, cfg->startemph);
+	else if (towordstyle(words->type) == word_Strong &&
+                 (attraux(words->aux) == attr_First ||
+                  attraux(words->aux) == attr_Only))
+	    ret += info_rdadds(id, cfg->startstrong);
 	else if (towordstyle(words->type) == word_Code &&
 		 (attraux(words->aux) == attr_First ||
 		  attraux(words->aux) == attr_Only))
@@ -896,6 +918,10 @@ static int info_rdaddwc(info_data *id, word *words, word *end, int xrefs,
 	    (attraux(words->aux) == attr_Last ||
 	     attraux(words->aux) == attr_Only))
 	    ret += info_rdadds(id, cfg->endemph);
+	else if (towordstyle(words->type) == word_Strong &&
+                 (attraux(words->aux) == attr_Last ||
+                  attraux(words->aux) == attr_Only))
+	    ret += info_rdadds(id, cfg->endstrong);
 	else if (towordstyle(words->type) == word_Code &&
 		 (attraux(words->aux) == attr_Last ||
 		  attraux(words->aux) == attr_Only))
@@ -956,22 +982,25 @@ static int info_width_internal(word *words, int xrefs, infoconfig *cfg) {
     wid = 0;
     attr = towordstyle(words->type);
 
-    if (attr == word_Emph || attr == word_Code) {
+    if (attr == word_Emph || attr == word_Strong || attr == word_Code) {
 	if (attraux(words->aux) == attr_Only ||
 	    attraux(words->aux) == attr_First)
-	    wid += ustrwid(attr == word_Emph ? cfg->startemph : cfg->lquote,
-			   cfg->charset);
+	    wid += ustrwid(attr == word_Emph ? cfg->startemph :
+                           attr == word_Strong ? cfg->startstrong :
+                           cfg->lquote, cfg->charset);
     }
-    if (attr == word_Emph || attr == word_Code) {
+    if (attr == word_Emph || attr == word_Strong || attr == word_Code) {
 	if (attraux(words->aux) == attr_Only ||
 	    attraux(words->aux) == attr_Last)
-	    wid += ustrwid(attr == word_Emph ? cfg->startemph : cfg->lquote,
-			   cfg->charset);
+	    wid += ustrwid(attr == word_Emph ? cfg->startemph :
+                           attr == word_Strong ? cfg->startstrong :
+                           cfg->lquote, cfg->charset);
     }
 
     switch (words->type) {
       case word_Normal:
       case word_Emph:
+      case word_Strong:
       case word_Code:
       case word_WeakCode:
 	if (cvt_ok(cfg->charset, words->text) || !words->alt)
@@ -982,10 +1011,12 @@ static int info_width_internal(word *words, int xrefs, infoconfig *cfg) {
 
       case word_WhiteSpace:
       case word_EmphSpace:
+      case word_StrongSpace:
       case word_CodeSpace:
       case word_WkCodeSpace:
       case word_Quote:
       case word_EmphQuote:
+      case word_StrongQuote:
       case word_CodeQuote:
       case word_WkCodeQuote:
 	assert(words->type != word_CodeQuote &&

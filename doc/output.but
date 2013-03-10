@@ -263,6 +263,11 @@ in the \c{\\c} command (see \k{input-code}).
 emphasised text (written using the \c{\\e} command; see
 \k{input-emph}).
 
+\dt \I{\cw{\\cfg\{text-strong\}}}\cw{\\cfg\{text-strong\}\{}\e{start-strong}\cw{\}\{}\e{end-strong}\cw{\}}[\cw{\{}\e{start-strong}\cw{\}\{}\e{end-strong}...\cw{\}}]
+
+\dd This specifies the characters which should be used to surround
+strong text (written using the \c{\\s} command; see \k{input-emph}).
+
 \lcont{
 
 You should separately specify the start-emphasis and end-emphasis
@@ -1457,6 +1462,13 @@ multiple fallback options. Works exactly like the
 \cw{\\cfg\{text-emphasis\}} directive (see
 \k{output-text-characters}).
 
+\dt \I{\cw{\\cfg\{info-strong\}}}\cw{\\cfg\{info-strong\}\{}\e{start-strong}\cw{\}\{}\e{end-strong}\cw{\}}[\cw{\{}\e{start-strong}\cw{\}\{}\e{end-strong}...\cw{\}}]
+
+\dd Specifies how to display strong text. You can specify
+multiple fallback options. Works exactly like the
+\cw{\\cfg\{text-emphasis\}} directive (see
+\k{output-text-characters}).
+
 \S{output-info-misc} Miscellaneous configuration options
 
 \dt \I{\cw{\\cfg\{info-list-suffix\}}}\cw{\\cfg\{info-list-suffix\}\{}\e{text}\cw{\}}
@@ -1545,6 +1557,7 @@ The \i{default settings} for the Info output format are:
 \c \cfg{info-rule}{\u2500}{-}
 \c \cfg{info-quotes}{\u2018}{\u2019}{`}{'}
 \c \cfg{info-emphasis}{_}{_}
+\c \cfg{info-strong}{*}{*}
 \c
 \c \cfg{info-list-suffix}{.}
 

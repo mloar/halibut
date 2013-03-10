@@ -176,6 +176,7 @@ struct font_list_Tag {
 enum {
     FONT_NORMAL,
     FONT_EMPH,
+    FONT_STRONG,
     FONT_CODE,
     NFONTS
 };

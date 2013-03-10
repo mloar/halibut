@@ -48,7 +48,7 @@ chapter title I can write before feeling silly.
 
 This is a para\#{another{} comment}graph of text. It
 has line\#{yet another one} breaks in   between words, multiple
-  spaces (ignored), and \e{emphasised text} as well as \c{code
+  spaces (ignored), \e{emphasised text} and \s{strong text} as well as \c{code
 fragments}.
 
 \#{This is an inline comment alone in a paragraph.}
@@ -248,8 +248,9 @@ u ú û ü ù _ v w x y ý ÿ ¥ z \u017e 0
 
 \cfg{input-charset}{ASCII}
 
-Testing ligatures in normal (fi), empasised (\e{fi}), code (\c{fi}) and
-weak code (\cw{fi}).  The latter two should not be ligated.
+Testing ligatures in normal (fi), emphasised (\e{fi}), strong
+(\s{fi}), code (\c{fi}) and weak code (\cw{fi}). The latter two should
+not be ligated.
 
 \c Also in a code paragraph (fi) with bold (fi) and italic (fi).
 \e                                          bb              ii
@@ -277,6 +278,11 @@ Similarly, we should support things like hyperlinks
 \e{\W{http://www.tartarus.org/}{at the beginning} of emphasised sections},
 and \e{in the \W{http://www.tartarus.org/}{middle} of them}, and also
 \e{at the \W{http://home.att.net/~cecw/lastpage.htm}{end}}.
+
+Try that all over against with \c{\\s}: hyperlinks
+\s{\W{http://www.tartarus.org/}{at the beginning} of strong sections},
+and \s{in the \W{http://www.tartarus.org/}{middle} of them}, and also
+\s{at the \W{http://home.att.net/~cecw/lastpage.htm}{end}}.
 
 Here's a hyperlink containing some special characters:
 \W{http://a<b&c>d/}{here}. (Not that it'll \e{work}, but you can at

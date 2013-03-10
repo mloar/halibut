@@ -94,6 +94,10 @@ sentence in this paragraph was generated using the Halibut input
 \c Possibly the most obvious piece of formatting you might want
 \c to use in a document is \e{emphasis}.
 
+A second form of emphasis is supported, called \i\s{strong} text. You
+can use the \i\c{\\s} command for this type of emphasis. Typically, in
+output formats, \c{\\e} will give italics, and \c{\\s} will give bold.
+
 \S{input-code} \c{\\c} and \c{\\cw}: Displaying \i{computer code} inline
 
 Halibut was primarily designed to produce software manuals. It can
@@ -111,8 +115,9 @@ the text accurately and conveniently).
 
 Halibut provides \e{two} commands for this, which are subtly
 different. The names of those commands are \i\c{\\c} (\q{code}) and
-\i\c{\\cw} (\q{\i{weak code}}). You use them just like \c{\\e}, by
-following them with some text in braces. For example, this...
+\i\c{\\cw} (\q{\i{weak code}}). You use them just like \c{\\e} and
+\c{\\s}, by following them with some text in braces. For example,
+this...
 
 \c This sentence contains some \c{code} and some \cw{weak code}.
 
@@ -497,8 +502,8 @@ characters to escape.
 Since a backslash inside a code paragraph generates a literal
 backslash, this means you cannot use any other Halibut formatting
 commands inside a code paragraph. In particular, if you want to
-emphasise a particular word in the paragraph, you can't do that
-using \c{\\e} (\k{input-emph}) in the normal way.
+emphasise or strengthen a particular word in the paragraph, you can't
+do that using \c{\\e} or \c{\\s} (\k{input-emph}) in the normal way.
 
 Therefore, Halibut provides an alternative means of \i{emphasis in
 code paragraphs}. Each line beginning with \c{\\c} can optionally be
@@ -1125,7 +1130,7 @@ This will cause the word \q{grep} to appear in code style, as if the
 the word will also appear in code style in the actual index.
 
 If you want to simultaneously index and emphasise a word, there's
-another special case \i\c{\\i\\e}:
+another special case \i\c{\\i\\e} (and similarly \i\c{\\i\\s}):
 
 \c This is what we call a \i\e{paper jam}.
 
