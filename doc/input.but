@@ -868,7 +868,7 @@ So now you know.
 
 }
 
-\S{input-sections} \I{\\C-upper}\c{\\C}, \i\c{\\H}, \i\c{\\S},
+\S{input-sections} \I{\\C-upper}\c{\\C}, \i\c{\\H}, \I{\\S-upper}\c{\\S},
 \i\c{\\A}, \I{\\U-upper}\c{\\U}: Chapter and \i{section headings}
 
 \K{intro-features} mentions that Halibut \I{section

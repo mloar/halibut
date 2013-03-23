@@ -560,6 +560,7 @@ directive
 \IM{computer code} computer code
 
 \IM{\\e} \c{\\e} command
+\IM{\\s} \c{\\s} command
 \IM{\\c} \c{\\c} command
 \IM{\\cw} \c{\\cw} command
 \IM{\\cq} \c{\\cq} command
@@ -581,7 +582,7 @@ directive
 \IM{\\quote} \c{\\quote} command
 \IM{\\C-upper} \c{\\C} command
 \IM{\\H} \c{\\H} command
-\IM{\\S} \c{\\S} command
+\IM{\\S-upper} \c{\\S} command
 \IM{\\A} \c{\\A} command
 \IM{\\U-upper} \c{\\U} command
 \IM{\\S2} \c{\\S2}, \c{\\S3} commands etc.
@@ -595,6 +596,7 @@ directive
 \IM{\\i\\c} \c{\\i\\c} combination
 \IM{\\i\\cw} \c{\\i\\cw} combination
 \IM{\\i\\e} \c{\\i\\e} combination
+\IM{\\i\\s} \c{\\i\\s} combination
 \IM{\\I-upper} \c{\\I} command
 \IM{\\ii} \c{\\ii} command
 \IM{\\IM} \c{\\IM} command
