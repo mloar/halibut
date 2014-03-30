@@ -1203,7 +1203,8 @@ static void outblock(deflate_compress_ctx *out,
      */
     for (i = 0; i < 19; i++)
 	codelen[i] = len3[lenlenmap[i]];
-    for (hclen = 19; hclen > 4 && codelen[hclen-1] == 0; hclen--);
+    for (hclen = 19; hclen > 4 && codelen[hclen-1] == 0; hclen--)
+        /* empty loop body */;
 
     /*
      * Now work out the exact size of both the dynamic and the

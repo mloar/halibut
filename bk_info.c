@@ -315,7 +315,7 @@ void info_backend(paragraph *sourceform, keywordlist *keywords,
     int nesting, nestindent;
     int indentb, indenta;
     int filepos;
-    int has_index;
+    int has_index = FALSE;
     info_data intro_text = EMPTY_INFO_DATA;
     node *topnode, *currnode;
     word bullet;

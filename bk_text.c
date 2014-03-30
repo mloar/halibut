@@ -686,7 +686,7 @@ static void text_heading(textfile *tf, word *tprefix, word *nprefix,
 	if (margin < 0) margin = 0;
 	firstlinewidth = indent + width - margin - length;
 	wrapwidth = width;
-    } else if (align.align == LEFT || align.align == CENTRE) {
+    } else /* if (align.align == LEFT || align.align == CENTRE) */ {
 	margin = 0;
 	firstlinewidth = indent + width - length;
 	wrapwidth = indent + width;
